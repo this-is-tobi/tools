@@ -1,0 +1,12 @@
+{
+  "pull_request": {
+    "head": {
+      "ref": "feat/this-is-a-test"
+    },
+    "base": {
+      "ref": "develop"
+    },
+    "draft": true
+  },
+  "act": true
+}
