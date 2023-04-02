@@ -35,7 +35,7 @@ Following flags are available:
   -e    (Optional) Event file in './ci/act/events/' that will trigger workflows. e.g: './ci/act/events/push_base_main.json'.
         Default is '$EVENT_FILE'.
 
-  -e    (Optional) Start a local registry running as a docker container.
+  -r    (Optional) Start a local registry running as a docker container.
         Default is '$START_REGISTRY'.
 
   -w    (Optional) Workflow directory that will be triggered. e.g: './github/worlflows' or './ci/act/workflows/test'.
@@ -48,7 +48,7 @@ print_help() {
 }
 
 # Parse options
-while getopts he:w: flag; do
+while getopts he:rw: flag; do
   case "${flag}" in
     e)
       EVENT_FILE="$(readlink -f ${OPTARG})";;
