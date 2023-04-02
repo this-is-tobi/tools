@@ -18,7 +18,7 @@ DOCKER_VERSION="$(docker --version)"
 DOCKER_COMPOSE_VERSION="$(docker compose version)"
 
 # Get Date
-NOW=$(date +'%Y-%m-%dT%H-%M-%SZ')
+NOW=$(date +'%Y-%m-%dT%H-%M-%S')
 
 # Default
 EVENT_FILE="$ACT_DIR/events/pr_base_main.json"
