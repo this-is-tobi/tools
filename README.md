@@ -12,3 +12,5 @@ Utility tools & scripts :wrench:
 ## Utils
 
 - [act](https://github.com/nektos/act) *- local github action act wrapper*
+- node
+  - [crypto.mjs](./node/crypto.mjs) *- set of crypto functions*
