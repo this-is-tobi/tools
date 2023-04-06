@@ -23,7 +23,7 @@ print_help() {
 }
 
 # Parse options
-while getopts :i:n:h flag; do
+while getopts i:n:h flag; do
   case "${flag}" in
     i)
       IP_ADDRESS="${OPTARG}";;

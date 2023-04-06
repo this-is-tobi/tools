@@ -5,12 +5,12 @@ set -e
 # Colorize terminal
 red='\e[0;31m'
 no_color='\033[0m'
+
 # Console step increment
 i=1
 
 # Get versions
 DOCKER_VERSION="$(docker --version)"
-
 
 # Default
 REGISTRY="docker.io"

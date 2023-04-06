@@ -5,9 +5,9 @@ set -e
 # Colorize terminal
 red='\e[0;31m'
 no_color='\033[0m'
+
 # Console step increment
 i=1
-
 
 # Declare script helper
 TEXT_HELPER="\nThis script aims to build a markdown style vulnerability report for the trivy json scan results. It will read the files and then build a markdown summary (compatible with Github issue) summarising the vulnerabilities for each image and configuration file for the given input folder.
