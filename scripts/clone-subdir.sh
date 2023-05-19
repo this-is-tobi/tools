@@ -4,8 +4,6 @@
 red='\e[0;31m'
 no_color='\033[0m'
 
-# Console step increment
-i=1
 
 # Defaults
 DELETE_GIT_DIR="false"
@@ -44,7 +42,7 @@ while getopts b:do:s:u: flag; do
     d)
       DELETE_GIT_DIR="true";;
     o)
-      OUTPUT_DIR="true";;
+      OUTPUT_DIR="${OPTARG}";;
     s)
       SUB_DIR="${OPTARG}";;
     u)
@@ -60,18 +58,18 @@ REPO_NAME="$(echo $REPO_URL | grep -oE '[^/]+$')"
 
 
 # init git repository in the output dir
-printf "\n\n${red}${i}.${no_color} Init git repository\n\n"
+printf "\n\n${red}  ->${no_color} Init git repository\n\n"
 i=$(($i + 1))
 
-mkdir -p "$OUTPUT_DIR/$REPO_NAME"
-cd "$OUTPUT_DIR/$REPO_NAME"
+mkdir -p "${OUTPUT_DIR%/}/$REPO_NAME"
+cd "${OUTPUT_DIR%/}/$REPO_NAME"
 git init 
 git remote add origin "$REPO_URL"
 git config core.sparsecheckout true
 
 
 # Clone sub directory from the target repository
-printf "\n\n${red}${i}.${no_color} Clone repository\n\n"
+printf "\n\n${red}  ->${no_color} Clone repository\n\n"
 i=$(($i + 1))
 
 echo "$SUB_DIR/*" >> .git/info/sparse-checkout
@@ -79,10 +77,11 @@ git pull origin "$GIT_BRANCH"
 
 
 # Delete git artifacts in the fresh cloned repo
-if [ "$DELETE_GIT_DIR" = "true" ]; then
-  printf "\n\n${red}${i}.${no_color} ungit previously cloned repoitory\n\n"
+if [ "$DELETE_GIT_DIR" == "true" ]; then
+  printf "\n\n${red}  ->${no_color} ungit previously cloned repoitory\n\n"
   i=$(($i + 1))
 
-  mv "$OUTPUT_DIR/$REPO_NAME/$SUB_DIR/" "$OUTPUT_DIR"
-  rm -rf "$OUTPUT_DIR/$REPO_NAME"
+  cd -
+  cp -a "${OUTPUT_DIR%/}/$REPO_NAME/$SUB_DIR/." "${OUTPUT_DIR%/}/"
+  rm -rf "${OUTPUT_DIR%/}/$REPO_NAME"
 fi
