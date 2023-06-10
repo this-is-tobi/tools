@@ -13,5 +13,7 @@ Utility tools & scripts
 ## Utils
 
 - [act](https://github.com/nektos/act) *- local github action act wrapper*
+- `docker/`
+  - [nginx](./docker/nginx/Dockerfile) *- bitnami/nignx rootless conf with env subst*
 - `node/`
   - [crypto.mjs](./node/crypto.mjs) *- set of crypto functions*
