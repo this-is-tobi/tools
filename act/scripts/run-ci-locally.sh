@@ -64,9 +64,9 @@ done
 
 # utils
 install_act() {
-  printf "\n${red}Optional.${no_color} Installs act...\n"
+  printf "\n\n${red}Optional.${no_color} Installs act...\n\n"
   curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
-  printf "\nact version $(act --version) installed\n"
+  printf "\n\nact version $(act --version) installed\n\n"
 }
 
 if [ -z "$(act --version)" ]; then
@@ -86,47 +86,68 @@ fi
 
 # Script condition
 if [ ! -d "$WORKFLOW_DIR" ]; then
-  printf "\nWorkflow directory '$WORKFLOW_DIR' does not exist.\n"
+  printf "\n\nWorkflow directory '$WORKFLOW_DIR' does not exist.\n\n"
   print_help
   exit 1
 fi
 
 # Settings
 EVENT_NAME=$(cat "$EVENT_FILE" | jq -r 'keys_unsorted | first')
-printf "\nScript settings:
+printf "\n\nScript settings:
   -> act version: ${ACT_VERSION}
   -> docker version: ${DOCKER_VERSION}
   -> docker-compose version: ${DOCKER_COMPOSE_VERSION}
   -> workflows directory: ${WORKFLOW_DIR}
   -> event file: ${EVENT_FILE}
-  -> event name: ${EVENT_NAME}\n"
+  -> event name: ${EVENT_NAME}\n\n"
 
 
 if [ "$START_REGISTRY" = "true" ]; then
-  # printf "\n${red}${i}.${no_color} Create credentials for local registry\n\n"
-  # i=$(($i + 1))
+  printf "\n\n${red}${i}.${no_color} Create certificate for local registry\n\n"
+  i=$(($i + 1))
 
-  # docker run \
-  #   --rm \
-  #   --entrypoint htpasswd \
-  #   httpd:2 -Bbn "$REGISTRY_USERNAME" "$REGISTRY_SECRET" \
-  #   > "$REGISTRY_DIR/auth/htpasswd"
+  openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
+    -keyout $REGISTRY_DIR/certs/registry.local.key -out $REGISTRY_DIR/certs/registry.local.crt \
+    -subj "/C=FR/ST=France/L=Paris/O=IT/CN=registry.local"
 
-  printf "\n${red}${i}.${no_color} Start local registry\n\n"
+
+  printf "\n\n${red}${i}.${no_color} Add local certificate for the registry\n\n"
+  i=$(($i + 1))
+
+  touch /etc/ssl/certs/registry.local && cat $REGISTRY_DIR/certs/registry.local.crt > /etc/ssl/certs/registry.local
+
+
+  printf "\n\n${red}${i}.${no_color} Add the registry in docker daemon insecure registries\n\n"
+  i=$(($i + 1))
+
+  jq '."insecure-registries" += ["localhost:5555"]' ~/.docker/daemon.json > daemon.tmp \
+    && mv daemon.tmp ~/.docker/daemon.json
+
+
+  printf "\n\n${red}${i}.${no_color} Create credentials for local registry\n\n"
+  i=$(($i + 1))
+
+  docker run \
+    --rm \
+    --entrypoint htpasswd \
+    httpd:2 -Bbn "$REGISTRY_USERNAME" "$REGISTRY_SECRET" \
+    > "$REGISTRY_DIR/auth/htpasswd"
+
+  printf "\n\n${red}${i}.${no_color} Start local registry\n\n"
   i=$(($i + 1))
 
   docker compose -f $REGISTRY_DIR/docker-compose.registry.yml --env-file $ACT_ENV_FILE up -d
 fi
 
 
-printf "\n${red}${i}.${no_color} Builds docker image use by act as Github runner\n\n"
+printf "\n\n${red}${i}.${no_color} Builds docker image use by act as Github runner\n\n"
 i=$(($i + 1))
 
 cd $ACT_DIR/docker
-docker build .
+docker build -t act/ubuntu:latest .
 
 
-printf "\n${red}${i}.${no_color} Displays workflow list\n\n"
+printf "\n\n${red}${i}.${no_color} Displays workflow list\n\n"
 i=$(($i + 1))
 
 act \
@@ -135,7 +156,7 @@ act \
   --list
 
 
-printf "\n${red}${i}.${no_color} Displays workflow graph\n\n"
+printf "\n\n${red}${i}.${no_color} Displays workflow graph\n\n"
 i=$(($i + 1))
 
 act \
@@ -144,11 +165,11 @@ act \
   --graph
 
 
-printf "\n${red}${i}.${no_color} Runs locally GitHub Actions workflow\n\n"
+printf "\n\n${red}${i}.${no_color} Runs locally GitHub Actions workflow\n\n"
 i=$(($i + 1))
 
 act "$EVENT_NAME" \
-  --platform "ubuntu-latest=localhost:6000/act/ubuntu" \
+  --platform "ubuntu-latest=act/ubuntu:latest" \
   --workflows "$WORKFLOW_DIR" \
   --eventpath "$EVENT_FILE" \
   --use-gitignore \
@@ -156,13 +177,13 @@ act "$EVENT_NAME" \
   --env "GITHUB_RUN_ID=$NOW" \
   --env "REGISTRY_HOST=$REGISTRY_HOST" \
   --env "REGISTRY_PORT=$REGISTRY_PORT" \
+  --secret REGISTRY_USERNAME=$REGISTRY_USERNAME \
+  --secret REGISTRY_SECRET=$REGISTRY_SECRET \
   --rm
   # --bind \
-  # --secret REGISTRY_USERNAME=$REGISTRY_USERNAME \
-  # --secret REGISTRY_SECRET=$REGISTRY_SECRET
 
 
-printf "\n${red}${i}.${no_color} Retrieves artifacts\n\n"
+printf "\n\n${red}${i}.${no_color} Retrieves artifacts\n\n"
 i=$(($i + 1))
 
 if [ -d "$ACT_DIR/artifacts/$NOW" ] && [ -n "$(find $ACT_DIR/artifacts/$NOW -type f -name '*.gz__')" ]; then
@@ -174,14 +195,14 @@ fi
 
 
 if [ "$START_REGISTRY" = "true" ]; then
-  printf "\n${red}${i}.${no_color} Stop local registry\n\n"
+  printf "\n\n${red}${i}.${no_color} Stop local registry\n\n"
   i=$(($i + 1))
 
   docker compose -f $REGISTRY_DIR/docker-compose.registry.yml down -v
 fi
 
 
-printf "\n${red}${i}.${no_color} Clean up\n\n"
+printf "\n\n${red}${i}.${no_color} Clean up\n\n"
 i=$(($i + 1))
 
 cat "$ACT_ENV_FILE" | while read e; do
