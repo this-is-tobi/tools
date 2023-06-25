@@ -16,5 +16,6 @@ Utility tools & scripts
 - [act](https://github.com/nektos/act) *- local github action act wrapper*
 - `docker/`
   - [nginx](./docker/nginx/Dockerfile) *- bitnami/nignx rootless conf with env subst*
+- [kind](https://github.com/kubernetes-sigs/kind/t) *- local kubernetes kind wrapper*
 - `node/`
   - [crypto.mjs](./node/crypto.mjs) *- set of crypto functions*
