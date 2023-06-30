@@ -26,11 +26,19 @@ TAG=latest
 TEXT_HELPER="\nThis script aims to manage a local kubernetes cluster using Kind also known as Kubernetes in Docker.
 Following flags are available:
 
-  -c    Command tu run. Available commands are 'create' ro 'delete'.
+  -c    Command tu run. Multiple commands can be provided as a comma separated list.
+        Available commands are :
+          build   - Build and push to the local registry docker compose images.
+          create  - Create local registry and kind cluster.
+          delete  - Delete local registry and kind cluster.
+          deploy  - Deploy application for development.
+          test    - Start e2e tests with cypress.
 
-  -d    Domains to add in /etc/hosts for local services resolution. Comma separated list.
+  -d    Domains to add in /etc/hosts for local services resolution. Comma separated list. This will require sudo.
 
   -f    Path to the docker-compose file that will be used with Kind.
+
+  -i    Install kind.
 
   -n    Custom namespace used to tag images.
 
@@ -43,7 +51,7 @@ print_help() {
 }
 
 # Parse options
-while getopts hc:d:f:n:t: flag; do
+while getopts hc:d:f:in:t: flag; do
   case "${flag}" in
     c)
       COMMAND=${OPTARG};;
@@ -51,6 +59,8 @@ while getopts hc:d:f:n:t: flag; do
       DOMAINS=${OPTARG};;
     f)
       COMPOSE_FILE=${OPTARG};;
+    i)
+      INSTALL_KIND=true;;
     n)
       NAMESPACE=${OPTARG};;
     t)
@@ -87,6 +97,11 @@ install_kind() {
   printf "\n\nkind version $(kind --version) installed\n\n"
 }
 
+if [ "$INSTALL_KIND" = "true" ]; then
+  install_kind
+fi
+
+
 # Script condition
 if [ -z "$(kind --version)" ]; then
   while true; do
@@ -102,7 +117,7 @@ if [ -z "$(kind --version)" ]; then
   done
 fi
 
-if [ "$COMMAND" = "create" ] && [ ! -f "$(readlink -f $COMPOSE_FILE)" ]; then
+if [[ "$COMMAND" =~ "build" ]] && [ ! -f "$(readlink -f $COMPOSE_FILE)" ]; then
   echo "\nDocker compose file $COMPOSE_FILE does not exist."
   print_help
   exit 1
@@ -110,7 +125,7 @@ fi
 
 
 # Maage Kind cluster
-if [ "$COMMAND" = "create" ]; then
+if [[ "$COMMAND" =~ "create" ]]; then
   # Create registry container unless it already exists
   if [ "$(docker inspect -f '{{.State.Running}}' "${REGISTRY_NAME}" 2>/dev/null || true)" != 'true' ]; then
     printf "\n\n${red}${i}.${no_color} Create container registry\n\n"
@@ -134,7 +149,7 @@ if [ "$COMMAND" = "create" ]; then
       cat <<EOF | docker exec -i "${node}" cp /dev/stdin "${REGISTRY_DIR}/hosts.toml"
 [host."http://${REGISTRY_NAME}:5000"]
 EOF
-  done
+    done
 
     # Connect the registry to the cluster
     printf "\n\n${red}${i}.${no_color} Connect registry to the cluster\n\n"
@@ -163,35 +178,37 @@ EOF
     i=$(($i + 1))
     helm repo add traefik https://traefik.github.io/charts && helm repo update
     helm upgrade --install --namespace traefik --create-namespace --values $SCRIPTPATH/configs/traefik-values.yml traefik traefik/traefik
+  fi
+fi
 
-    # Push images to cluster registry
-    printf "\n\n${red}${i}.${no_color} Push images to cluster registry\n\n"
-    i=$(($i + 1))
-    if [ "$NAMESPACE" = "" ]; then
-      IMAGES=($(sh $SCRIPTPATH/../scripts/compose-to-matrix.sh -f $COMPOSE_FILE -t $TAG -r localhost:5001 | jq -c '.[] | select(.build != false)'))
+if [[ "$COMMAND" =~ "build" ]]; then
+  # Push images to cluster registry
+  printf "\n\n${red}${i}.${no_color} Push images to cluster registry\n\n"
+  i=$(($i + 1))
+  if [ "$NAMESPACE" = "" ]; then
+    IMAGES=($(sh $SCRIPTPATH/../scripts/compose-to-matrix.sh -f $COMPOSE_FILE -t $TAG -r localhost:5001 | jq -c '.[] | select(.build != false)'))
+  else
+    IMAGES=($(sh $SCRIPTPATH/../scripts/compose-to-matrix.sh -f $COMPOSE_FILE -t $TAG -n $NAMESPACE -r localhost:5001 | jq -c '.[] | select(.build != false)'))
+  fi
+  for image in ${IMAGES[*]}; do
+    TAG="$(echo $image | jq -r '.build.tags[0]')"
+    CONTEXT="$(echo $image | jq -r '.build.context')"
+    DOCKERFILE="$(echo $image | jq -r '.build.dockerfile')"
+    TARGET="$(echo $image | jq -r '.build.target')"
+    if [ "$TARGET" = "null" ]; then
+      docker build --file "$DOCKERFILE" --tag "$TAG" --push "$CONTEXT"
     else
-      IMAGES=($(sh $SCRIPTPATH/../scripts/compose-to-matrix.sh -f $COMPOSE_FILE -t $TAG -n $NAMESPACE -r localhost:5001 | jq -c '.[] | select(.build != false)'))
+      docker build --file "$DOCKERFILE" --tag "$TAG" --target "$TARGET" --push "$CONTEXT"
     fi
-    for image in ${IMAGES[*]}; do
-      TAG="$(echo $image | jq -r '.build.tags[0]')"
-      CONTEXT="$(echo $image | jq -r '.build.context')"
-      DOCKERFILE="$(echo $image | jq -r '.build.dockerfile')"
-      TARGET="$(echo $image | jq -r '.build.target')"
-      if [ "$TARGET" = "null" ]; then
-        docker build --file "$DOCKERFILE" --tag "$TAG" --push "$CONTEXT"
-      else
-        docker build --file "$DOCKERFILE" --tag "$TAG" --target "$TARGET" --push "$CONTEXT"
-      fi
-    done
-  fi
+  done
+fi
 
-  # Add local services to /etc/hosts
-  if [ ! -z "$DOMAINS" ]; then
-    printf "\n\n${red}${i}.${no_color} Add local services to /etc/hosts\n\n"
-    i=$(($i + 1))
-    FORMATED_DOMAINS=echo "$DOMAINS" | sed 's/,/\ /g'
-    [ ! $(sudo grep -q "$FORMATED_DOMAINS" /etc/hosts) ] && sudo sh -c "echo $'\n# Kind\n127.0.0.1  $FORMATED_DOMAINS' >> /etc/hosts"
-  fi
+# Add local services to /etc/hosts
+if [ ! -z "$DOMAINS" ]; then
+  printf "\n\n${red}${i}.${no_color} Add local services to /etc/hosts\n\n"
+  i=$(($i + 1))
+  FORMATED_DOMAINS=echo "$DOMAINS" | sed 's/,/\ /g'
+  [ ! $(sudo grep -q "$FORMATED_DOMAINS" /etc/hosts) ] && sudo sh -c "echo $'\n# Kind\n127.0.0.1  $FORMATED_DOMAINS' >> /etc/hosts"
 fi
 
 if [ "$COMMAND" = "delete" ]; then
