@@ -31,8 +31,6 @@ Following flags are available:
           build   - Build and push to the local registry docker compose images.
           create  - Create local registry and kind cluster.
           delete  - Delete local registry and kind cluster.
-          deploy  - Deploy application for development.
-          test    - Start e2e tests with cypress.
 
   -d    Domains to add in /etc/hosts for local services resolution. Comma separated list. This will require sudo.
 
