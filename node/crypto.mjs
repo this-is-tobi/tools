@@ -1,10 +1,15 @@
 import crypto from 'node:crypto'
 
-// encryptionKey should have length of 32 characters
+// encryptionKey should have an exact length of 32 characters
 const encryptionKey = 'a-key-with-exactly-32-characters' // process.env.ENCRYPTION_KEY
 // for AES use 16 as ivLength
 const ivLength = 16
 
+/**
+ * @function generateHash
+ * @param {string} password - Password to hash.
+ * @returns {promise} Hash of input password.
+*/
 export const generateHash = async (password) => {
   return new Promise((resolve, reject) => {
     const salt = crypto.randomBytes(8).toString('hex')
@@ -17,6 +22,12 @@ export const generateHash = async (password) => {
   })
 }
 
+/**
+ * @function compareToHash
+ * @param {string} password - Password to compare with hash.
+ * @param {string} hash - Hash to compare with password.
+ * @returns {promise} Equality of password and hash.
+*/
 export const compareToHash = async (password, hash) => {
   return new Promise((resolve, reject) => {
     const [salt, key] = hash.split(':')
@@ -30,6 +41,11 @@ export const compareToHash = async (password, hash) => {
   })
 }
 
+/**
+ * @function encrypt
+ * @param {string} text - Text to encrypt.
+ * @returns {promise} Encrypted text.
+*/
 export const encrypt = (text) => {
   return new Promise((resolve, reject) => {
     try {
@@ -44,6 +60,11 @@ export const encrypt = (text) => {
   })
 }
 
+/**
+ * @function decrypt
+ * @param {string} text - Encrypted text to decrypt.
+ * @returns {promise} Decrypted text.
+*/
 export const decrypt = (text) => {
   return new Promise((resolve, reject) => {
     try {
@@ -60,6 +81,11 @@ export const decrypt = (text) => {
   })
 }
 
+/**
+ * @function generateRandomPassword
+ * @param {number} [length=24] - Length of the generated password.
+ * @returns {string} Generated password.
+*/
 export const generateRandomPassword = (length = 24) => {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@-_#$*'
   return Array.from(crypto.getRandomValues(new Uint32Array(length)))
