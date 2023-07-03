@@ -9,7 +9,9 @@ export const generateHash = async (password) => {
   return new Promise((resolve, reject) => {
     const salt = crypto.randomBytes(8).toString('hex')
     crypto.scrypt(password, salt, 64, (err, derivedKey) => {
-      if (err) reject(err)
+      if (err) {
+        reject(err)
+      }
       resolve(salt + ':' + derivedKey.toString('hex'))
     })
   })
@@ -20,7 +22,9 @@ export const compareToHash = async (password, hash) => {
     const [salt, key] = hash.split(':')
     const keyBuffer = Buffer.from(key, 'hex')
     crypto.scrypt(password, salt, 64, (err, derivedKey) => {
-      if (err) reject(err)
+      if (err) {
+        reject(err)
+      }
       resolve(crypto.timingSafeEqual(keyBuffer, derivedKey))
     })
   })
@@ -56,13 +60,14 @@ export const decrypt = (text) => {
   })
 }
 
-export const generateRandomPassword = (length = 30) => {
+export const generateRandomPassword = (length = 24) => {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@-_#$*'
   return Array.from(crypto.getRandomValues(new Uint32Array(length)))
     .map((x) => chars[x % chars.length])
     .join('')
 }
 
+// Test functions
 (async () => {
   const password = 'Password42!'
 

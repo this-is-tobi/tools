@@ -101,7 +101,7 @@ MATRIX=$(cat "$COMPOSE_FILE" \
     --arg r "$REGISTRY" \
     --arg t "$TAGS" \
     '.services | to_entries | map({
-      image: (.value.image | split(":")[0]),
+      image: (.value.image),
       name: (.value.image | split(":")[0] | split("/")[-1]),
       build: (
         if .value.build then {
@@ -132,8 +132,8 @@ for t in $(echo $TAGS | tr "," "\n"); do
         'map(. |
           if .build != false then 
             .build.tags += [
-              ($r + $n + (.image | split("/")[-1]) + ":" + $major),
-              ($r + $n + (.image | split("/")[-1]) + ":" + $major + "." + $minor)
+              ($r + $n + (.image | split(":")[0] | split("/")[-1]) + ":" + $major),
+              ($r + $n + (.image | split(":")[0] | split("/")[-1]) + ":" + $major + "." + $minor)
             ]
           else
             .
@@ -149,7 +149,7 @@ for t in $(echo $TAGS | tr "," "\n"); do
       'map(. |
         if .build != false then
           .build.tags += [
-            ($r + $n + (.image | split("/")[-1]) + ":" + $t)
+            ($r + $n + (.image | split(":")[0] | split("/")[-1]) + ":" + $t)
           ]
         else
           .
@@ -179,7 +179,7 @@ MATRIX=$(echo "$MATRIX" \
     --arg t "$TAGS" \
     'map(. |
       if .build != false then 
-        .image = (.image  | split("/")[-1] + ":" + ($t | split(",")[0]))
+        .image = (.image | split(":")[0] | split("/")[-1] + ":" + ($t | split(",")[0]))
       else
         .
       end
