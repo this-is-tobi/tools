@@ -15,11 +15,6 @@ KIND_VERSION="$(kind --version)"
 
 # Default
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
-REGISTRY_NAME=kind-registry
-REGISTRY_PORT=5001
-REGISTRY_DIR="/etc/containerd/certs.d/localhost:${REGISTRY_PORT}"
-NAMESPACE=""
-TAG=latest
 
 
 # Declare script helper
@@ -38,10 +33,6 @@ Following flags are available:
 
   -i    Install kind.
 
-  -n    Custom namespace used to tag images.
-
-  -t    Tag to apply when building images.
-
   -h    Print script help.\n\n"
 
 print_help() {
@@ -49,7 +40,7 @@ print_help() {
 }
 
 # Parse options
-while getopts hc:d:f:in:t: flag; do
+while getopts hc:d:f:i flag; do
   case "${flag}" in
     c)
       COMMAND=${OPTARG};;
@@ -59,10 +50,6 @@ while getopts hc:d:f:in:t: flag; do
       COMPOSE_FILE=${OPTARG};;
     i)
       INSTALL_KIND=true;;
-    n)
-      NAMESPACE=${OPTARG};;
-    t)
-      TAG=${OPTARG};;
     h | *)
       print_help
       exit 0;;
@@ -122,104 +109,44 @@ if [[ "$COMMAND" =~ "build" ]] && [ ! -f "$(readlink -f $COMPOSE_FILE)" ]; then
 fi
 
 
-# Maage Kind cluster
+# Deploy cluster with trefik ingress controller
 if [[ "$COMMAND" =~ "create" ]]; then
-  # Create registry container unless it already exists
-  if [ "$(docker inspect -f '{{.State.Running}}' "${REGISTRY_NAME}" 2>/dev/null || true)" != 'true' ]; then
-    printf "\n\n${red}${i}.${no_color} Create container registry\n\n"
-    i=$(($i + 1))
-    docker run \
-      -d --restart=always -p "127.0.0.1:${REGISTRY_PORT}:5000" --name "${REGISTRY_NAME}" -v $SCRIPTPATH/registry:/var/lib/registry \
-      registry:2
-  fi
-
-  # Start cluster
   if [ -z "$(kind get clusters | grep 'kind')" ]; then
     printf "\n\n${red}${i}.${no_color} Create Kind cluster\n\n"
     i=$(($i + 1))
-    kind create cluster --config $SCRIPTPATH/configs/cluster.yml
 
-    # Add registry to nodes
-    printf "\n\n${red}${i}.${no_color} Add registry to cluster nodes\n\n"
-    i=$(($i + 1))
-    for node in $(kind get nodes); do
-      docker exec "${node}" mkdir -p "${REGISTRY_DIR}"
-      cat <<EOF | docker exec -i "${node}" cp /dev/stdin "${REGISTRY_DIR}/hosts.toml"
-[host."http://${REGISTRY_NAME}:5000"]
-EOF
-    done
+    kind create cluster --config $SCRIPTPATH/configs/kind-config.yml
 
-    # Connect the registry to the cluster
-    printf "\n\n${red}${i}.${no_color} Connect registry to the cluster\n\n"
-    i=$(($i + 1))
-    if [ "$(docker inspect -f='{{json .NetworkSettings.Networks.kind}}' "${REGISTRY_NAME}")" = 'null' ]; then
-      docker network connect "kind" "${REGISTRY_NAME}"
-    fi
 
-    # Add registry documentation
-    printf "\n\n${red}${i}.${no_color} Add registry doc\n\n"
-    i=$(($i + 1))
-    cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: local-registry-hosting
-  namespace: kube-public
-data:
-  localRegistryHosting.v1: |
-    host: "localhost:${REGISTRY_PORT}"
-    help: "https://kind.sigs.k8s.io/docs/user/local-registry/"
-EOF
-
-    # Install Traefik ingress controller
     printf "\n\n${red}${i}.${no_color} Install Traefik ingress controller\n\n"
     i=$(($i + 1))
+
     helm repo add traefik https://traefik.github.io/charts && helm repo update
     helm upgrade --install --namespace traefik --create-namespace --values $SCRIPTPATH/configs/traefik-values.yml traefik traefik/traefik
   fi
 fi
 
+# Build and load images into cluster nodes
 if [[ "$COMMAND" =~ "build" ]]; then
-  # Push images to cluster registry
   printf "\n\n${red}${i}.${no_color} Push images to cluster registry\n\n"
-  i=$(($i + 1))
-  if [ "$NAMESPACE" = "" ]; then
-    IMAGES=($(sh $SCRIPTPATH/../scripts/compose-to-matrix.sh -f $COMPOSE_FILE -t $TAG -r localhost:5001 | jq -c '.[] | select(.build != false)'))
-  else
-    IMAGES=($(sh $SCRIPTPATH/../scripts/compose-to-matrix.sh -f $COMPOSE_FILE -t $TAG -n $NAMESPACE -r localhost:5001 | jq -c '.[] | select(.build != false)'))
-  fi
-  for image in ${IMAGES[*]}; do
-    TAG="$(echo $image | jq -r '.build.tags[0]')"
-    CONTEXT="$(echo $image | jq -r '.build.context')"
-    DOCKERFILE="$(echo $image | jq -r '.build.dockerfile')"
-    TARGET="$(echo $image | jq -r '.build.target')"
-    if [ "$TARGET" = "null" ]; then
-      docker build --file "$DOCKERFILE" --tag "$TAG" --push "$CONTEXT"
-    else
-      docker build --file "$DOCKERFILE" --tag "$TAG" --target "$TARGET" --push "$CONTEXT"
-    fi
-  done
+
+  docker compose --file $COMPOSE_FILE build
+  kind load docker-image $(yq -o t '.services | map(select(.build) | .image)' ./docker-compose-prod.yml)
 fi
 
 # Add local services to /etc/hosts
 if [ ! -z "$DOMAINS" ]; then
   printf "\n\n${red}${i}.${no_color} Add local services to /etc/hosts\n\n"
   i=$(($i + 1))
+
   FORMATED_DOMAINS=echo "$DOMAINS" | sed 's/,/\ /g'
   [ ! $(sudo grep -q "$FORMATED_DOMAINS" /etc/hosts) ] && sudo sh -c "echo $'\n# Kind\n127.0.0.1  $FORMATED_DOMAINS' >> /etc/hosts"
 fi
 
+# Delete cluster
 if [ "$COMMAND" = "delete" ]; then
-  # Stop cluster
   printf "\n\n${red}${i}.${no_color} Delete Kind cluster\n\n"
   i=$(($i + 1))
-  kind delete cluster
 
-  # Delete registry container
-  printf "\n\n${red}${i}.${no_color} Delete cluster registry\n\n"
-  i=$(($i + 1))
-  if [ "$(docker inspect -f '{{.State.Running}}' "${REGISTRY_NAME}" 2>/dev/null || true)" = 'true' ]; then
-    docker stop "${REGISTRY_NAME}" && \
-      docker rm "${REGISTRY_NAME}" -v
-  fi
+  kind delete cluster
 fi

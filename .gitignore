@@ -1,5 +1,1 @@
 .env
-
-registry/data
-registry/auth
-registry/certs
