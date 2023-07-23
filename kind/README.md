@@ -28,3 +28,5 @@ sh "$(find . -d -name 'kind')"/run.sh -c delete
 ## Cluster
 
 One single node is deployed but it can be customized in `./configs/kind-config.yml`. The cluster comes with [Traefik](https://doc.traefik.io/traefik/providers/kubernetes-ingress/) ingress controller installed with port mapping on both ports `80` and `443`.
+
+The node is using `extraMounts` to provide a volume binding between host working directory and `/app` to give the ability to bind mount volumes into containers during development.

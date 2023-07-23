@@ -23,7 +23,7 @@ Following flags are available:
 
   -c    Command tu run. Multiple commands can be provided as a comma separated list.
         Available commands are :
-          build   - Build and push to the local registry docker compose images.
+          build   - Build and push load into nodes docker compose images.
           create  - Create local registry and kind cluster.
           delete  - Delete local registry and kind cluster.
 
@@ -82,30 +82,32 @@ install_kind() {
   printf "\n\nkind version $(kind --version) installed\n\n"
 }
 
-if [ "$INSTALL_KIND" = "true" ]; then
+if [ "$INSTALL_KIND" = "true" ] && [ -z "$(kind --version)" ]; then
   install_kind
 fi
 
 
 # Script condition
 if [ -z "$(kind --version)" ]; then
-  while true; do
-    read -p "\nYou need kind to run this script. Do you wish to install kind?\n" yn
-    case $yn in
-      [Yy]*)
-        install_kind;;
-      [Nn]*)
-        exit 0;;
-      *)
-        echo "\nPlease answer yes or no.\n";;
-    esac
-  done
+  echo "\nYou need kind to run this script.\n"
+  print_help
+  exit 1
 fi
 
 if [[ "$COMMAND" =~ "build" ]] && [ ! -f "$(readlink -f $COMPOSE_FILE)" ]; then
-  echo "\nDocker compose file $COMPOSE_FILE does not exist."
+  echo "\nDocker compose file $COMPOSE_FILE does not exist.\n"
   print_help
   exit 1
+fi
+
+
+# Add local services to /etc/hosts
+if [ ! -z "$DOMAINS" ]; then
+  printf "\n\n${red}${i}.${no_color} Add local services to /etc/hosts\n\n"
+  i=$(($i + 1))
+
+  FORMATED_DOMAINS="$(echo "$DOMAINS" | sed 's/,/\ /g')"
+  [ $(grep -q "$FORMATED_DOMAINS" /etc/hosts) ] && sudo sh -c "echo $'\n\n# Kind\n127.0.0.1  $FORMATED_DOMAINS' >> /etc/hosts"
 fi
 
 
@@ -126,22 +128,26 @@ if [[ "$COMMAND" =~ "create" ]]; then
   fi
 fi
 
+
 # Build and load images into cluster nodes
 if [[ "$COMMAND" =~ "build" ]]; then
   printf "\n\n${red}${i}.${no_color} Push images to cluster registry\n\n"
 
   docker compose --file $COMPOSE_FILE build
-  kind load docker-image $(yq -o t '.services | map(select(.build) | .image)' ./docker-compose-prod.yml)
+  kind load docker-image $(yq -o t '.services | map(select(.build) | .image)' $COMPOSE_FILE)
 fi
 
-# Add local services to /etc/hosts
-if [ ! -z "$DOMAINS" ]; then
-  printf "\n\n${red}${i}.${no_color} Add local services to /etc/hosts\n\n"
+
+# Clean cluster application resources
+if [ "$COMMAND" = "clean" ]; then
+  printf "\n\n${red}${i}.${no_color} Clean cluster resources\n\n"
   i=$(($i + 1))
 
-  FORMATED_DOMAINS=echo "$DOMAINS" | sed 's/,/\ /g'
-  [ ! $(sudo grep -q "$FORMATED_DOMAINS" /etc/hosts) ] && sudo sh -c "echo $'\n# Kind\n127.0.0.1  $FORMATED_DOMAINS' >> /etc/hosts"
+  helm uninstall dso
+  kubectl delete pvc/dso-db-storage
+  helm uninstall dso-utils
 fi
+
 
 # Delete cluster
 if [ "$COMMAND" = "delete" ]; then
