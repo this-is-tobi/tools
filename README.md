@@ -22,4 +22,4 @@ Utility tools & scripts
 ## Tools
 
 - [act](https://github.com/nektos/act) *- local github action act wrapper*
-- [kind](https://github.com/kubernetes-sigs/kind/t) *- local kubernetes kind wrapper*
+- [kind](https://github.com/kubernetes-sigs/kind) *- local kubernetes kind wrapper*
