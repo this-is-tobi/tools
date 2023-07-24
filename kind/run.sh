@@ -6,15 +6,14 @@ set -e
 red='\e[0;31m'
 no_color='\033[0m'
 
-# Console step increment
-i=1
-
 # Get versions
 DOCKER_VERSION="$(docker --version)"
 KIND_VERSION="$(kind --version)"
 
 # Default
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+HELM_RELEASE_NAME="my-app"
+HELM_DIRECTORY="./helm"
 
 
 # Declare script helper
@@ -26,6 +25,8 @@ Following flags are available:
           build   - Build and push load into nodes docker compose images.
           create  - Create local registry and kind cluster.
           delete  - Delete local registry and kind cluster.
+          dev     - Run application in development mode.
+          prod    - Run application in production mode.
 
   -d    Domains to add in /etc/hosts for local services resolution. Comma separated list. This will require sudo.
 
@@ -59,7 +60,7 @@ done
 
 # Utils
 install_kind() {
-  printf "\n\n${red}Optional.${no_color} Install kind...\n\n"
+  printf "\n\n${red}[kind wrapper].${no_color} Install kind...\n\n"
   if [ "$(uname)" = "Linux" ]; then
     OS=linux
   elif [ "$(uname)" = "Darwin" ]; then
@@ -89,7 +90,7 @@ fi
 
 # Script condition
 if [ -z "$(kind --version)" ]; then
-  echo "\nYou need kind to run this script.\n"
+  echo "\nYou need to install kind to run this script.\n"
   print_help
   exit 1
 fi
@@ -103,35 +104,44 @@ fi
 
 # Add local services to /etc/hosts
 if [ ! -z "$DOMAINS" ]; then
-  printf "\n\n${red}${i}.${no_color} Add local services to /etc/hosts\n\n"
-  i=$(($i + 1))
+  printf "\n\n${red}[kind wrapper].${no_color} Add local services to /etc/hosts\n\n"
 
   FORMATED_DOMAINS="$(echo "$DOMAINS" | sed 's/,/\ /g')"
-  [ $(grep -q "$FORMATED_DOMAINS" /etc/hosts) ] && sudo sh -c "echo $'\n\n# Kind\n127.0.0.1  $FORMATED_DOMAINS' >> /etc/hosts"
+  if [ "$(grep -c "$FORMATED_DOMAINS" /etc/hosts)" -ge 1 ]; then
+    printf "\n\n${red}[kind wrapper].${no_color} Services local domains already added to /etc/hosts\n\n"
+  else
+    sudo sh -c "echo $'\n\n# Kind\n127.0.0.1  $FORMATED_DOMAINS' >> /etc/hosts"
+
+    printf "\n\n${red}[kind wrapper].${no_color} Services local domains successfully added to /etc/hosts\n\n"
+  fi
 fi
 
 
 # Deploy cluster with trefik ingress controller
 if [[ "$COMMAND" =~ "create" ]]; then
   if [ -z "$(kind get clusters | grep 'kind')" ]; then
-    printf "\n\n${red}${i}.${no_color} Create Kind cluster\n\n"
-    i=$(($i + 1))
+    printf "\n\n${red}[kind wrapper].${no_color} Create Kind cluster\n\n"
 
     kind create cluster --config $SCRIPTPATH/configs/kind-config.yml
 
 
-    printf "\n\n${red}${i}.${no_color} Install Traefik ingress controller\n\n"
-    i=$(($i + 1))
+    printf "\n\n${red}[kind wrapper].${no_color} Install Traefik ingress controller\n\n"
 
     helm repo add traefik https://traefik.github.io/charts && helm repo update
-    helm upgrade --install --namespace traefik --create-namespace --values $SCRIPTPATH/configs/traefik-values.yml traefik traefik/traefik
+    helm upgrade \
+      --install \
+      --wait \
+      --namespace traefik \
+      --create-namespace \
+      --values $SCRIPTPATH/configs/traefik-values.yml \
+      traefik traefik/traefik
   fi
 fi
 
 
 # Build and load images into cluster nodes
 if [[ "$COMMAND" =~ "build" ]]; then
-  printf "\n\n${red}${i}.${no_color} Push images to cluster registry\n\n"
+  printf "\n\n${red}[kind wrapper].${no_color} Load images into cluster node\n\n"
 
   docker compose --file $COMPOSE_FILE build
   kind load docker-image $(yq -o t '.services | map(select(.build) | .image)' $COMPOSE_FILE)
@@ -140,19 +150,41 @@ fi
 
 # Clean cluster application resources
 if [ "$COMMAND" = "clean" ]; then
-  printf "\n\n${red}${i}.${no_color} Clean cluster resources\n\n"
-  i=$(($i + 1))
+  printf "\n\n${red}[kind wrapper].${no_color} Clean cluster resources\n\n"
 
-  helm uninstall dso
-  kubectl delete pvc/dso-db-storage
-  helm uninstall dso-utils
+  helm uninstall $HELM_RELEASE_NAME
+fi
+
+
+# Deploy application in dev or test mode
+if [[ "$COMMAND" =~ "dev" ]]; then
+  printf "\n\n${red}[kind wrapper].${no_color} Deploy application in development mode\n\n"
+
+  helm upgrade \
+    --install \
+    --wait \
+    $HELM_RELEASE_NAME $HELM_DIRECTORY
+
+  for i in $(kubectl get deploy -o name); do 
+    kubectl rollout status $i -w --timeout=150s; 
+  done
+elif [[ "$COMMAND" =~ "prod" ]]; then
+  printf "\n\n${red}[kind wrapper].${no_color} Deploy application in production mode\n\n"
+
+  helm upgrade \
+    --install \
+    --wait \
+    $HELM_RELEASE_NAME $HELM_DIRECTORY
+
+  for i in $(kubectl get deploy -o name); do 
+    kubectl rollout status $i -w --timeout=150s; 
+  done
 fi
 
 
 # Delete cluster
 if [ "$COMMAND" = "delete" ]; then
-  printf "\n\n${red}${i}.${no_color} Delete Kind cluster\n\n"
-  i=$(($i + 1))
+  printf "\n\n${red}[kind wrapper].${no_color} Delete Kind cluster\n\n"
 
   kind delete cluster
 fi
