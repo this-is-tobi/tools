@@ -104,7 +104,7 @@ fi
 
 # Add local services to /etc/hosts
 if [ ! -z "$DOMAINS" ]; then
-  printf "\n\n${red}[kind wrapper].${no_color} Add local services to /etc/hosts\n\n"
+  printf "\n\n${red}[kind wrapper].${no_color} Add services local domains to /etc/hosts\n\n"
 
   FORMATED_DOMAINS="$(echo "$DOMAINS" | sed 's/,/\ /g')"
   if [ "$(grep -c "$FORMATED_DOMAINS" /etc/hosts)" -ge 1 ]; then
@@ -144,7 +144,8 @@ if [[ "$COMMAND" =~ "build" ]]; then
   printf "\n\n${red}[kind wrapper].${no_color} Load images into cluster node\n\n"
 
   docker compose --file $COMPOSE_FILE build
-  kind load docker-image $(yq -o t '.services | map(select(.build) | .image)' $COMPOSE_FILE)
+  kind load docker-image $(cat "$COMPOSE_FILE" \
+  | docker run -i --rm mikefarah/yq -o t '.services | map(select(.build) | .image)')
 fi
 
 
