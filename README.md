@@ -12,6 +12,7 @@ Utility tools & scripts
 
 ## Shell
 
+- [add-keycloak-users.sh](./shell/add-keycloak-users.sh) *- add keycloak users for a given keycloak realm*
 - [clone-subdir.sh](./shell/clone-subdir.sh) *- clone a subdirectory from a git repository*
 - [compose-to-matrix.sh](./shell/compose-to-matrix.sh) *- parse docker-compose file to create github matrix*
 - [copy-env-examples.sh](./shell/copy-env-examples.sh) *- copy all git project env\*-examples files to env files*
