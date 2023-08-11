@@ -70,13 +70,13 @@ install_kind() {
     exit 0
   fi
 
-  if [ "$(uname)" = "x86_64" ]; then
+  if [ "$(uname -p)" = "x86_64" ]; then
     ARCH=amd64
-  elif [ "$(uname)" = "arm64" ] || [ "$(uname)" = "aarch64" ]; then
+  elif [ "$(uname -p)" = "arm64" ] || [ "$(uname -p)" = "aarch64" ]; then
     ARCH=arm64
   fi
 
-  curl -Lo ./kind "https://kind.sigs.k8s.io/dl/v0.20.0/kind-$OS-$ARCH"
+  curl -Lo ./kind "https://kind.sigs.k8s.io/dl/v0.20.0/kind-${OS}-${ARCH}"
   chmod +x ./kind
   mv ./kind /usr/local/bin/kind
 
