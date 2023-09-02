@@ -13,11 +13,8 @@ curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
 Put this directory in your git project, then :
 
 ```sh
-# Go to the root level of the git project
-cd `git rev-parse --show-toplevel`
-
-# Start act wrapper
-sh "$(find . -d -name 'act')"/scripts/run-ci-locally.sh
+# Start act
+sh run-ci-locally.sh
 ```
 
 ## Results analysis
