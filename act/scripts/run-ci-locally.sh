@@ -10,7 +10,7 @@ i=1
 PROJECT_DIR="$(git rev-parse --show-toplevel)"
 ACT_DIR="$(cd $PROJECT_DIR && find $(pwd) -type d -iname 'act' -not -path '**/act/**')"
 ACT_ENV_FILE="${ACT_DIR}/env/.env"
-REGISTRY_DIR="$ACT_DIR/docker/registry"
+REGISTRY_DIR="$ACT_DIR/registry"
 
 # Get versions
 ACT_VERSION="$(act --version)"
@@ -140,12 +140,6 @@ if [ "$START_REGISTRY" = "true" ]; then
 fi
 
 
-printf "\n\n${red}${i}.${no_color} Builds docker image use by act as Github runner\n\n"
-i=$(($i + 1))
-
-docker build -t localhost:6000/act/ubuntu:latest $ACT_DIR/docker
-
-
 printf "\n\n${red}${i}.${no_color} Displays workflow list\n\n"
 i=$(($i + 1))
 
@@ -168,7 +162,7 @@ printf "\n\n${red}${i}.${no_color} Runs locally GitHub Actions workflow\n\n"
 i=$(($i + 1))
 
 act "$EVENT_NAME" \
-  --platform "ubuntu-latest=localhost:6000/act/ubuntu:latest" \
+  --platform "ubuntu-latest=ghcr.io/this-is-tobi/tools/act-runner:latest" \
   --workflows "$WORKFLOW_DIR" \
   --eventpath "$EVENT_FILE" \
   --use-gitignore \

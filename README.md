@@ -22,5 +22,5 @@ Utility tools & scripts
 
 ## Tools
 
-- [act](https://github.com/nektos/act) *- local github action act wrapper*
-- [kind](https://github.com/kubernetes-sigs/kind) *- local kubernetes kind wrapper*
+- [act](./act/README.md) *- local github action act wrapper*
+- [kind](./kind/README.md) *- local kubernetes kind wrapper*

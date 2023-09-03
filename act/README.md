@@ -24,11 +24,30 @@ Once the CI has finished running locally, artifacts are available in the folder 
 ## Local registry
 
 It is possible to start a local docker registry running on port `5555` by adding `-r` flag on script `run-ci-locally.sh`.
-For more details, see `./docker/registry/docker-compose.registry.yml`.
+For more details, see `./registry/docker-compose.registry.yml`.
 
 ## Runner
 
-Runner docker image can be customized in `./docker/Dockerfile`, by default it provides :
+Runner docker image can be customized in `./runners/Dockerfile`, by default it provides :
 - docker
 - nodejs
+- act
+- github-cli
+- golang-go
+- helm
+- helm-docs
+- k9s
+- kind
+- krew
+- kubectl
+- kubectx
+- kubens
+- kustomize
+- minio-client
+- rclone
+- scw
+- terraform
+- trivy
+- vault
+- yq
 - tools for cypress

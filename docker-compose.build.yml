@@ -1,0 +1,11 @@
+version: '3.9'
+
+services:
+  server:
+    build:
+      context: act/runners
+      dockerfile: Dockerfile
+      target: build
+    image: act-runner:1.0.0
+    networks:
+      - dso-network
