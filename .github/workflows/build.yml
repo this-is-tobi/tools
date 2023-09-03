@@ -1,0 +1,60 @@
+name: Build and push images
+
+on:
+  workflow_dispatch:
+
+env:
+  REGISTRY: "ghcr.io"
+  NAMESPACE: "${{ github.repository }}"
+  PLATFORMS: "linux/amd64,linux/arm64"
+
+jobs:
+  matrix:
+    name: Generate matrix for build
+    runs-on: ubuntu-latest
+    outputs:
+      build-matrix: ${{ steps.build-matrix.outputs.BUILD_MATRIX }}
+    steps:
+      - name: Checks-out repository
+        uses: actions/checkout@v3
+      - name: Generate matrix for build
+        id: build-matrix
+        run: |
+          echo 'BUILD_MATRIX<<EOF' >> $GITHUB_OUTPUT
+          ./shell/compose-to-matrix.sh -f ./docker-compose.build.yml -c -p "${{ env.PLATFORMS }}" -r "${{ env.REGISTRY }}" -n "${{ env.NAMESPACE }}" -a >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+
+  build:
+    name: Build images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    needs:
+      - matrix
+    strategy:
+      matrix:
+        images: ${{ fromJSON(needs.matrix.outputs.build-matrix) }}
+    steps:
+      - name: Checks-out repository
+        uses: actions/checkout@v3
+      - name: Set up Docker buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Set up QEMU (for multi platform build)
+        uses: docker/setup-qemu-action@v2
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          logout: true
+      - name: Build docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ${{ matrix.images.build.context }}
+          file: ${{ matrix.images.build.dockerfile }}
+          tags: ${{ matrix.images.build.tags }}
+          target: ${{ matrix.images.build.target }}
+          platforms: ${{ matrix.images.build.platforms }}
+          push: true
