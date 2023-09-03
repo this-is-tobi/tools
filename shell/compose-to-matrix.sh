@@ -14,7 +14,7 @@ DOCKER_VERSION="$(docker --version)"
 
 # Default
 REGISTRY="docker.io"
-TAGS="latest"
+# TAGS="latest"
 COMMIT_SHA="$(git rev-parse --short HEAD)"
 PLATFORMS="linux/amd64"
 CSV=false
@@ -103,6 +103,7 @@ MATRIX=$(cat "$COMPOSE_FILE" \
     '.services | to_entries | map({
       image: (.value.image),
       name: (.value.image | split(":")[0] | split("/")[-1]),
+      defaultTag: (.value.image | split(":")[1]),
       build: (
         if .value.build then {
           context: ($d + "/" + .value.build.context),
@@ -117,45 +118,62 @@ MATRIX=$(cat "$COMPOSE_FILE" \
       })')
 
 # Add tags in matrix
-for t in $(echo $TAGS | tr "," "\n"); do
-  if [[ "$t" == *"."*"."* ]] && [[ "$RECURSIVE" == "true" ]]; then
-    MAJOR_VERSION="$(echo $t | cut -d "." -f 1)"
-    MINOR_VERSION="$(echo $t | cut -d "." -f 2)"
-    PATCH_VERSION="$(echo $t | cut -d "." -f 3)"
+if [ ! -z "$TAGS" ]; then
+  for t in $(echo $TAGS | tr "," "\n"); do
+    if [[ "$t" == *"."*"."* ]] && [[ "$RECURSIVE" == "true" ]]; then
+      MAJOR_VERSION="$(echo $t | cut -d "." -f 1)"
+      MINOR_VERSION="$(echo $t | cut -d "." -f 2)"
+      PATCH_VERSION="$(echo $t | cut -d "." -f 3)"
+
+      MATRIX=$(echo "$MATRIX" \
+        | jq \
+          --arg r "$REGISTRY" \
+          --arg n "$NAMESPACE" \
+          --arg major "$MAJOR_VERSION" \
+          --arg minor "$MINOR_VERSION" \
+          'map(. |
+            if .build != false then 
+              .build.tags += [
+                ($r + $n + (.image | split(":")[0] | split("/")[-1]) + ":" + $major),
+                ($r + $n + (.image | split(":")[0] | split("/")[-1]) + ":" + $major + "." + $minor)
+              ]
+            else
+              .
+            end
+          )')
+    fi
 
     MATRIX=$(echo "$MATRIX" \
       | jq \
+        --arg t "$t" \
         --arg r "$REGISTRY" \
         --arg n "$NAMESPACE" \
-        --arg major "$MAJOR_VERSION" \
-        --arg minor "$MINOR_VERSION" \
         'map(. |
-          if .build != false then 
+          if .build != false then
             .build.tags += [
-              ($r + $n + (.image | split(":")[0] | split("/")[-1]) + ":" + $major),
-              ($r + $n + (.image | split(":")[0] | split("/")[-1]) + ":" + $major + "." + $minor)
+              ($r + $n + (.image | split(":")[0] | split("/")[-1]) + ":" + $t)
             ]
           else
             .
           end
         )')
-  fi
-
+  done
+else
   MATRIX=$(echo "$MATRIX" \
     | jq \
-      --arg t "$t" \
       --arg r "$REGISTRY" \
       --arg n "$NAMESPACE" \
       'map(. |
         if .build != false then
           .build.tags += [
-            ($r + $n + (.image | split(":")[0] | split("/")[-1]) + ":" + $t)
+            ($r + $n + .image),
+            ($r + $n + (.image | split(":")[0] | split("/")[-1]) + ":latest")
           ]
         else
           .
         end
       )')
-done
+fi
 
 # Add platforms in matrix
 for p in $(echo $PLATFORMS | tr "," "\n"); do
