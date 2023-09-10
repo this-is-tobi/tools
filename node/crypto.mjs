@@ -6,6 +6,7 @@ const encryptionKey = 'a-key-with-exactly-32-characters' // process.env.ENCRYPTI
 const ivLength = 16
 
 /**
+ * Hash a given password.
  * @function generateHash
  * @param {string} password - Password to hash.
  * @returns {promise} Hash of input password.
@@ -23,6 +24,7 @@ export const generateHash = async (password) => {
 }
 
 /**
+ * Compare given password and hash to test if it match.
  * @function compareToHash
  * @param {string} password - Password to compare with hash.
  * @param {string} hash - Hash to compare with password.
@@ -42,6 +44,7 @@ export const compareToHash = async (password, hash) => {
 }
 
 /**
+ * Encrypt a given value with an encryption key.
  * @function encrypt
  * @param {string} text - Text to encrypt.
  * @returns {promise} Encrypted text.
@@ -61,6 +64,7 @@ export const encrypt = (text) => {
 }
 
 /**
+ * Decrypt a given value with an encryption key.
  * @function decrypt
  * @param {string} text - Encrypted text to decrypt.
  * @returns {promise} Decrypted text.
@@ -82,12 +86,13 @@ export const decrypt = (text) => {
 }
 
 /**
+ * Generate a random password
  * @function generateRandomPassword
  * @param {number} [length=24] - Length of the generated password.
  * @returns {string} Generated password.
 */
 export const generateRandomPassword = (length = 24) => {
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@-_#$*'
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@-_#*'
   return Array.from(crypto.getRandomValues(new Uint32Array(length)))
     .map((x) => chars[x % chars.length])
     .join('')
