@@ -1,11 +1,16 @@
 version: '3.9'
 
 services:
-  server:
+  act-runner:
     build:
-      context: act/runners
+      context: docker/act
       dockerfile: Dockerfile
       target: build
     image: act-runner:1.0.0
-    networks:
-      - dso-network
+
+  debug:
+    build:
+      context: docker/debug
+      dockerfile: Dockerfile
+      target: build
+    image: debug:1.0.0
