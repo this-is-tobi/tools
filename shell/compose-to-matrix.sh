@@ -165,10 +165,19 @@ else
       --arg n "$NAMESPACE" \
       'map(. |
         if .build != false then
-          .build.tags += [
-            ($r + $n + .image),
-            ($r + $n + (.image | split(":")[0] | split("/")[-1]) + ":latest")
-          ]
+          if .defaultTag | test("^[0-9].[0-9].[0-9]") then
+            .build.tags += [
+              ($r + $n + (.image | split(":")[0] | split("/")[-1]) + ":" + (.defaultTag | split(".")[0])),
+              ($r + $n + (.image | split(":")[0] | split("/")[-1]) + ":" + (.defaultTag | split(".")[0]) + "." + (.defaultTag | split(".")[1])),
+              ($r + $n + .image),
+              ($r + $n + (.image | split(":")[0] | split("/")[-1]) + ":latest")
+            ]
+          else
+            .build.tags += [
+              ($r + $n + .image),
+              ($r + $n + (.image | split(":")[0] | split("/")[-1]) + ":latest")
+            ]
+          end
         else
           .
         end
