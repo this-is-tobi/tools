@@ -4,7 +4,7 @@ Utility tools & scripts
 
 ## Docker
 
-- [act](./docker/act/Dockerfile) *- act runner for local CI tests (ubuntu based)*
+- [act-runner](./docker/act-runner/Dockerfile) *- act runner for local CI tests (ubuntu based)*
 - [debug](./docker/debug/Dockerfile) *- debug image with all convenients tools (debian based)*
 - [nginx](./docker/nginx/Dockerfile) *- bitnami/nignx rootless conf with variables substitution*
 

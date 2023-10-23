@@ -3,7 +3,7 @@ version: '3.9'
 services:
   act-runner:
     build:
-      context: docker/act
+      context: docker/act-runner
       dockerfile: Dockerfile
       target: build
     image: act-runner:1.0.0
