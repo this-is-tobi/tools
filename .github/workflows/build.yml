@@ -37,9 +37,7 @@ jobs:
       - name: Generate matrix for build
         id: build-matrix
         run: |
-          echo 'BUILD_MATRIX<<EOF' >> $GITHUB_OUTPUT
-          ./shell/compose-to-matrix.sh -f ./docker-compose.build.yml -c -p "${{ env.PLATFORMS }}" -r "${{ env.REGISTRY }}" -n "${{ env.NAMESPACE }}" -a >> $GITHUB_OUTPUT
-          echo 'EOF' >> $GITHUB_OUTPUT
+          echo "BUILD_MATRIX=$(jq -c . < ./ci/matrix.json)" >> $GITHUB_OUTPUT
 
   build:
     name: Build images
@@ -53,17 +51,40 @@ jobs:
       matrix:
         images: ${{ fromJSON(needs.matrix.outputs.build-matrix) }}
     steps:
+      - name: Get repository owner and name
+        id: image-status
+        run: |
+          IMAGE_STATUS=$(curl \
+            --head \
+            --silent \
+            --write-out '%{http_code}' \
+            --output /dev/null \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            https://ghcr.io/v2/${{ github.repository }}/${{ matrix.images.name }}/manifests/${{ matrix.images.build.tag }})
+          echo "IMAGE_STATUS=$IMAGE_STATUS" >> $GITHUB_OUTPUT
+
+      - name: Get image tags
+        id: image-tags
+        run: |
+          MAJOR_VERSION="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 1)"
+          MINOR_VERSION="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 2)"
+          echo "IMAGE_TAGS=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:${{ matrix.images.build.tag }},${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:$MAJOR_VERSION.$MINOR_VERSION,${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:$MAJOR_VERSION,${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:latest" >> $GITHUB_OUTPUT
+
       - name: Checks-out repository
         uses: actions/checkout@v3
+        if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
 
       - name: Set up Docker buildx
         uses: docker/setup-buildx-action@v3
+        if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
 
       - name: Set up QEMU (for multi platform build)
         uses: docker/setup-qemu-action@v3
+        if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
+        if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ env.REGISTRY == 'ghcr.io' && github.actor || secrets.REGISTRY_USERNAME }}
@@ -72,11 +93,12 @@ jobs:
 
       - name: Build docker image
         uses: docker/build-push-action@v5
+        if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
         with:
           context: ${{ matrix.images.build.context }}
           file: ${{ matrix.images.build.dockerfile }}
-          tags: ${{ matrix.images.build.tags }}
+          tags: ${{ steps.image-tags.outputs.IMAGE_TAGS }}
           target: ${{ matrix.images.build.target }}
-          platforms: ${{ matrix.images.build.platforms }}
+          platforms: ${{ env.PLATFORMS }}
           push: true
           provenance: false

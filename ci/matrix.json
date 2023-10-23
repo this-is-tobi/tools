@@ -1,0 +1,29 @@
+[
+  {
+    "name": "act-runner",
+    "build": {
+      "context": "./docker/act-runner",
+      "dockerfile": "./docker/act-runner/Dockerfile",
+      "target": "build",
+      "tag": "1.0.0"
+    }
+  },
+  {
+    "name": "debug",
+    "build": {
+      "context": "./docker/debug",
+      "dockerfile": "./docker/debug/Dockerfile",
+      "target": "build",
+      "tag": "1.0.0"
+    }
+  },
+  {
+    "name": "pg-backup",
+    "build": {
+      "context": "./docker/pg-backup",
+      "dockerfile": "./docker/pg-backup/Dockerfile",
+      "target": "build",
+      "tag": "1.0.0"
+    }
+  }
+]
