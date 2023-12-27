@@ -25,7 +25,8 @@ __Templates images :__
 - [compose-to-matrix.sh](./shell/compose-to-matrix.sh) *- parse docker-compose file to create github matrix.*
 - [copy-env-examples.sh](./shell/copy-env-examples.sh) *- copy all git project env\*-examples files to env files.*
 - [delete-ghcr-image.sh](./shell/delete-ghcr-image.sh) *- delete image and subsequent manifests from ghcr.*
-- [get-keycloak-token.sh](./shell/get-keycloak-token.sh) *- display keycloak token for a given keycloak realm, client and user.*
+- [export-argocd-resources.sh](./shell/export-argocd-resources.sh) *- export ready-to-apply argocd resources.*
+- [get-keycloak-token.sh](./shell/get-keycloak-token.sh) *- display keycloak token for the given infos.*
 - [manage-etc-hosts.sh](./shell/manage-etc-hosts.sh) *- add or update host ip adress in /etc/hosts.*
 - [trivy-report.sh](./shell/trivy-report.sh) *- parse trivy json reports to create a markdown summary.*
 
