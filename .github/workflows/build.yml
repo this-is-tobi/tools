@@ -51,6 +51,14 @@ jobs:
       matrix:
         images: ${{ fromJSON(needs.matrix.outputs.build-matrix) }}
     steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.REGISTRY == 'ghcr.io' && github.actor || secrets.REGISTRY_USERNAME }}
+          password: ${{ env.REGISTRY == 'ghcr.io' && secrets.GITHUB_TOKEN || secrets.REGISTRY_PASSWORD }}
+          logout: true
+
       - name: Get repository owner and name
         id: image-status
         run: |
@@ -59,8 +67,8 @@ jobs:
             --silent \
             --write-out '%{http_code}' \
             --output /dev/null \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            https://ghcr.io/v2/${{ github.repository }}/${{ matrix.images.name }}/manifests/${{ matrix.images.build.tag }})
+            -H "Authorization: Bearer $(echo -n '${{ secrets.GITHUB_TOKEN }}' | base64)" \
+            https://${{ env.REGISTRY }}/v2/${{ env.NAMESPACE }}/${{ matrix.images.name }}/manifests/${{ matrix.images.build.tag }})
           echo "IMAGE_STATUS=$IMAGE_STATUS" >> $GITHUB_OUTPUT
 
       - name: Get image tags
@@ -81,15 +89,6 @@ jobs:
       - name: Set up QEMU (for multi platform build)
         uses: docker/setup-qemu-action@v3
         if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ env.REGISTRY == 'ghcr.io' && github.actor || secrets.REGISTRY_USERNAME }}
-          password: ${{ env.REGISTRY == 'ghcr.io' && secrets.GITHUB_TOKEN || secrets.REGISTRY_PASSWORD }}
-          logout: true
 
       - name: Build docker image
         uses: docker/build-push-action@v5
