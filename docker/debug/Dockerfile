@@ -20,8 +20,8 @@ RUN apt update && apt install -y \
 
 RUN sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen && sudo locale-gen
 
-RUN useradd -ms /bin/zsh $USER \
-  && echo "$USER  ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/$USER
+RUN useradd -ms /bin/zsh "$USER" \
+  && echo "$USER  ALL=(ALL) NOPASSWD:ALL" | sudo tee "/etc/sudoers.d/$USER"
 
 USER debian
 WORKDIR $HOME
