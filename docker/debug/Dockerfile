@@ -27,6 +27,6 @@ USER debian
 WORKDIR $HOME
 
 RUN git clone https://github.com/this-is-tobi/dotfiles && touch ./.zshrc \
-  && ./dotfiles/setup/setup-debian.sh -p "base" -d
+  && ./dotfiles/setup/setup-debian.sh -p "base,devops" -d
 
 ENTRYPOINT ["/bin/zsh"]
