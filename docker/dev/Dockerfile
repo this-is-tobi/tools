@@ -3,7 +3,7 @@ FROM docker.io/debian:11 AS build
 
 # Set system env
 ENV DEBIAN_FRONTEND=noninteractive
-ENV USER=debian
+ENV USER=tobi
 ENV HOME=/home/$USER
 
 RUN apt update && apt install -y \
@@ -28,6 +28,6 @@ USER $USER
 WORKDIR $HOME
 
 RUN git clone https://github.com/this-is-tobi/dotfiles && touch ./.zshrc \
-  && ./dotfiles/setup/setup-debian.sh -p "base,devops" -d
+  && ./dotfiles/setup/setup-debian.sh -p "base,devops,go,js" -d
 
 ENTRYPOINT ["/bin/zsh"]

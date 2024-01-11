@@ -8,6 +8,7 @@ __Utils images :__
 
 - [act-runner](./docker/act-runner/Dockerfile) *- act runner image for local CI tests (ubuntu based).*
 - [debug](./docker/debug/Dockerfile) *- debug image with all convenients tools (debian based).*
+- [dev](./docker/dev/Dockerfile) *- development image with all convenients tools (debian based).*
 - [pg-backup](./docker/pg-backup/Dockerfile) *- helper image to backup postgresql to s3 (ubuntu based).*
 
 __Templates images :__

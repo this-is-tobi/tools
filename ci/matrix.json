@@ -18,6 +18,15 @@
     }
   },
   {
+    "name": "dev",
+    "build": {
+      "context": "./docker/dev",
+      "dockerfile": "./docker/dev/Dockerfile",
+      "target": "build",
+      "tag": "1.0.0"
+    }
+  },
+  {
     "name": "pg-backup",
     "build": {
       "context": "./docker/pg-backup",
