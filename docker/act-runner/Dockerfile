@@ -41,7 +41,8 @@ RUN apt-get update && apt-get install -y \
   xvfb \
   xz-utils \
   zstd \
-  zip
+  zip \
+  && rm -rf /var/lib/apt/lists/*
 
 # Install docker
 RUN sudo apt-get install -y ca-certificates curl gnupg \
@@ -50,7 +51,8 @@ RUN sudo apt-get install -y ca-certificates curl gnupg \
   && sudo chmod a+r /etc/apt/keyrings/docker.gpg \
   && echo "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
   "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null \
-  && sudo apt-get update && sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  && sudo apt-get update && sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \
+  && rm -rf /var/lib/apt/lists/*
 
 # Install nodejs
 RUN apt-get install -y ca-certificates curl gnupg \
@@ -58,7 +60,14 @@ RUN apt-get install -y ca-certificates curl gnupg \
   && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
   && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list \
   && apt-get update \
-  && apt-get install -y nodejs
+  && apt-get install -y nodejs \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install pnpm
+RUN wget -qO- https://get.pnpm.io/install.sh | ENV="$HOME/.bashrc" SHELL="$(which bash)" bash -
+
+# Install bun
+RUN curl -fsSL https://bun.sh/install | bash
 
 # Install ansible
 RUN python3 -m pip install ansible
@@ -71,7 +80,6 @@ RUN curl -sSL https://raw.githubusercontent.com/upciti/wakemeops/main/assets/ins
   golang-go \
   helm \
   helm-docs \
-  k9s \
   kind \
   krew \
   kubectl \
@@ -84,4 +92,5 @@ RUN curl -sSL https://raw.githubusercontent.com/upciti/wakemeops/main/assets/ins
   terraform \
   trivy \
   vault \
-  yq
+  yq \
+  && rm -rf /var/lib/apt/lists/*
