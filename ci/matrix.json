@@ -32,7 +32,7 @@
       "context": "./docker/pg-backup",
       "dockerfile": "./docker/pg-backup/Dockerfile",
       "target": "build",
-      "tag": "1.1.0"
+      "tag": "1.2.0"
     }
   }
 ]
