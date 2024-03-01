@@ -32,7 +32,7 @@ jobs:
       build-matrix: ${{ steps.build-matrix.outputs.BUILD_MATRIX }}
     steps:
       - name: Checks-out repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Generate matrix for build
         id: build-matrix
@@ -79,7 +79,7 @@ jobs:
           echo "IMAGE_TAGS=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:${{ matrix.images.build.tag }},${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:$MAJOR_VERSION.$MINOR_VERSION,${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:$MAJOR_VERSION,${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:latest" >> $GITHUB_OUTPUT
 
       - name: Checks-out repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
 
       - name: Set up Docker buildx
