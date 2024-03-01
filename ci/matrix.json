@@ -14,7 +14,7 @@
       "context": "./docker/debug",
       "dockerfile": "./docker/debug/Dockerfile",
       "target": "build",
-      "tag": "1.1.0"
+      "tag": "2.0.0"
     }
   },
   {

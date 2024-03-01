@@ -1,5 +1,5 @@
 # FROM ubuntu-latest
-FROM docker.io/debian:11 AS build
+FROM docker.io/debian:12 AS build
 
 # Set system env
 ENV DEBIAN_FRONTEND=noninteractive
@@ -17,7 +17,7 @@ RUN apt update && apt install -y \
   ssh \
   sudo \
   wget \
-  && apt clean
+  && rm -rf /var/lib/apt/lists/*
 
 RUN sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen && sudo locale-gen
 
