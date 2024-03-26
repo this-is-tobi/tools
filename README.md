@@ -10,6 +10,7 @@ __Utils images :__
 - [debug](./docker/debug/Dockerfile) *- debug image with all convenients tools (debian based).*
 - [dev](./docker/dev/Dockerfile) *- development image with all convenients tools (debian based).*
 - [pg-backup](./docker/pg-backup/Dockerfile) *- helper image to backup postgresql to s3 (ubuntu based).*
+- [s3-backup](./docker/s3-backup/Dockerfile) *- helper image to backup s3 bucket to another s3 bucket (debian based).*
 
 __Templates images :__
 

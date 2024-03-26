@@ -1,0 +1,47 @@
+kind: Secret
+apiVersion: v1
+metadata:
+  name: s3-backup
+  namespace: ""
+data:
+  SOURCE_S3_ENDPOINT: ""
+  SOURCE_S3_ACCESS_KEY: ""
+  SOURCE_S3_SECRET_KEY: ""
+  SOURCE_S3_BUCKET_NAME: ""
+  SOURCE_S3_BUCKET_PREFIX: ""
+  TARGET_S3_ENDPOINT: ""
+  TARGET_S3_ACCESS_KEY: ""
+  TARGET_S3_SECRET_KEY: ""
+  TARGET_S3_BUCKET_NAME: ""
+  TARGET_S3_BUCKET_PREFIX: ""
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: s3-backup
+  namespace: ""
+  labels:
+    jobgroup: s3-backup
+spec:
+  schedule: "0 1 * * *"
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    metadata:
+      name: s3-backup
+      labels:
+        jobgroup: s3-backup
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          containers:
+          - name: s3-backup
+            image: ghcr.io/this-is-tobi/tools/pg-backup:latest
+            imagePullPolicy: Always
+            envFrom:
+            - secretRef:
+                name: s3-backup
+          restartPolicy: Never

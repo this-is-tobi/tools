@@ -59,7 +59,7 @@ jobs:
           password: ${{ env.REGISTRY == 'ghcr.io' && secrets.GITHUB_TOKEN || secrets.REGISTRY_PASSWORD }}
           logout: true
 
-      - name: Get repository owner and name
+      - name: Get image status
         id: image-status
         run: |
           IMAGE_STATUS=$(curl \
