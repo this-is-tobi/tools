@@ -75,7 +75,7 @@ install_kind() {
     ARCH=arm64
   fi
 
-  curl -Lo ./kind "https://kind.sigs.k8s.io/dl/v0.20.0/kind-${OS}-${ARCH}"
+  curl -Lo ./kind "https://kind.sigs.k8s.io/dl/v0.22.0/kind-${OS}-${ARCH}"
   chmod +x ./kind
   mv ./kind /usr/local/bin/kind
 
