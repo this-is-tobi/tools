@@ -22,7 +22,7 @@ mc cp \
   --recursive \
   --preserve \
   --md5 \
-  source_host/${SOURCE_S3_BUCKET_NAME%/}/${SOURCE_S3_BUCKET_PREFIX%/} \
-  target_host/${TARGET_S3_BUCKET_NAME%/}/${TARGET_S3_BUCKET_PREFIX%/}
+  source_host/${SOURCE_S3_BUCKET_NAME%/}${SOURCE_S3_BUCKET_PREFIX:+/}${SOURCE_S3_BUCKET_PREFIX%/} \
+  target_host/${TARGET_S3_BUCKET_NAME%/}${TARGET_S3_BUCKET_PREFIX:+/}${TARGET_S3_BUCKET_PREFIX%/}
 
 printf "\nBackup finished\n"
