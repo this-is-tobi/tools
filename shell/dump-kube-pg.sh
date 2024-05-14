@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Colorize terminal
 red='\e[0;31m'
 no_color='\033[0m'
@@ -102,15 +104,22 @@ printf "Settings:
   > POD_NAME: ${POD_NAME}
   > CONTAINER_NAME: ${CONTAINER_NAME}\n"
 
+DUMP_PATH=""
+PATHS=(
+  /tmp
+  /var/lib/postgresql/data
+  /bitnami/postgresql/data
+)
 
 # Check container fs permissions to store the dump file
-if [ "$(isRW /tmp)" = true ]; then
-  DUMP_PATH="/tmp"
-elif [ "$(isRW /var/lib/postgresql/data)" = true ]; then
-  DUMP_PATH="/var/lib/postgresql/data"
-elif [ "$(isRW /bitnami/postgresql/data)" = true ]; then
-  DUMP_PATH="/bitnami/postgresql/data"
-else
+for P in ${PATHS[*]}; do
+  if [ "$(isRW $P)" = true ]; then
+    DUMP_PATH=$P
+    break
+  fi
+done
+
+if [ -z $DUMP_PATH ]; then
   printf "\n\n${red}[Dump wrapper].${no_color} Error: Container filesystem is read-only for path '/tmp', '/var/lib/postgresql/data' and '/bitnami/postgresql/data'.\n\n"
   exit 1
 fi
