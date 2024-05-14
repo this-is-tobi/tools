@@ -121,18 +121,22 @@ if [ "$MODE" = "dump" ]; then
   # Create output directory
   mkdir -p $EXPORT_DIR
 
+  # Set paths variables
+  DUMP_FILENAME="${DATE_TIME}_${DB_NAME}.dump"
+  DESTINATION_DUMP="${EXPORT_DIR}/${DUMP_FILENAME}"
+
   # Dump database
   printf "\n\n${red}[Dump wrapper].${no_color} Dump database.\n\n"
-  kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "PGPASSWORD='${DB_PASS}' pg_dump -Fc -U '${DB_USER}' '${DB_NAME}' > ${DUMP_PATH}/${DATE_TIME}_${DB_NAME}.dump"
+  kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "PGPASSWORD='${DB_PASS}' pg_dump -Fc -U '${DB_USER}' '${DB_NAME}' > ${DUMP_PATH}/${DUMP_FILENAME}"
 
   # Copy dump locally
   printf "\n\n${red}[Dump wrapper].${no_color} Copy dump file locally.\n\n"
-  kubectl $NAMESPACE_ARG cp ${POD_NAME}:${DUMP_PATH:1}/${DATE_TIME}_${DB_NAME}.dump ${EXPORT_DIR}/${DATE_TIME}_${DB_NAME}.dump ${CONTAINER_ARG}
-fi
+  kubectl $NAMESPACE_ARG cp ${POD_NAME}:${DUMP_PATH:1}/${DUMP_FILENAME} "${DESTINATION_DUMP}"  ${CONTAINER_ARG}
 
+  echo ${DESTINATION_DUMP}
 
 # Restore database
-if [ "$MODE" = "restore" ]; then
+elif [ "$MODE" = "restore" ]; then
   # Copy local dump into pod
   printf "\n\n${red}[Dump wrapper].${no_color} Copy local dump file into container (path: '$DUMP_PATH/$(basename $DUMP_FILE)').\n\n"
   kubectl $NAMESPACE_ARG cp ${DUMP_FILE} ${POD_NAME}:${DUMP_PATH:1}/$(basename ${DUMP_FILE}) ${CONTAINER_ARG}
