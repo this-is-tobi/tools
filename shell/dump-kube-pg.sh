@@ -22,8 +22,9 @@ Following flags are available:
   -f    Local dump file to restore.
 
   -m    Mode tu run. Available modes are :
-          dump     - Dump the database locally.
-          restore  - Restore local dump into pod.
+          dump            - Dump the database locally.
+          dump_forward    - Dump the database locally with port forward.
+          restore         - Restore local dump into pod.
 
   -n    Kubernetes namespace target where the database pod is running.
         Default is '$NAMESPACE'
@@ -91,7 +92,7 @@ fi
 
 
 isRW () {
-  kubectl exec ${POD_NAME} -- bash -c "[ -w $1 ] && echo 'true' || echo 'false'"
+  kubectl $NAMESPACE_ARG exec ${POD_NAME} -- bash -c "[ -w $1 ] && echo 'true' || echo 'false'"
 }
 
 
@@ -112,12 +113,14 @@ PATHS=(
 )
 
 # Check container fs permissions to store the dump file
-for P in ${PATHS[*]}; do
-  if [ "$(isRW $P)" = true ]; then
-    DUMP_PATH=$P
-    break
-  fi
-done
+if [ ! "$MODE" = "dump_forward" ]; then
+  for P in ${PATHS[*]}; do
+    if [ "$(isRW $P)" = true ]; then
+      DUMP_PATH=$P
+      break
+    fi
+  done
+fi
 
 if [ -z $DUMP_PATH ]; then
   printf "\n\n${red}[Dump wrapper].${no_color} Error: Container filesystem is read-only for path '/tmp', '/var/lib/postgresql/data' and '/bitnami/postgresql/data'.\n\n"
@@ -128,7 +131,7 @@ fi
 # Dump database
 if [ "$MODE" = "dump" ]; then
   # Create output directory
-  mkdir -p $EXPORT_DIR
+  [ ! -d "$EXPORT_DIR" ] && mkdir -p $EXPORT_DIR
 
   # Set paths variables
   DUMP_FILENAME="${DATE_TIME}_${DB_NAME}.dump"
@@ -146,7 +149,7 @@ if [ "$MODE" = "dump" ]; then
 
 elif [ "$MODE" = "dump_forward" ]; then
   # Create output directory
-  mkdir -p $EXPORT_DIR
+  [ ! -d "$EXPORT_DIR" ] && mkdir -p $EXPORT_DIR
 
   # Set paths variables
   DUMP_FILENAME="${DATE_TIME}_${DB_NAME}.dump"
@@ -166,10 +169,11 @@ elif [ "$MODE" = "dump_forward" ]; then
 # Restore database
 elif [ "$MODE" = "restore" ]; then
   # Copy local dump into pod
-  printf "\n\n${red}[Dump wrapper].${no_color} Copy local dump file into container (path: '$DUMP_PATH/$(basename $DUMP_FILE)').\n\n"
-  kubectl $NAMESPACE_ARG cp ${DUMP_FILE} ${POD_NAME}:${DUMP_PATH:1}/$(basename ${DUMP_FILE}) ${CONTAINER_ARG}
+  DUMP_FILE_BASENAME="$(basename ${DUMP_FILE})"
+  printf "\n\n${red}[Dump wrapper].${no_color} Copy local dump file into container (path: '$DUMP_PATH/$DUMP_FILE_BASENAME').\n\n"
+  kubectl $NAMESPACE_ARG cp ${DUMP_FILE} ${POD_NAME}:${DUMP_PATH:1}/${DUMP_FILE_BASENAME} ${CONTAINER_ARG}
 
   # Restore database
   printf "\n\n${red}[Dump wrapper].${no_color} Restore database.\n\n"
-  kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "PGPASSWORD='${DB_PASS}' pg_restore -Fc ${DB_NAME_ARG} ${DUMP_PATH}/$(basename ${DUMP_FILE}) -U '${DB_USER}'"
+  kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "PGPASSWORD='${DB_PASS}' pg_restore -Fc ${DB_NAME_ARG} ${DUMP_PATH}/${DUMP_FILE_BASENAME} -U '${DB_USER}'"
 fi
