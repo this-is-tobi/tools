@@ -1,0 +1,41 @@
+api:
+  image: 
+    repository: template-monorepo-ts/api
+    tag: dev
+  ingress:
+    enabled: true
+    className: ""
+    annotations: {}
+    hosts:
+    - host: api.domain.local
+      paths:
+      - path: /api/
+        pathType: Prefix
+  extraVolumes:
+  - name: dev-workspace
+    path: /app/apps/api/src
+    type: hostPath
+  extraVolumeMounts:
+  - name: dev-workspace
+    mountPath: /app/apps/api/src
+
+docs:
+  image: 
+    repository: template-monorepo-ts/docs
+    tag: dev
+  ingress:
+    enabled: true
+    className: ""
+    annotations: {}
+    hosts:
+    - host: doc.domain.local
+      paths:
+      - path: /
+        pathType: Prefix
+  extraVolumes:
+  - name: dev-workspace
+    path: /app/apps/docs/src
+    type: hostPath
+  extraVolumeMounts:
+  - name: dev-workspace
+    mountPath: /app/apps/docs/src

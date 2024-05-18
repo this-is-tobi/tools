@@ -14,10 +14,6 @@ ports:
     nodePort: 30080
   websecure:
     nodePort: 30443
-  traefik:
-    port: 9000
-    nodePort: 30900
-    expose: true
 
 service:
   type: NodePort

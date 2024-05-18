@@ -1,6 +1,6 @@
 # Tools :wrench:
 
-Utility tools & scripts
+Utility tools & scripts.
 
 ## Docker
 
