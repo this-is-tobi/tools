@@ -46,7 +46,7 @@ print_help() {
 }
 
 # Parse options
-while getopts c:d:f:m:n:o:p:r:u:h flag; do
+while getopts hc:d:f:m:n:o:p:r:u: flag; do
   case "${flag}" in
     c)
       CONTAINER_NAME=${OPTARG};;

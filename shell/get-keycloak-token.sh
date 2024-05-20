@@ -27,7 +27,7 @@ print_help() {
 }
 
 # Parse options
-while getopts i:k:p:r:s:u:h flag; do
+while getopts hi:k:p:r:s:u: flag; do
   case "${flag}" in
     i)
       CLIENT_ID=${OPTARG};;

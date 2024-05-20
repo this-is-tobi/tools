@@ -24,7 +24,7 @@ print_help() {
 
 
 # Parse options
-while getopts k:p:r:u:h flag; do
+while getopts hk:p:r:u: flag; do
   case "${flag}" in
     k)
       KEYCLOAK_HOST=${OPTARG};;

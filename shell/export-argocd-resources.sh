@@ -30,7 +30,7 @@ print_help() {
 }
 
 # Parse options
-while getopts k:n:o:h flag; do
+while getopts hk:n:o: flag; do
   case "${flag}" in
     k)
       RESOURCES_KIND=${OPTARG};;

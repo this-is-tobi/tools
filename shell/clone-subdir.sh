@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Colorize terminal
 red='\e[0;31m'
 no_color='\033[0m'
@@ -35,7 +37,7 @@ print_help() {
 }
 
 # Parse options
-while getopts b:do:s:u: flag; do
+while getopts hb:do:s:u: flag; do
   case "${flag}" in
     b)
       GIT_BRANCH="${OPTARG}";;
@@ -54,34 +56,38 @@ while getopts b:do:s:u: flag; do
 done
 
 
-REPO_NAME="$(echo $REPO_URL | grep -oE '[^/]+$')"
+# Script conditions
+if [ -z "$REPO_URL" ]; then
+  printf "\n${red}Error.${no_color} Argument missing : repo url name (flag -u)".
+  exit 1
+fi
+if [ -z "$SUB_DIR" ]; then
+  printf "\n${red}Error.${no_color} Argument missing : subdirectory to clone (flag -s)".
+  exit 1
+fi
 
 
 # init git repository in the output dir
-printf "\n\n${red}  ->${no_color} Init git repository\n\n"
-i=$(($i + 1))
+printf "\n\n${red}[clone subdir]${no_color} Init git repository\n\n"
 
-mkdir -p "${OUTPUT_DIR%/}/$REPO_NAME"
-cd "${OUTPUT_DIR%/}/$REPO_NAME"
+[ ! -d "$OUPUT_DIR" ] && mkdir -p "$OUTPUT_DIR"
+cd "$OUTPUT_DIR"
 git init 
 git remote add origin "$REPO_URL"
 git config core.sparsecheckout true
 
 
 # Clone sub directory from the target repository
-printf "\n\n${red}  ->${no_color} Clone repository\n\n"
-i=$(($i + 1))
+printf "\n\n${red}[clone subdir]${no_color} Clone repository\n\n"
 
 echo "$SUB_DIR/*" >> .git/info/sparse-checkout
 git pull origin "$GIT_BRANCH"
-
+cp -aR "$SUB_DIR/." . && rm -rf "$SUB_DIR"
+cd - > /dev/null
 
 # Delete git artifacts in the fresh cloned repo
 if [ "$DELETE_GIT_DIR" == "true" ]; then
-  printf "\n\n${red}  ->${no_color} ungit previously cloned repoitory\n\n"
-  i=$(($i + 1))
+  printf "\n\n${red}[clone subdir]${no_color} ungit cloned repoitory\n\n"
 
-  cd -
-  cp -a "${OUTPUT_DIR%/}/$REPO_NAME/$SUB_DIR/." "${OUTPUT_DIR%/}/"
-  rm -rf "${OUTPUT_DIR%/}/$REPO_NAME"
+  rm -rf "${OUTPUT_DIR%/}/.git"
 fi
