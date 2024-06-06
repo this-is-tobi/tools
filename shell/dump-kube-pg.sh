@@ -108,6 +108,7 @@ printf "Settings:
 DUMP_PATH=""
 PATHS=(
   /tmp
+  /var/tmp
   /var/lib/postgresql/data
   /bitnami/postgresql/data
 )
@@ -120,11 +121,10 @@ if [ ! "$MODE" = "dump_forward" ]; then
       break
     fi
   done
-fi
-
-if [ -z $DUMP_PATH ]; then
-  printf "\n\n${red}[Dump wrapper].${no_color} Error: Container filesystem is read-only for path '/tmp', '/var/lib/postgresql/data' and '/bitnami/postgresql/data'.\n\n"
-  exit 1
+  if [ -z $DUMP_PATH ]; then
+    printf "\n\n${red}[Dump wrapper].${no_color} Error: Container filesystem is read-only for path '/tmp', '/var/lib/postgresql/data' and '/bitnami/postgresql/data'.\n\n"
+    exit 1
+  fi
 fi
 
 
@@ -143,7 +143,7 @@ if [ "$MODE" = "dump" ]; then
 
   # Copy dump locally
   printf "\n\n${red}[Dump wrapper].${no_color} Copy dump file locally.\n\n"
-  kubectl $NAMESPACE_ARG cp ${POD_NAME}:${DUMP_PATH:1}/${DUMP_FILENAME} "${DESTINATION_DUMP}"  ${CONTAINER_ARG}
+  kubectl $NAMESPACE_ARG cp ${POD_NAME}:${DUMP_PATH:1}/${DUMP_FILENAME} "${DESTINATION_DUMP}" ${CONTAINER_ARG}
 
   echo ${DESTINATION_DUMP}
 
