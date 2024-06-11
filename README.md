@@ -42,6 +42,12 @@ __Templates images :__
 | [purge-ghcr-tags.sh](./shell/purge-ghcr-tags.sh)                 | *purge ghcr tags older than a given date.*                     |
 | [trivy-report.sh](./shell/trivy-report.sh)                       | *parse trivy json reports to create a markdown summary.*       |
 
+> [!TIP]
+> Using a script directly from a curl command :
+> ```sh
+> curl -s https://raw.githubusercontent.com/this-is-tobi/tools/main/shell/<script_name> | bash -s -- -h
+> ```
+
 ## Tools
 
 | Name                     | Description                        |
