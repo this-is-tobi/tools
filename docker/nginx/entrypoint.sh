@@ -2,8 +2,8 @@
 
 ROOT_DIR=/opt/bitnami/nginx/html
 # Prefix that is used to find variables in js files 
-# ex: `const test = provess.env.SERVER_HOST || 'nginx-server-host'`
-KEY_PREFIX=nginx
+# ex: `const test = provess.env.SERVER_HOST || 'runtime-server-host'`
+KEY_PREFIX=runtime
 # List of variables to inject into js files from environment eval
 VARIABLES=(
   # SERVER_HOST

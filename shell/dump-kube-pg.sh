@@ -19,7 +19,7 @@ Following flags are available:
 
   -d    Name of the postgres database.
 
-  -f    Local dump file to restore.
+  -f    Local dump file to restore (only needed with restore mode).
 
   -m    Mode tu run. Available modes are :
           dump            - Dump the database locally.
@@ -27,17 +27,17 @@ Following flags are available:
           restore         - Restore local dump into pod.
 
   -n    Kubernetes namespace target where the database pod is running.
-        Default is '$NAMESPACE'
+        Default is '$NAMESPACE'.
 
   -o    Output directory where to export files.
-        Default is '$EXPORT_DIR'
+        Default is '$EXPORT_DIR'.
 
   -p    Password of the database user that will run the dump command.
 
   -r    Name of the pod to run the dump on.
 
   -u    Database user used to dump the database.
-        Default is '$DB_USER'
+        Default is '$DB_USER'.
 
   -h    Print script help.\n\n"
 
