@@ -1,5 +1,5 @@
 # Prod stage
-FROM docker.io/bitnami/nginx:1.25.5 AS prod
+FROM docker.io/bitnami/nginx:1.26.1 AS prod
 
 USER 0
 
