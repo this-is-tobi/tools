@@ -28,19 +28,20 @@ __Templates images :__
 
 ## Shell
 
-| Name                                                             | Description                                                    |
-| ---------------------------------------------------------------- | -------------------------------------------------------------- |
-| [add-keycloak-users.sh](./shell/add-keycloak-users.sh)           | *add keycloak users for a given keycloak realm.*               |
-| [clone-subdir.sh](./shell/clone-subdir.sh)                       | *clone a subdirectory from a git repository.*                  |
-| [compose-to-matrix.sh](./shell/compose-to-matrix.sh)             | *parse docker-compose file to create github matrix.*           |
-| [copy-env-examples.sh](./shell/copy-env-examples.sh)             | *copy all git project env\*-examples files to env files.*      |
-| [dump-kube-pg.sh](./shell/dump-kube-pg.sh)                       | *dump / restore postgres database from / to a kubernetes pod.* |
-| [delete-ghcr-image.sh](./shell/delete-ghcr-image.sh)             | *delete image and subsequent manifests from ghcr.*             |
-| [export-argocd-resources.sh](./shell/export-argocd-resources.sh) | *export ready-to-apply argocd resources.*                      |
-| [get-keycloak-token.sh](./shell/get-keycloak-token.sh)           | *display keycloak token for the given infos.*                  |
-| [manage-etc-hosts.sh](./shell/manage-etc-hosts.sh)               | *add or update host ip adress in /etc/hosts.*                  |
-| [purge-ghcr-tags.sh](./shell/purge-ghcr-tags.sh)                 | *purge ghcr tags older than a given date.*                     |
-| [trivy-report.sh](./shell/trivy-report.sh)                       | *parse trivy json reports to create a markdown summary.*       |
+| Name                                                             | Description                                                       |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------- |
+| [add-keycloak-users.sh](./shell/add-keycloak-users.sh)           | *add keycloak users for a given keycloak realm.*                  |
+| [backup-kube-pg.sh](./shell/backup-kube-pg.sh)                   | *backup / restore postgres database from / to a kubernetes pod.*  |
+| [backup-kube-vault.sh](./shell/backup-kube-vault.sh)             | *backup / restore vault raft cluster from / to a kubernetes pod.* |
+| [clone-subdir.sh](./shell/clone-subdir.sh)                       | *clone a subdirectory from a git repository.*                     |
+| [compose-to-matrix.sh](./shell/compose-to-matrix.sh)             | *parse docker-compose file to create github matrix.*              |
+| [copy-env-examples.sh](./shell/copy-env-examples.sh)             | *copy all git project env\*-examples files to env files.*         |
+| [delete-ghcr-image.sh](./shell/delete-ghcr-image.sh)             | *delete image and subsequent manifests from ghcr.*                |
+| [export-argocd-resources.sh](./shell/export-argocd-resources.sh) | *export ready-to-apply argocd resources.*                         |
+| [get-keycloak-token.sh](./shell/get-keycloak-token.sh)           | *display keycloak token for the given infos.*                     |
+| [manage-etc-hosts.sh](./shell/manage-etc-hosts.sh)               | *add or update host ip adress in /etc/hosts.*                     |
+| [purge-ghcr-tags.sh](./shell/purge-ghcr-tags.sh)                 | *purge ghcr tags older than a given date.*                        |
+| [trivy-report.sh](./shell/trivy-report.sh)                       | *parse trivy json reports to create a markdown summary.*          |
 
 > [!TIP]
 > Using a script directly from a curl command :

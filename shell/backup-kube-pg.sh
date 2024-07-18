@@ -8,11 +8,11 @@ no_color='\033[0m'
 
 # Default
 DB_USER="postgres"
-EXPORT_DIR="./db-dumps"
-DATE_TIME=$(date +"%Y-%m-%dT%H-%M")
+EXPORT_DIR="./backups"
+DATE_TIME=$(date +"%Y%m%dT%H%M")
 
 # Declare script helper
-TEXT_HELPER="\nThis script aims to perform a dump on a kubernetes postgres pod and copy locally the dump file.
+TEXT_HELPER="\nThis script aims to perform a dump on a kubernetes postgres pod and copy locally the dump file, or the opposite, restore a local dump file to a postgres pod.
 Following flags are available:
 
   -c    Name of the pod's container.
@@ -32,9 +32,9 @@ Following flags are available:
   -o    Output directory where to export files.
         Default is '$EXPORT_DIR'.
 
-  -p    Password of the database user that will run the dump command.
+  -p    Name of the pod to run the dump on.
 
-  -r    Name of the pod to run the dump on.
+  -t    Password of the database user that will run the dump command.
 
   -u    Database user used to dump the database.
         Default is '$DB_USER'.
@@ -46,7 +46,7 @@ print_help() {
 }
 
 # Parse options
-while getopts hc:d:f:m:n:o:p:r:u: flag; do
+while getopts hc:d:f:m:n:o:p:t:u: flag; do
   case "${flag}" in
     c)
       CONTAINER_NAME=${OPTARG};;
@@ -61,9 +61,9 @@ while getopts hc:d:f:m:n:o:p:r:u: flag; do
     o)
       EXPORT_DIR=${OPTARG};;
     p)
-      DB_PASS=${OPTARG};;
-    r)
       POD_NAME=${OPTARG};;
+    t)
+      DB_PASS=${OPTARG};;
     u)
       DB_USER=${OPTARG};;
     h | *)
@@ -112,6 +112,7 @@ PATHS=(
   /var/lib/postgresql/data
   /bitnami/postgresql/data
 )
+echo "$PATHS"
 
 # Check container fs permissions to store the dump file
 if [ ! "$MODE" = "dump_forward" ]; then
@@ -122,7 +123,7 @@ if [ ! "$MODE" = "dump_forward" ]; then
     fi
   done
   if [ -z $DUMP_PATH ]; then
-    printf "\n\n${red}[Dump wrapper].${no_color} Error: Container filesystem is read-only for path '/tmp', '/var/lib/postgresql/data' and '/bitnami/postgresql/data'.\n\n"
+    printf "\n\n${red}[Dump wrapper].${no_color} Error: Container filesystem is read-only for paths $PATHS.\n\n"
     exit 1
   fi
 fi
@@ -134,7 +135,7 @@ if [ "$MODE" = "dump" ]; then
   [ ! -d "$EXPORT_DIR" ] && mkdir -p $EXPORT_DIR
 
   # Set paths variables
-  DUMP_FILENAME="${DATE_TIME}_${DB_NAME}.dump"
+  DUMP_FILENAME="${DATE_TIME}-${DB_NAME}.dump"
   DESTINATION_DUMP="${EXPORT_DIR}/${DUMP_FILENAME}"
 
   # Dump database
@@ -142,29 +143,25 @@ if [ "$MODE" = "dump" ]; then
   kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "PGPASSWORD='${DB_PASS}' pg_dump -Fc -U '${DB_USER}' '${DB_NAME}' > ${DUMP_PATH}/${DUMP_FILENAME}"
 
   # Copy dump locally
-  printf "\n\n${red}[Dump wrapper].${no_color} Copy dump file locally.\n\n"
+  printf "\n\n${red}[Dump wrapper].${no_color} Copy dump file locally (path: '${DESTINATION_DUMP}').\n\n"
   kubectl $NAMESPACE_ARG cp ${POD_NAME}:${DUMP_PATH:1}/${DUMP_FILENAME} "${DESTINATION_DUMP}" ${CONTAINER_ARG}
-
-  echo ${DESTINATION_DUMP}
 
 elif [ "$MODE" = "dump_forward" ]; then
   # Create output directory
   [ ! -d "$EXPORT_DIR" ] && mkdir -p $EXPORT_DIR
 
   # Set paths variables
-  DUMP_FILENAME="${DATE_TIME}_${DB_NAME}.dump"
+  DUMP_FILENAME="${DATE_TIME}-${DB_NAME}.dump"
   DESTINATION_DUMP="${EXPORT_DIR}/${DUMP_FILENAME}"
 
-  echo $DESTINATION_DUMP
   # Dump database
-  printf "\n\n${red}[Dump wrapper].${no_color} Dump database.\n\n"
+  printf "\n\n${red}[Dump wrapper].${no_color} Dump database locally (path: '${DESTINATION_DUMP}').\n\n"
   set +e
   kubectl $NAMESPACE_ARG port-forward ${POD_NAME} 5555:5432 &
   sleep 1
   PGPASSWORD=${DB_PASS} pg_dump -Fc -U ${DB_USER} -p 5555 -h 127.0.0.1 ${DB_NAME} > ${DESTINATION_DUMP}
 
   kill %1
-  echo ${DESTINATION_DUMP}
 
 # Restore database
 elif [ "$MODE" = "restore" ]; then
