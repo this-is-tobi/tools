@@ -91,10 +91,9 @@ printf "Settings:
 
 DUMP_PATH=""
 PATHS=(
-  /tmp
-  /var/tmp
   /vault/data
   /bitnami/vault/data
+  /tmp
 )
 
 # Check container fs permissions to store the dump file

@@ -6,13 +6,17 @@ Utility tools & scripts.
 
 __Utils images :__
 
-| Name                                         | Description                                                             | Pull command                                        |
-| -------------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------- |
-| [act-runner](./docker/act-runner/Dockerfile) | *act runner image for local CI tests (ubuntu based).*                   | `docker pull ghcr.io/this-is-tobi/tools/act-runner` |
-| [debug](./docker/debug/Dockerfile)           | *debug image with all convenients tools (debian based).*                | `docker pull ghcr.io/this-is-tobi/tools/debug`      |
-| [dev](./docker/dev/Dockerfile)               | *development image with all convenients tools (debian based).*          | `docker pull ghcr.io/this-is-tobi/tools/dev`        |
-| [pg-backup](./docker/pg-backup/Dockerfile)   | *helper image to backup postgresql to s3 (ubuntu based).*               | `docker pull ghcr.io/this-is-tobi/tools/pg-backup`  |
-| [s3-backup](./docker/s3-backup/Dockerfile)   | *helper image to backup s3 bucket to another s3 bucket (debian based).* | `docker pull ghcr.io/this-is-tobi/tools/s3-backup`  |
+| Name                                             | Description                                                             | Image name                                |
+| ------------------------------------------------ | ----------------------------------------------------------------------- | ----------------------------------------- |
+| [act-runner](./docker/act-runner/Dockerfile)     | *act runner image for local CI tests (ubuntu based).*                   | `ghcr.io/this-is-tobi/tools/act-runner`   |
+| [debug](./docker/debug/Dockerfile)               | *debug image with all convenients tools (debian based).*                | `ghcr.io/this-is-tobi/tools/debug`        |
+| [dev](./docker/dev/Dockerfile)                   | *development image with all convenients tools (debian based).*          | `ghcr.io/this-is-tobi/tools/dev`          |
+| [pg-backup](./docker/pg-backup/Dockerfile)       | *helper image to backup postgresql to s3 (postgres based).*             | `ghcr.io/this-is-tobi/tools/pg-backup`    |
+| [s3-backup](./docker/s3-backup/Dockerfile)       | *helper image to backup s3 bucket to another s3 bucket (debian based).* | `ghcr.io/this-is-tobi/tools/s3-backup`    |
+| [vault-backup](./docker/vault-backup/Dockerfile) | *helper image to backup vault raft cluster to s3 bucket (vault based).* | `ghcr.io/this-is-tobi/tools/vault-backup` |
+
+> [!TIP]
+> The backup images are supplied with a sample kubernetes cronjob in their respective folders.
 
 __Templates images :__
 
