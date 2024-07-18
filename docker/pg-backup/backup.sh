@@ -1,5 +1,7 @@
 #!/bin/bash
 
+DATE_TIME=$(date +"%Y%m%dT%H%M")
+
 printf "Settings:
   > DB_HOST: ${DB_HOST}
   > DB_PORT: ${DB_PORT}
@@ -20,7 +22,7 @@ mc alias set backup_host "${S3_ENDPOINT}" "${S3_ACCESS_KEY}" "${S3_SECRET_KEY}"
 printf "\nStart backup\n"
 
 PGPASSWORD="${DB_PASS}" pg_dump -Fc -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" "${DB_NAME}" \
-  | mc pipe backup_host/${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX%/}/$(date +"%Y-%m-%dT%H-%M")-${DB_NAME}.dump
+  | mc pipe backup_host/${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX%/}/${DATE_TIME}-${DB_NAME}.dump
 
 printf "\nBackup finished\n"
 

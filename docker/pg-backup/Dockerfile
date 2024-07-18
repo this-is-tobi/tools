@@ -1,4 +1,4 @@
-FROM docker.io/postgres:15.6 AS build
+FROM docker.io/postgres:15.7 AS build
 
 ARG TARGETARCH
 
