@@ -1,5 +1,5 @@
 # FROM ubuntu-latest
-FROM docker.io/ubuntu:22.04 AS build
+FROM docker.io/ubuntu:24.04 AS build
 
 # Set system env
 ARG TARGETOS
