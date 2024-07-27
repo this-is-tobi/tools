@@ -1,4 +1,3 @@
-# FROM ubuntu-latest
 FROM docker.io/debian:12 AS build
 
 # Set system env

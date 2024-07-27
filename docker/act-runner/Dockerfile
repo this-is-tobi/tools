@@ -17,11 +17,9 @@ RUN apt-get update && apt-get install -y \
   gnupg \
   gnupg-agent \
   jq \
-  libasound2 \
   libcurl3-gnutls \
   libcurl4 \
   libgbm-dev \
-  libgconf-2-4 \
   libgtk2.0-0 \
   libgtk-3-0 \
   libnotify-dev \
@@ -69,13 +67,12 @@ RUN wget -qO- https://get.pnpm.io/install.sh | ENV="$HOME/.bashrc" SHELL="$(whic
 # Install bun
 RUN curl -fsSL https://bun.sh/install | bash
 
-# Install ansible
-RUN python3 -m pip install ansible
-
 # Add wakemeops debian repo
 RUN curl -sSL https://raw.githubusercontent.com/upciti/wakemeops/main/assets/install_repository | sudo bash \
   && sudo apt-get update && apt-get install -y \
   act \
+  argo \
+  argocd \
   github-cli \
   golang-go \
   helm \
@@ -83,8 +80,6 @@ RUN curl -sSL https://raw.githubusercontent.com/upciti/wakemeops/main/assets/ins
   kind \
   krew \
   kubectl \
-  kubectx \
-  kubens \
   kustomize \
   minio-client \
   rclone \
