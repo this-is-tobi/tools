@@ -40,11 +40,10 @@ print_help() {
 }
 
 # Parse options
-# while getopts hc:a:f:m:n:o:p:t: flag; do
 while getopts hc:f:m:n:o:p:t: flag; do
   case "${flag}" in
-    # a)
-    #   VAULT_ADDRESS=${OPTARG};;
+    c)
+      CONTAINER_NAME=${OPTARG};;
     f)
       DUMP_FILE=${OPTARG};;
     m)
