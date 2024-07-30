@@ -50,7 +50,7 @@
       "context": "./docker/vault-backup",
       "dockerfile": "./docker/vault-backup/Dockerfile",
       "target": "build",
-      "tag": "1.0.7"
+      "tag": "1.0.10"
     }
   }
 ]
