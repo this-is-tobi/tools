@@ -4,6 +4,10 @@
 red='\e[0;31m'
 no_color='\033[0m'
 
+# Default
+KC_USERNAME="admin"
+
+
 # Declare script helper
 TEXT_HELPER="\nThe purpose of this script is to display the keycloak user's token based on appropriate information.
 Following flags are available:
@@ -18,7 +22,7 @@ Following flags are available:
 
   -s    Keycloak client secret.
 
-  -u    Username.
+  -u    Keycloak username (Default is '$KC_USERNAME').
 
   -h    Print script help.\n\n"
 
@@ -32,15 +36,15 @@ while getopts hi:k:p:r:s:u: flag; do
     i)
       CLIENT_ID=${OPTARG};;
     k)
-      KEYCLOAK_HOST=${OPTARG};;
+      KC_HOST=${OPTARG};;
     p)
-      PASSWORD=${OPTARG};;
+      KC_PASSWORD=${OPTARG};;
     r)
-      REALM=${OPTARG};;
+      KC_REALM=${OPTARG};;
     s)
       CLIENT_SECRET=${OPTARG};;
     u)
-      USERNAME=${OPTARG};;
+      KC_USERNAME=${OPTARG};;
     h | *)
       print_help
       exit 0;;
@@ -55,19 +59,19 @@ function jwt_decode(){
 if [ -z "$CLIENT_ID" ]; then
   printf "\n${red}Error.${no_color} Argument missing : client id (flag -i)".
   exit 1
-elif [ -z "$KEYCLOAK_HOST" ]; then
+elif [ -z "$KC_HOST" ]; then
   printf "\n${red}Error.${no_color} Argument missing : keycloak host (flag -k)".
   exit 1
-elif [ -z "$PASSWORD" ]; then
+elif [ -z "$KC_PASSWORD" ]; then
   printf "\n${red}Error.${no_color} Argument missing : user password (flag -p)".
   exit 1
-elif [ -z "$REALM" ]; then
+elif [ -z "$KC_REALM" ]; then
   printf "\n${red}Error.${no_color} Argument missing : keycloak realm (flag -r)".
   exit 1
 elif [ -z "$CLIENT_SECRET" ]; then
   printf "\n${red}Error.${no_color} Argument missing : client secret (flag -s)".
   exit 1
-elif [ -z "$USERNAME" ]; then
+elif [ -z "$KC_USERNAME" ]; then
   printf "\n${red}Error.${no_color} Argument missing : username (flag -u)".
   exit 1
 fi
@@ -76,9 +80,9 @@ fi
 ACCESS_TOKEN=$(curl \
   -d "client_id=$CLIENT_ID" \
   -d "client_secret=$CLIENT_SECRET" \
-  -d "username=$USERNAME" \
-  -d "password=$PASSWORD" \
+  -d "username=$KC_USERNAME" \
+  -d "password=$KC_PASSWORD" \
   -d "grant_type=password" \
-  "$KEYCLOAK_HOST/realms/$REALM/protocol/openid-connect/token" | jq -r '.access_token')
+  "$KC_HOST/realms/$KC_REALM/protocol/openid-connect/token" | jq -r '.access_token')
 
 jwt_decode "$ACCESS_TOKEN"
