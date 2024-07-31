@@ -12,7 +12,8 @@ data:
   S3_SECRET_KEY: ""
   S3_BUCKET_NAME: ""
   S3_BUCKET_PREFIX: ""
-  RETENTION_DAYS: ""
+  RETENTION: ""
+  MC_EXTRA_ARGS: ""
 
 ---
 apiVersion: batch/v1

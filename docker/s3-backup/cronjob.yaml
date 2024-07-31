@@ -14,6 +14,7 @@ data:
   TARGET_S3_SECRET_KEY: ""
   TARGET_S3_BUCKET_NAME: ""
   TARGET_S3_BUCKET_PREFIX: ""
+  MC_EXTRA_ARGS: ""
 
 ---
 apiVersion: batch/v1
@@ -39,7 +40,7 @@ spec:
         spec:
           containers:
           - name: s3-backup
-            image: ghcr.io/this-is-tobi/tools/pg-backup:latest
+            image: ghcr.io/this-is-tobi/tools/s3-backup:latest
             imagePullPolicy: Always
             envFrom:
             - secretRef:
