@@ -32,7 +32,7 @@
       "context": "./docker/pg-backup",
       "dockerfile": "./docker/pg-backup/Dockerfile",
       "target": "build",
-      "tag": "1.4.2"
+      "tag": "1.4.3"
     }
   },
   {
@@ -50,7 +50,7 @@
       "context": "./docker/vault-backup",
       "dockerfile": "./docker/vault-backup/Dockerfile",
       "target": "build",
-      "tag": "1.1.2"
+      "tag": "1.1.3"
     }
   }
 ]
