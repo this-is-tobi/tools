@@ -28,8 +28,7 @@ PGPASSWORD="${DB_PASS}" pg_dump -Fc -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_POR
 printf "\n\nBackup finished\n\n"
 
 # Delete backups older than
-re='^[0-9]+$'
-if [[ ! -z "${RETENTION}" ]] && [[ "${RETENTION}" =~ $re ]]; then
+if [ ! -z "${RETENTION}" ]; then
   printf "\n\nDelete backups older than ${RETENTION}days in '${S3_BUCKET_NAME}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX}'\n\n"
 
   mc ${MC_EXTRA_ARGS} rm --recursive --force --older-than "${RETENTION}" backup_host/${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX}
