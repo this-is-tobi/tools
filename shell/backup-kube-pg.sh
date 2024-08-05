@@ -22,9 +22,10 @@ Following flags are available:
   -f    Local dump file to restore (only needed with restore mode).
 
   -m    Mode tu run. Available modes are :
-          dump            - Dump the database locally.
-          dump_forward    - Dump the database locally with port forward.
-          restore         - Restore local dump into pod.
+          dump              - Dump the database locally.
+          dump_forward      - Dump the database locally with port forward.
+          restore           - Restore local dump into pod.
+          restore_forward   - Restore local dump with port forward.
 
   -n    Kubernetes namespace target where the database pod is running.
         Default is '$NAMESPACE'.
@@ -79,8 +80,8 @@ if [ "$MODE" = "dump" ] || [ "$MODE" = "dump_forward" ] && [ -z "$POD_NAME" ]; t
 elif [ "$MODE" = "dump" ] || [ "$MODE" = "dump_forward" ] && [ -z "$DB_NAME" ]; then
   printf "\n${red}Error.${no_color} Argument missing : database name (flag -d)".
   exit 1
-elif [ "$MODE" = "restore" ] && [ -z "$DUMP_FILE" ]; then
-  printf "\n${red}Error.${no_color} Argument DUMP_FILE : database file dump (flag -f)".
+elif [ "$MODE" = "restore" ] || [ "$MODE" = "restore_forward" ] && [ -z "$DUMP_FILE" ]; then
+  printf "\n${red}Error.${no_color} Argument missing : dump file (flag -f)".
   exit 1
 fi
 
@@ -140,7 +141,7 @@ if [ "$MODE" = "dump" ]; then
 
   # Dump database
   printf "\n\n${red}[Dump wrapper].${no_color} Dump database.\n\n"
-  kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "PGPASSWORD='${DB_PASS}' pg_dump -Fc -U '${DB_USER}' '${DB_NAME}' > ${DUMP_PATH}/${DUMP_FILENAME}"
+  kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "PGPASSWORD='${DB_PASS}' pg_dump -Fc -U ${DB_USER} ${DB_NAME_ARG} > ${DUMP_PATH}/${DUMP_FILENAME}"
 
   # Copy dump locally
   printf "\n\n${red}[Dump wrapper].${no_color} Copy dump file locally (path: '${DESTINATION_DUMP}').\n\n"
@@ -159,7 +160,7 @@ elif [ "$MODE" = "dump_forward" ]; then
   set +e
   kubectl $NAMESPACE_ARG port-forward ${POD_NAME} 5555:5432 &
   sleep 1
-  PGPASSWORD=${DB_PASS} pg_dump -Fc -U ${DB_USER} -p 5555 -h 127.0.0.1 ${DB_NAME} > ${DESTINATION_DUMP}
+  PGPASSWORD=${DB_PASS} pg_dump -Fc -U ${DB_USER} -p 5555 -h 127.0.0.1 ${DB_NAME_ARG} > ${DESTINATION_DUMP}
 
   kill %1
 
@@ -172,5 +173,15 @@ elif [ "$MODE" = "restore" ]; then
 
   # Restore database
   printf "\n\n${red}[Dump wrapper].${no_color} Restore database.\n\n"
-  kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "PGPASSWORD='${DB_PASS}' pg_restore -Fc ${DB_NAME_ARG} ${DUMP_PATH}/${DUMP_FILE_BASENAME} -U '${DB_USER}'"
+  kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "PGPASSWORD='${DB_PASS}' pg_restore -Fc -U ${DB_USER} ${DB_NAME_ARG} ${DUMP_PATH}/${DUMP_FILE_BASENAME}"
+
+elif [ "$MODE" = "restore_forward" ]; then
+  # Restore database
+  printf "\n\n${red}[Dump wrapper].${no_color} Restore database.\n\n"
+  set +e
+  kubectl $NAMESPACE_ARG port-forward ${POD_NAME} 5555:5432 &
+  sleep 1
+  PGPASSWORD=${DB_PASS} pg_restore -Fc -U ${DB_USER} -p 5555 -h 127.0.0.1 ${DB_NAME_ARG} ${DUMP_FILE}
+
+  kill %1
 fi

@@ -19,9 +19,10 @@ Following flags are available:
   -f    Local dump file to restore (only needed with restore mode).
 
   -m    Mode tu run. Available modes are :
-          dump            - Dump the vault locally.
-          dump_forward    - Dump the vault locally with port forward.
-          restore         - Restore local dump into pod.
+          dump              - Dump the vault locally.
+          dump_forward      - Dump the vault locally with port forward.
+          restore           - Restore local dump into pod.
+          restore_forward   - Restore local dump with port forward.
 
   -n    Kubernetes namespace target where the vault pod is running.
         Default is '$NAMESPACE'.
@@ -66,8 +67,8 @@ done
 if [ "$MODE" = "dump" ] || [ "$MODE" = "dump_forward" ] && [ -z "$POD_NAME" ]; then
   printf "\n${red}Error.${no_color} Argument missing : pod name (flag -r)".
   exit 1
-elif [ "$MODE" = "restore" ] && [ -z "$DUMP_FILE" ]; then
-  printf "\n${red}Error.${no_color} Argument DUMP_FILE : vault file dump (flag -f)".
+elif [ "$MODE" = "restore" ] || [ "$MODE" = "restore_forward" ] && [ -z "$DUMP_FILE" ]; then
+  printf "\n${red}Error.${no_color} Argument missing : dump file (flag -f)".
   exit 1
 fi
 
@@ -155,4 +156,15 @@ elif [ "$MODE" = "restore" ]; then
   # Restore vault
   printf "\n\n${red}[Dump wrapper].${no_color} Restore vault.\n\n"
   kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- sh -c "echo ${VAULT_TOKEN} | vault login -non-interactive - && vault operator raft snapshot restore ${DUMP_PATH}/${DUMP_FILENAME}"
+
+elif [ "$MODE" = "restore_forward" ]; then
+  # Restore database
+  printf "\n\n${red}[Dump wrapper].${no_color} Restore database.\n\n"
+  set +e
+  kubectl $NAMESPACE_ARG port-forward ${POD_NAME} 5555:8200 &
+  sleep 1
+  echo ${VAULT_TOKEN} | vault login -address 127.0.0.1:5555 -non-interactive - \
+    && vault operator raft snapshot restore -address=https://127.0.0.1:8200 ${DUMP_FILE}
+
+  kill %1
 fi
