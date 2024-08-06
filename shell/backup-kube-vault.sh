@@ -155,7 +155,7 @@ elif [ "$MODE" = "restore" ]; then
 
   # Restore vault
   printf "\n\n${red}[Dump wrapper].${no_color} Restore vault.\n\n"
-  kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- sh -c "echo ${VAULT_TOKEN} | vault login -non-interactive - && vault operator raft snapshot restore ${DUMP_PATH}/${DUMP_FILENAME}"
+  kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- sh -c "echo ${VAULT_TOKEN} | vault login -non-interactive - && vault operator raft snapshot restore ${DUMP_PATH}/${DUMP_FILE_BASENAME}"
 
 elif [ "$MODE" = "restore_forward" ]; then
   # Restore database
