@@ -3,17 +3,17 @@ providers:
   kubernetesCRD:
     namespaces:
       - default
-      - traefik
+      - ingress-traefik
   kubernetesIngress:
     namespaces:
       - default
-      - traefik
+      - ingress-traefik
 
 ports:
   web:
-    nodePort: 30080
+    nodePort: 80
   websecure:
-    nodePort: 30443
+    nodePort: 443
 
 service:
   type: NodePort

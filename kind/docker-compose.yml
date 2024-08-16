@@ -1,0 +1,7 @@
+services:
+  svc-1:
+    image: <image_name>:<image_tag>
+    build:
+      context: ..
+      dockerfile: <path_to_dockerfile>
+      target: <dockerfile_target>
