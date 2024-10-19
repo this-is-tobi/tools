@@ -1,4 +1,4 @@
-FROM docker.io/hashicorp/vault:1.17.2 AS build
+FROM docker.io/hashicorp/vault:1.18.0 AS build
 
 ARG TARGETARCH
 ARG USERNAME=vault

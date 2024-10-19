@@ -15,6 +15,15 @@ __Utils images :__
 | [s3-backup](./docker/s3-backup/Dockerfile)       | *helper image to backup s3 bucket to another s3 bucket (debian based).* | `ghcr.io/this-is-tobi/tools/s3-backup`    |
 | [vault-backup](./docker/vault-backup/Dockerfile) | *helper image to backup vault raft cluster to s3 bucket (vault based).* | `ghcr.io/this-is-tobi/tools/vault-backup` |
 
+__Backup images correlation table :__
+
+| Name         | Image version | Tool version        |
+| ------------ | ------------- | ------------------- |
+| pg-backup    | 1.4.3         | *postgresql -* 15.7 |
+| pg-backup    | 2.0.0         | *postgresql -* 16.4 |
+| vault-backup | 1.1.3         | *vault -* 1.17.2    |
+| vault-backup | 1.2.0         | *vault -* 1.18.0    |
+
 > [!TIP]
 > The backup images are supplied with a sample kubernetes cronjob in their respective folders.
 

@@ -1,4 +1,4 @@
-FROM docker.io/postgres:15.7 AS build
+FROM docker.io/postgres:16.4 AS build
 
 ARG TARGETARCH
 ARG USERNAME=postgres
