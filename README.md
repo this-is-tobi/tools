@@ -4,7 +4,7 @@ Utility tools & scripts.
 
 ## Docker
 
-__Utils images :__
+### Utils images
 
 | Name                                             | Description                                                             | Image name                                |
 | ------------------------------------------------ | ----------------------------------------------------------------------- | ----------------------------------------- |
@@ -21,13 +21,14 @@ __Backup images correlation table :__
 | ------------ | ------------- | ------------------- |
 | pg-backup    | 1.4.3         | *postgresql -* 15.7 |
 | pg-backup    | 2.0.0         | *postgresql -* 16.4 |
+| pg-backup    | 3.0.0         | *postgresql -* 17.0 |
 | vault-backup | 1.1.3         | *vault -* 1.17.2    |
 | vault-backup | 1.2.0         | *vault -* 1.18.0    |
 
 > [!TIP]
 > The backup images are supplied with a sample kubernetes cronjob in their respective folders.
 
-__Templates images :__
+### Templates images
 
 | Name                               | Description                                                |
 | ---------------------------------- | ---------------------------------------------------------- |
