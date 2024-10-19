@@ -7,6 +7,7 @@ red='\e[0;31m'
 no_color='\033[0m'
 
 # Default
+NAMESPACE="$(kubectl config view --minify -o jsonpath='{..namespace}')"
 DB_USER="postgres"
 EXPORT_DIR="./backups"
 DATE_TIME=$(date +"%Y%m%dT%H%M")
@@ -28,14 +29,14 @@ Following flags are available:
           restore_forward   - Restore local dump with port forward.
 
   -n    Kubernetes namespace target where the database pod is running.
-        Default is '$NAMESPACE'.
+        Default is current namespace : '$NAMESPACE'.
 
   -o    Output directory where to export files.
         Default is '$EXPORT_DIR'.
 
-  -p    Name of the pod to run the dump on.
+  -p    Password of the database user that will run the dump command.
 
-  -t    Password of the database user that will run the dump command.
+  -t    Target name of the pod or service to run the dump on.
 
   -u    Database user used to dump the database.
         Default is '$DB_USER'.
@@ -62,9 +63,9 @@ while getopts hc:d:f:m:n:o:p:t:u: flag; do
     o)
       EXPORT_DIR=${OPTARG};;
     p)
-      POD_NAME=${OPTARG};;
-    t)
       DB_PASS=${OPTARG};;
+    t)
+      TARGET=${OPTARG};;
     u)
       DB_USER=${OPTARG};;
     h | *)
@@ -74,8 +75,11 @@ while getopts hc:d:f:m:n:o:p:t:u: flag; do
 done
 
 
-if [ "$MODE" = "dump" ] || [ "$MODE" = "dump_forward" ] && [ -z "$POD_NAME" ]; then
-  printf "\n${red}Error.${no_color} Argument missing : pod name (flag -r)".
+if [ -z "$MODE" ]; then
+  printf "\n${red}Error.${no_color} Argument missing : mode (flag -m)".
+  exit 1
+elif [ -z "$TARGET" ]; then
+  printf "\n${red}Error.${no_color} Argument missing : target pod or service (flag -t)".
   exit 1
 elif [ "$MODE" = "dump" ] || [ "$MODE" = "dump_forward" ] && [ -z "$DB_NAME" ]; then
   printf "\n${red}Error.${no_color} Argument missing : database name (flag -d)".
@@ -93,18 +97,50 @@ fi
 
 
 isRW () {
-  kubectl $NAMESPACE_ARG exec ${POD_NAME} -- bash -c "[ -w $1 ] && echo 'true' || echo 'false'"
+  kubectl $NAMESPACE_ARG exec ${TARGET} -- bash -c "[ -w $1 ] && echo 'true' || echo 'false'"
 }
+
+getPodFromService () {
+  local SVC_NAME="$1"
+  SELECTOR=$(kubectl $NAMESPACE_ARG get svc "$SVC_NAME" -o jsonpath='{.spec.selector}' | jq -r 'to_entries | map("\(.key)=\(.value)") | join(",")')
+  if [[ -z "$SELECTOR" ]]; then
+    echo "No selector found for service $SVC_NAME"
+    exit 1
+  fi
+  POD_NAME=$(kubectl $NAMESPACE_ARG get pod -l "$SELECTOR" -o jsonpath='{.items[0].metadata.name}')
+  if [[ -z "$POD_NAME" ]]; then
+    echo "No pods found for selector '$SELECTOR' in namespace '$NAMESPACE'."
+    exit 1
+  else
+    echo "$POD_NAME"
+  fi
+}
+
+
+if [[ "$TARGET" == svc/* || "$TARGET" == service/* ]]; then
+  SERVICE_NAME="${TARGET#*/}"
+  POD_NAME=$(getPodFromService "$SERVICE_NAME")
+  if [[ -z "$POD_NAME" ]]; then
+    echo "No pods found for service : $SERVICE_NAME"
+    exit 1
+  fi
+else
+  POD_NAME="$TARGET"
+fi
 
 
 printf "Settings:
   > MODE: ${MODE}
+  > EXPORT_DIR: ${EXPORT_DIR}
+  > DUMP_FILE: ${DUMP_FILE}
   > DB_NAME: ${DB_NAME}
   > DB_USER: ${DB_USER}
-  > DB_PASS: ${DB_PASS}
-  > NAMESPACE: ${NAMESPACE:-$(kubectl config view --minify -o jsonpath='{..namespace}')}
+  > DB_PASS: $(if [ -n $DB_PASS ]; then printf "%*s" $(( ${#DB_PASS} - 3 )) "" | tr " " "*"; echo ${DB_PASS: -3}; else echo ''; fi)
+  > NAMESPACE: ${NAMESPACE}
+  > TARGET: ${TARGET}
   > POD_NAME: ${POD_NAME}
-  > CONTAINER_NAME: ${CONTAINER_NAME}\n"
+  > CONTAINER_NAME: ${CONTAINER_NAME}\n\n"
+
 
 DUMP_PATH=""
 PATHS=(
@@ -113,7 +149,6 @@ PATHS=(
   /var/lib/postgresql/data
   /bitnami/postgresql/data
 )
-echo "$PATHS"
 
 # Check container fs permissions to store the dump file
 if [ ! "$MODE" = "dump_forward" ]; then
@@ -141,11 +176,11 @@ if [ "$MODE" = "dump" ]; then
 
   # Dump database
   printf "\n\n${red}[Dump wrapper].${no_color} Dump database.\n\n"
-  kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "PGPASSWORD='${DB_PASS}' pg_dump -Fc -U ${DB_USER} ${DB_NAME_ARG} > ${DUMP_PATH}/${DUMP_FILENAME}"
+  kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "PGPASSWORD='${DB_PASS}' pg_dump -Fc -U ${DB_USER} ${DB_NAME_ARG} > ${DUMP_PATH}/${DUMP_FILENAME}"
 
   # Copy dump locally
   printf "\n\n${red}[Dump wrapper].${no_color} Copy dump file locally (path: '${DESTINATION_DUMP}').\n\n"
-  kubectl $NAMESPACE_ARG cp ${POD_NAME}:${DUMP_PATH:1}/${DUMP_FILENAME} "${DESTINATION_DUMP}" ${CONTAINER_ARG}
+  kubectl ${NAMESPACE_ARG} cp ${POD_NAME}:${DUMP_PATH:1}/${DUMP_FILENAME} "${DESTINATION_DUMP}" ${CONTAINER_ARG}
 
 elif [ "$MODE" = "dump_forward" ]; then
   # Create output directory
@@ -158,7 +193,7 @@ elif [ "$MODE" = "dump_forward" ]; then
   # Dump database
   printf "\n\n${red}[Dump wrapper].${no_color} Dump database locally (path: '${DESTINATION_DUMP}').\n\n"
   set +e
-  kubectl $NAMESPACE_ARG port-forward ${POD_NAME} 5555:5432 &
+  kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5555:5432 &
   sleep 1
   PGPASSWORD=${DB_PASS} pg_dump -Fc -U ${DB_USER} -p 5555 -h 127.0.0.1 ${DB_NAME_ARG} > ${DESTINATION_DUMP}
 
@@ -169,17 +204,17 @@ elif [ "$MODE" = "restore" ]; then
   # Copy local dump into pod
   DUMP_FILE_BASENAME="$(basename ${DUMP_FILE})"
   printf "\n\n${red}[Dump wrapper].${no_color} Copy local dump file into container (path: '$DUMP_PATH/$DUMP_FILE_BASENAME').\n\n"
-  kubectl $NAMESPACE_ARG cp ${DUMP_FILE} ${POD_NAME}:${DUMP_PATH:1}/${DUMP_FILE_BASENAME} ${CONTAINER_ARG}
+  kubectl ${NAMESPACE_ARG} cp ${DUMP_FILE} ${POD_NAME}:${DUMP_PATH:1}/${DUMP_FILE_BASENAME} ${CONTAINER_ARG}
 
   # Restore database
   printf "\n\n${red}[Dump wrapper].${no_color} Restore database.\n\n"
-  kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "PGPASSWORD='${DB_PASS}' pg_restore -Fc -U ${DB_USER} ${DB_NAME_ARG} ${DUMP_PATH}/${DUMP_FILE_BASENAME}"
+  kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "PGPASSWORD='${DB_PASS}' pg_restore -Fc -U ${DB_USER} ${DB_NAME_ARG} ${DUMP_PATH}/${DUMP_FILE_BASENAME}"
 
 elif [ "$MODE" = "restore_forward" ]; then
   # Restore database
   printf "\n\n${red}[Dump wrapper].${no_color} Restore database.\n\n"
   set +e
-  kubectl $NAMESPACE_ARG port-forward ${POD_NAME} 5555:5432 &
+  kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5555:5432 &
   sleep 1
   PGPASSWORD=${DB_PASS} pg_restore -Fc -U ${DB_USER} -p 5555 -h 127.0.0.1 ${DB_NAME_ARG} ${DUMP_FILE}
 
