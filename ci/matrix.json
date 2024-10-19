@@ -41,7 +41,7 @@
       "context": "./docker/s3-backup",
       "dockerfile": "./docker/s3-backup/Dockerfile",
       "target": "build",
-      "tag": "1.1.2"
+      "tag": "1.1.3"
     }
   },
   {
