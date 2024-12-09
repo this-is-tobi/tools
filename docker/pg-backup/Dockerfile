@@ -1,4 +1,6 @@
-FROM docker.io/postgres:17.0 AS build
+ARG BASE_IMAGE=docker.io/postgres:17.2
+
+FROM ${BASE_IMAGE} AS build
 
 ARG TARGETARCH
 ARG USERNAME=postgres

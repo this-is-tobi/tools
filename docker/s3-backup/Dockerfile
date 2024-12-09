@@ -1,4 +1,6 @@
-FROM docker.io/debian:12 AS build
+ARG BASE_IMAGE=docker.io/debian:12
+
+FROM ${BASE_IMAGE} AS build
 
 ARG TARGETARCH
 ARG USERNAME=debian

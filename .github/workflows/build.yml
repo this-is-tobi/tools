@@ -76,7 +76,13 @@ jobs:
         run: |
           MAJOR_VERSION="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 1)"
           MINOR_VERSION="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 2)"
-          echo "IMAGE_TAGS=${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:${{ matrix.images.build.tag }},${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:$MAJOR_VERSION.$MINOR_VERSION,${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:$MAJOR_VERSION,${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:latest" >> $GITHUB_OUTPUT
+          IMAGE_TAGS="${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:${{ matrix.images.build.tag }},${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:$MAJOR_VERSION.$MINOR_VERSION,${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:$MAJOR_VERSION"
+
+          if [[ "${{ matrix.images.build.latest}}" == "true" ]]; then
+            IMAGE_TAGS="$IMAGE_TAGS,${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:latest"
+          fi
+
+          echo "IMAGE_TAGS=$IMAGE_TAGS" >> $GITHUB_OUTPUT
 
       - name: Checks-out repository
         uses: actions/checkout@v4
@@ -101,3 +107,5 @@ jobs:
           platforms: ${{ env.PLATFORMS }}
           push: true
           provenance: false
+          build-args: |
+            BASE_IMAGE=${{ matrix.images.build.base }}

@@ -2,55 +2,89 @@
   {
     "name": "act-runner",
     "build": {
+      "base": "docker.io/ubuntu:24.04",
       "context": "./docker/act-runner",
       "dockerfile": "./docker/act-runner/Dockerfile",
       "target": "build",
-      "tag": "2.0.1"
+      "tag": "2.0.1",
+      "latest": true
     }
   },
   {
     "name": "debug",
     "build": {
+      "base": "docker.io/debian:12",
       "context": "./docker/debug",
       "dockerfile": "./docker/debug/Dockerfile",
       "target": "build",
-      "tag": "2.0.0"
+      "tag": "2.0.0",
+      "latest": true
     }
   },
   {
     "name": "dev",
     "build": {
+      "base": "docker.io/debian:12",
       "context": "./docker/dev",
       "dockerfile": "./docker/dev/Dockerfile",
       "target": "build",
-      "tag": "2.0.0"
+      "tag": "2.0.0",
+      "latest": true
     }
   },
   {
     "name": "pg-backup",
     "build": {
+      "base": "docker.io/postgres:15.10",
       "context": "./docker/pg-backup",
       "dockerfile": "./docker/pg-backup/Dockerfile",
       "target": "build",
-      "tag": "3.0.0"
+      "tag": "1.4.4",
+      "latest": false
+    }
+  },
+  {
+    "name": "pg-backup",
+    "build": {
+      "base": "docker.io/postgres:16.6",
+      "context": "./docker/pg-backup",
+      "dockerfile": "./docker/pg-backup/Dockerfile",
+      "target": "build",
+      "tag": "2.0.1",
+      "latest": false
+    }
+  },
+  {
+    "name": "pg-backup",
+    "build": {
+      "base": "docker.io/postgres:17.2",
+      "context": "./docker/pg-backup",
+      "dockerfile": "./docker/pg-backup/Dockerfile",
+      "target": "build",
+      "tag": "3.0.1",
+      "latest": true
     }
   },
   {
     "name": "s3-backup",
     "build": {
+      "base": "docker.io/debian:12",
       "context": "./docker/s3-backup",
       "dockerfile": "./docker/s3-backup/Dockerfile",
       "target": "build",
-      "tag": "1.1.3"
+      "tag": "1.1.3",
+      "latest": true
     }
   },
   {
     "name": "vault-backup",
     "build": {
+      "base": "docker.io/hashicorp/vault:1.18.2",
       "context": "./docker/vault-backup",
       "dockerfile": "./docker/vault-backup/Dockerfile",
       "target": "build",
-      "tag": "1.2.0"
+      "tag": "1.2.1",
+      "latest": true
     }
   }
 ]

@@ -1,5 +1,6 @@
-# FROM ubuntu-latest
-FROM docker.io/ubuntu:24.04 AS build
+ARG BASE_IMAGE=docker.io/ubuntu:24.04
+
+FROM ${BASE_IMAGE} AS build
 
 # Set system env
 ARG TARGETOS
@@ -20,8 +21,8 @@ RUN apt-get update && apt-get install -y \
   libcurl3-gnutls \
   libcurl4 \
   libgbm-dev \
-  libgtk2.0-0 \
   libgtk-3-0 \
+  libgtk2.0-0 \
   libnotify-dev \
   libnss3 \
   libxss1 \
@@ -38,8 +39,8 @@ RUN apt-get update && apt-get install -y \
   xauth \
   xvfb \
   xz-utils \
-  zstd \
   zip \
+  zstd \
   && rm -rf /var/lib/apt/lists/*
 
 # Install docker
