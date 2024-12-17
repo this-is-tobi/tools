@@ -2,10 +2,9 @@ ARG BASE_IMAGE=docker.io/debian:12
 
 FROM ${BASE_IMAGE} AS build
 
-# Set system env
 ENV DEBIAN_FRONTEND=noninteractive
-ENV USER=debian
-ENV HOME=/home/$USER
+ARG USER_NAME=tobi
+ARG USER_HOME=/home/$USER_NAME
 
 RUN apt update && apt install -y \
   dnsutils \
@@ -18,17 +17,20 @@ RUN apt update && apt install -y \
   ssh \
   sudo \
   wget \
-  && rm -rf /var/lib/apt/lists/*
+  zsh \
+  && rm -rf /var/lib/apt/lists/* \
+  && sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen && sudo locale-gen \
+  && useradd -ms /bin/zsh "$USER_NAME" \
+  && echo "$USER_NAME ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/$USER_NAME" \
+  && chmod 440 "/etc/sudoers.d/$USER_NAME"
 
-RUN sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen && sudo locale-gen
-
-RUN useradd -ms /bin/zsh "$USER" \
-  && echo "$USER  ALL=(ALL) NOPASSWD:ALL" | sudo tee "/etc/sudoers.d/$USER"
-
-USER $USER
+ENV USER=$USER_NAME
+ENV HOME=$USER_HOME
+USER $USER_NAME
 WORKDIR $HOME
 
 RUN git clone https://github.com/this-is-tobi/dotfiles && touch ./.zshrc \
-  && ./dotfiles/setup/setup-debian.sh -p "base,devops" -d
+  && ./dotfiles/setup/setup-debian.sh -p "base,devops,secops" -d -c \
+  && sudo rm -rf /tmp/*
 
 ENTRYPOINT ["/bin/zsh"]

@@ -97,7 +97,7 @@ jobs:
         if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
 
       - name: Build docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
         with:
           context: ${{ matrix.images.build.context }}

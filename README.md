@@ -6,27 +6,27 @@ Utility tools & scripts.
 
 ### Utils images
 
-| Image                                   | Description                                                             | Dockerfiles                                    |
-| --------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------- |
-| ghcr.io/this-is-tobi/tools/act-runner   | *act runner image for local CI tests (ubuntu based).*                   | [Dockerfile](./docker/act-runner/Dockerfile)   |
-| ghcr.io/this-is-tobi/tools/debug        | *debug image with all convenients tools (debian based).*                | [Dockerfile](./docker/debug/Dockerfile)        |
-| ghcr.io/this-is-tobi/tools/dev          | *development image with all convenients tools (debian based).*          | [Dockerfile](./docker/dev/Dockerfile)          |
-| ghcr.io/this-is-tobi/tools/pg-backup    | *helper image to backup postgresql to s3 (postgres based).*             | [Dockerfile](./docker/pg-backup/Dockerfile)    |
-| ghcr.io/this-is-tobi/tools/s3-backup    | *helper image to backup s3 bucket to another s3 bucket (debian based).* | [Dockerfile](./docker/s3-backup/Dockerfile)    |
-| ghcr.io/this-is-tobi/tools/vault-backup | *helper image to backup vault raft cluster to s3 bucket (vault based).* | [Dockerfile](./docker/vault-backup/Dockerfile) |
+| Image                                     | Description                                                             | Dockerfiles                                    |
+| ----------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------- |
+| `ghcr.io/this-is-tobi/tools/act-runner`   | *act runner image for local CI tests (ubuntu based).*                   | [Dockerfile](./docker/act-runner/Dockerfile)   |
+| `ghcr.io/this-is-tobi/tools/debug`        | *debug image with all convenients tools (debian based).*                | [Dockerfile](./docker/debug/Dockerfile)        |
+| `ghcr.io/this-is-tobi/tools/dev`          | *development image with all convenients tools (debian based).*          | [Dockerfile](./docker/dev/Dockerfile)          |
+| `ghcr.io/this-is-tobi/tools/pg-backup`    | *helper image to backup postgresql to s3 (postgres based).*             | [Dockerfile](./docker/pg-backup/Dockerfile)    |
+| `ghcr.io/this-is-tobi/tools/s3-backup`    | *helper image to backup s3 bucket to another s3 bucket (debian based).* | [Dockerfile](./docker/s3-backup/Dockerfile)    |
+| `ghcr.io/this-is-tobi/tools/vault-backup` | *helper image to backup vault raft cluster to s3 bucket (vault based).* | [Dockerfile](./docker/vault-backup/Dockerfile) |
 
 __Versions correlation table :__
 
 | Name         | Image version | Base image                         |
 | ------------ | ------------- | ---------------------------------- |
-| act-runner   | 2.0.1         | `docker.io/ubuntu:24.04`           |
-| debug        | 2.0.0         | `docker.io/debian:12`              |
-| dev          | 2.0.0         | `docker.io/debian:12`              |
-| pg-backup    | 3.0.1         | `docker.io/postgres:17.2`          |
-| pg-backup    | 2.0.1         | `docker.io/postgresql:16.6`        |
-| pg-backup    | 1.4.4         | `docker.io/postgresql:15.10`       |
-| s3-backup    | 1.1.3         | `docker.io/debian:12`              |
-| vault-backup | 1.2.1         | `docker.io/hashicorp/vault:1.18.2` |
+| act-runner   | 2.0.2         | `docker.io/ubuntu:24.04`           |
+| debug        | 2.0.1         | `docker.io/debian:12`              |
+| dev          | 2.0.1         | `docker.io/debian:12`              |
+| pg-backup    | 3.0.2         | `docker.io/postgres:17.2`          |
+| pg-backup    | 2.0.2         | `docker.io/postgresql:16.6`        |
+| pg-backup    | 1.4.5         | `docker.io/postgresql:15.10`       |
+| s3-backup    | 1.1.4         | `docker.io/debian:12`              |
+| vault-backup | 1.2.2         | `docker.io/hashicorp/vault:1.18.2` |
 
 > [!TIP]
 > The backup images are supplied with a sample kubernetes cronjob in their respective folders.
