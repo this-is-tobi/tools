@@ -22,8 +22,8 @@ RUN apt-get update && apt-get install -y \
   libcurl4 \
   libgbm-dev \
   libgconf-2-4 \
-  libgtk2.0-0 \
   libgtk-3-0 \
+  libgtk2.0-0 \
   libnotify-dev \
   libnss3 \
   libxss1 \
@@ -40,8 +40,8 @@ RUN apt-get update && apt-get install -y \
   xauth \
   xvfb \
   xz-utils \
-  zstd \
-  zip
+  zip \
+  zstd
 
 # Install docker
 RUN sudo apt-get install -y ca-certificates curl gnupg \

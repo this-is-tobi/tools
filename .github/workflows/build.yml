@@ -13,19 +13,27 @@ on:
         required: true
         type: string
         default: this-is-tobi/tools
-      PLATFORMS:
-        description: Target platforms to build images
+      BUILD_AMD64:
+        description: Build for amd64
         required: true
-        type: string
-        default: linux/amd64,linux/arm64
+        type: boolean
+        default: true
+      BUILD_ARM64:
+        description: Build for arm64
+        required: true
+        type: boolean
+        default: true
+      USE_QEMU:
+        description: Use QEMU emulator for non amd64 builds
+        required: true
+        type: boolean
+        default: true
 
-env:
-  REGISTRY: ${{ inputs.REGISTRY }}
-  NAMESPACE: ${{ inputs.NAMESPACE }}
-  PLATFORMS: ${{ inputs.PLATFORMS }}
+permissions:
+  packages: write
 
 jobs:
-  matrix:
+  infos:
     name: Generate matrix for build
     runs-on: ubuntu-latest
     outputs:
@@ -41,22 +49,23 @@ jobs:
 
   build:
     name: Build images
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runners }}
     permissions:
       contents: read
       packages: write
     needs:
-      - matrix
+      - infos
     strategy:
       matrix:
-        images: ${{ fromJSON(needs.matrix.outputs.build-matrix) }}
+        runners: ${{ (inputs.BUILD_AMD64 && inputs.BUILD_ARM64 && !inputs.USE_QEMU && fromJson('["ubuntu-latest", "ARM64"]')) || (inputs.BUILD_ARM64 && !inputs.USE_QEMU && fromJson('["ARM64"]')) || fromJson('["ubuntu-latest"]') }}
+        images: ${{ fromJSON(needs.infos.outputs.build-matrix) }}
     steps:
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ env.REGISTRY == 'ghcr.io' && github.actor || secrets.REGISTRY_USERNAME }}
-          password: ${{ env.REGISTRY == 'ghcr.io' && secrets.GITHUB_TOKEN || secrets.REGISTRY_PASSWORD }}
+          registry: ${{ inputs.REGISTRY }}
+          username: ${{ inputs.REGISTRY == 'ghcr.io' && github.actor || secrets.REGISTRY_USERNAME }}
+          password: ${{ inputs.REGISTRY == 'ghcr.io' && secrets.GITHUB_TOKEN || secrets.REGISTRY_PASSWORD }}
           logout: true
 
       - name: Get image status
@@ -68,44 +77,129 @@ jobs:
             --write-out '%{http_code}' \
             --output /dev/null \
             -H "Authorization: Bearer $(echo -n '${{ secrets.GITHUB_TOKEN }}' | base64)" \
-            https://${{ env.REGISTRY }}/v2/${{ env.NAMESPACE }}/${{ matrix.images.name }}/manifests/${{ matrix.images.build.tag }})
+            https://${{ inputs.REGISTRY }}/v2/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}/manifests/${{ matrix.images.build.tag }})
           echo "IMAGE_STATUS=$IMAGE_STATUS" >> $GITHUB_OUTPUT
 
-      - name: Get image tags
-        id: image-tags
-        run: |
-          MAJOR_VERSION="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 1)"
-          MINOR_VERSION="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 2)"
-          IMAGE_TAGS="${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:${{ matrix.images.build.tag }},${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:$MAJOR_VERSION.$MINOR_VERSION,${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:$MAJOR_VERSION"
-
-          if [[ "${{ matrix.images.build.latest}}" == "true" ]]; then
-            IMAGE_TAGS="$IMAGE_TAGS,${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.images.name}}:latest"
-          fi
-
-          echo "IMAGE_TAGS=$IMAGE_TAGS" >> $GITHUB_OUTPUT
-
       - name: Checks-out repository
-        uses: actions/checkout@v4
         if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
+        uses: actions/checkout@v4
 
       - name: Set up Docker buildx
-        uses: docker/setup-buildx-action@v3
         if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
+        uses: docker/setup-buildx-action@v3
 
       - name: Set up QEMU (for multi platform build)
+        if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' && inputs.USE_QEMU }}
         uses: docker/setup-qemu-action@v3
-        if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
 
       - name: Build docker image
+        id: build
         uses: docker/build-push-action@v6
         if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
         with:
           context: ${{ matrix.images.build.context }}
           file: ${{ matrix.images.build.dockerfile }}
-          tags: ${{ steps.image-tags.outputs.IMAGE_TAGS }}
           target: ${{ matrix.images.build.target }}
-          platforms: ${{ env.PLATFORMS }}
-          push: true
+          platforms: ${{ (inputs.BUILD_AMD64 && inputs.BUILD_ARM64 && inputs.USE_QEMU && 'linux/amd64,linux/arm64') || (contains(matrix.runners, 'ARM') && 'linux/arm64') || 'linux/amd64' }}
+          outputs: type=image,name=${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }},push-by-digest=true,name-canonical=true,push=true
           provenance: false
           build-args: |
             BASE_IMAGE=${{ matrix.images.build.base }}
+
+      - name: Export digest
+        if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
+        run: |
+          mkdir -p /tmp/digests/${{ matrix.images.name }}-v${{ matrix.images.build.tag }}
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${{ matrix.images.name }}-v${{ matrix.images.build.tag }}/${digest#sha256:}"
+
+      - name: Upload digest
+        if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.images.name }}-v${{ matrix.images.build.tag }}-${{ (inputs.BUILD_AMD64 && inputs.BUILD_ARM64 && inputs.USE_QEMU && 'multiarch') || (contains(matrix.runners, 'ARM') && 'linux-arm64') || 'linux-amd64' }}
+          path: /tmp/digests/${{ matrix.images.name }}-v${{ matrix.images.build.tag }}/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: Merge digest
+    runs-on: ubuntu-latest
+    needs:
+    - infos
+    - build
+    strategy:
+      matrix:
+        images: ${{ fromJSON(needs.infos.outputs.build-matrix) }}
+    steps:
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ inputs.REGISTRY }}
+        username: ${{ inputs.REGISTRY == 'ghcr.io' && github.actor || secrets.REGISTRY_USERNAME }}
+        password: ${{ inputs.REGISTRY == 'ghcr.io' && secrets.GITHUB_TOKEN || secrets.REGISTRY_PASSWORD }}
+        logout: true
+
+    - name: Get image status
+      id: image-status
+      run: |
+        IMAGE_STATUS=$(curl \
+          --head \
+          --silent \
+          --write-out '%{http_code}' \
+          --output /dev/null \
+          -H "Authorization: Bearer $(echo -n '${{ secrets.GITHUB_TOKEN }}' | base64)" \
+          https://${{ inputs.REGISTRY }}/v2/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}/manifests/${{ matrix.images.build.tag }})
+        echo "IMAGE_STATUS=$IMAGE_STATUS" >> $GITHUB_OUTPUT
+
+    - name: Get image tags
+      if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
+      id: image-tags
+      run: |
+        MAJOR_VERSION="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 1)"
+        MINOR_VERSION="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 2)"
+        PATCH_VERSION="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 3)"
+
+        echo "MAJOR_VERSION: $MAJOR_VERSION"
+        echo "MINOR_VERSION: $MINOR_VERSION"
+        echo "PATCH_VERSION: $PATCH_VERSION"
+
+        echo "MAJOR_VERSION=$MAJOR_VERSION" >> $GITHUB_OUTPUT
+        echo "MINOR_VERSION=$MINOR_VERSION" >> $GITHUB_OUTPUT
+        echo "PATCH_VERSION=$PATCH_VERSION" >> $GITHUB_OUTPUT
+
+    - name: Download digests
+      if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
+      uses: actions/download-artifact@v4
+      with:
+        pattern: digests-${{ matrix.images.name }}-v${{ matrix.images.build.tag }}-*
+        path: /tmp/digests/${{ matrix.images.name }}-v${{ matrix.images.build.tag }}
+        merge-multiple: true
+
+    - name: Set up Docker Buildx
+      if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
+      uses: docker/setup-buildx-action@v3
+
+    - name: Docker meta
+      if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}
+        tags: |
+          type=raw,value=${{ steps.image-tags.outputs.MAJOR_TAG }}.${{ steps.image-tags.outputs.MINOR_TAG }}.${{ steps.image-tags.outputs.PATCH_TAG }},enable=true
+          type=raw,value=${{ steps.image-tags.outputs.MAJOR_TAG }}.${{ steps.image-tags.outputs.MINOR_TAG }},enable=true
+          type=raw,value=${{ steps.image-tags.outputs.MAJOR_TAG }},enable=true
+          type=raw,value=latest,enable=true
+
+    - name: Create manifest list and push
+      if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
+      working-directory: /tmp/digests/${{ matrix.images.name }}-v${{ matrix.images.build.tag }}
+      run: |
+        docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+          $(printf '${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}@sha256:%s ' *)
+
+    - name: Inspect image
+      if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
+      run: |
+        docker buildx imagetools inspect ${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}:${{ steps.meta.outputs.version }}
