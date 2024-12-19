@@ -24,7 +24,7 @@ on:
         type: boolean
         default: true
       USE_QEMU:
-        description: Use QEMU emulator for non amd64 builds
+        description: Use QEMU for non amd64 builds
         required: true
         type: boolean
         default: true
@@ -156,17 +156,17 @@ jobs:
       if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
       id: image-tags
       run: |
-        MAJOR_VERSION="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 1)"
-        MINOR_VERSION="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 2)"
-        PATCH_VERSION="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 3)"
+        MAJOR_TAG="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 1)"
+        MINOR_TAG="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 2)"
+        PATCH_TAG="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 3)"
 
-        echo "MAJOR_VERSION: $MAJOR_VERSION"
-        echo "MINOR_VERSION: $MINOR_VERSION"
-        echo "PATCH_VERSION: $PATCH_VERSION"
+        echo "MAJOR_TAG: $MAJOR_TAG"
+        echo "MINOR_TAG: $MINOR_TAG"
+        echo "PATCH_TAG: $PATCH_TAG"
 
-        echo "MAJOR_VERSION=$MAJOR_VERSION" >> $GITHUB_OUTPUT
-        echo "MINOR_VERSION=$MINOR_VERSION" >> $GITHUB_OUTPUT
-        echo "PATCH_VERSION=$PATCH_VERSION" >> $GITHUB_OUTPUT
+        echo "MAJOR_TAG=$MAJOR_TAG" >> $GITHUB_OUTPUT
+        echo "MINOR_TAG=$MINOR_TAG" >> $GITHUB_OUTPUT
+        echo "PATCH_TAG=$PATCH_TAG" >> $GITHUB_OUTPUT
 
     - name: Download digests
       if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
