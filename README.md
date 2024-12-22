@@ -23,10 +23,10 @@ __Versions correlation table :__
 | debug        | 2.0.1         | `docker.io/debian:12`              |
 | dev          | 2.0.1         | `docker.io/debian:12`              |
 | pg-backup    | 3.0.2         | `docker.io/postgres:17.2`          |
-| pg-backup    | 2.0.2         | `docker.io/postgresql:16.6`        |
-| pg-backup    | 1.4.5         | `docker.io/postgresql:15.10`       |
+| pg-backup    | 2.0.2         | `docker.io/postgres:16.6`          |
+| pg-backup    | 1.4.5         | `docker.io/postgres:15.10`         |
 | s3-backup    | 1.1.4         | `docker.io/debian:12`              |
-| vault-backup | 1.2.2         | `docker.io/hashicorp/vault:1.18.2` |
+| vault-backup | 1.2.3         | `docker.io/hashicorp/vault:1.18.3` |
 
 > [!TIP]
 > The backup images are supplied with a sample kubernetes cronjob in their respective folders.
