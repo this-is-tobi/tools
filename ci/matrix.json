@@ -11,6 +11,17 @@
     }
   },
   {
+    "name": "curl",
+    "build": {
+      "base": "docker.io/curlimages/curl-base:8.11.1",
+      "context": "./docker/curl",
+      "dockerfile": "./docker/curl/Dockerfile",
+      "target": "build",
+      "tag": "1.0.0",
+      "latest": true
+    }
+  },
+  {
     "name": "debug",
     "build": {
       "base": "docker.io/debian:12",
