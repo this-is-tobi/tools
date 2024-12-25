@@ -33,9 +33,9 @@ __Versions correlation table :__
 
 ### Templates images
 
-| Name                               | Description                                                |
-| ---------------------------------- | ---------------------------------------------------------- |
-| [nginx](./docker/nginx/Dockerfile) | *bitnami/nignx rootless conf with variables substitution.* |
+| Name                                         | Description                                                |
+| -------------------------------------------- | ---------------------------------------------------------- |
+| [nginx](./docker/templates/nginx/Dockerfile) | *bitnami/nignx rootless conf with variables substitution.* |
 
 ## Nodejs
 
