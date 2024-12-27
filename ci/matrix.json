@@ -13,11 +13,11 @@
   {
     "name": "curl",
     "build": {
-      "base": "docker.io/curlimages/curl-base:8.11.1",
+      "base": "docker.io/alpine:3.21.0",
       "context": "./docker/curl",
       "dockerfile": "./docker/curl/Dockerfile",
       "target": "build",
-      "tag": "1.0.0",
+      "tag": "1.1.0",
       "latest": true
     }
   },
