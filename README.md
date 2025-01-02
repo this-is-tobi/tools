@@ -22,7 +22,7 @@ __Versions correlation table :__
 | ------------ | ------------- | ---------------------------------- |
 | act-runner   | 2.0.2         | `docker.io/ubuntu:24.04`           |
 | curl         | 1.1.0         | `docker.io/alpine:3.21.0`          |
-| debug        | 2.0.1         | `docker.io/debian:12`              |
+| debug        | 2.1.0         | `docker.io/debian:12`              |
 | dev          | 2.0.1         | `docker.io/debian:12`              |
 | pg-backup    | 3.0.2         | `docker.io/postgres:17.2`          |
 | pg-backup    | 2.0.2         | `docker.io/postgres:16.6`          |
