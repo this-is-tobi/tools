@@ -31,6 +31,7 @@ WORKDIR $HOME
 
 RUN git clone https://github.com/this-is-tobi/dotfiles && touch ./.zshrc \
   && ./dotfiles/setup/setup-debian.sh -p "base,devops,secops,go,js" -d -c \
-  && sudo rm -rf /tmp/*
+  && sudo rm -rf /tmp/* \
+  && sudo rm -rf /var/lib/apt/lists/*
 
 ENTRYPOINT ["/bin/zsh"]
