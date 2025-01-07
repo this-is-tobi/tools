@@ -6,6 +6,9 @@ set -e
 red='\e[0;31m'
 no_color='\033[0m'
 
+# Defaults
+ZSH_COMPLETIONS_DIR="${ZSH_CUSTOM:-${ZSH:-~/.oh-my-zsh}/custom}/plugins/zsh-completions"
+
 
 # Declare script helper
 TEXT_HELPER="\nThis script aims to update zsh-completions sources (See. https://github.com/zsh-users/zsh-completions).
@@ -26,4 +29,9 @@ while getopts h flag; do
   esac
 done
 
-git -C ${ZSH_CUSTOM:-${ZSH:-~/.oh-my-zsh}/custom}/plugins/zsh-completions pull
+if [ ! -d "$ZSH_COMPLETIONS_DIR" ]; then
+  printf "\nzsh-completion directory does not exists, cloning repository.\n\n"
+  git clone https://github.com/zsh-users/zsh-completions $ZSH_COMPLETIONS_DIR
+else
+  git -C $ZSH_COMPLETIONS_DIR pull
+fi
