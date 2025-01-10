@@ -1,0 +1,66 @@
+# ApplicationSet template used for preview app in CI/CD
+#
+# You need to replace all values following the `<variable_name>` pattern
+# and adapt some values from the current template.
+# see. https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/Generators-Pull-Request/#github
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: <github_repository>-preview
+  namespace: <argocd_namespace>
+spec:
+  generators:
+  - pullRequest:
+      github:
+        owner: <github_username>
+        repo: <github_repository>
+        labels:
+        - preview
+        - built
+        appSecretName: <repo_secret> # Secret containing Github App infos (see. https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/#github-app-repositories)
+  template:
+    metadata:
+      name: <github_repository>-preview-pr-{{number}}
+    spec:
+      destination:
+        namespace: <github_repository>-pr-{{number}}
+        server: https://kubernetes.default.svc
+      project: <argocd_project>
+      source:
+        repoURL: https://github.com/<github_username>/<github_repository>.git
+        path: ./helm
+        targetRevision: main # 1.*.*
+        helm:
+          values: |
+            api:
+              image:
+                tag: pr-{{number}}
+              ingress:
+                annotations:
+                  cert-manager.io/cluster-issuer: <cluster_issuer>
+                hosts:
+                - host: api.pr-{{number}}.domain.com
+                tls:
+                - secretName: api.pr-{{number}}.domain.com-tls
+                  hosts:
+                  - api.pr-{{number}}.domain.com
+            docs:
+              image:
+                tag: pr-{{number}}
+              ingress:
+                annotations:
+                  cert-manager.io/cluster-issuer: <cluster_issuer>
+                hosts:
+                - host: docs.pr-{{number}}.domain.com
+                tls:
+                - secretName: docs.pr-{{number}}.domain.com-tls
+                  hosts:
+                  - docs.pr-{{number}}.domain.com
+            ...
+      syncPolicy:
+        syncOptions:
+        - CreateNamespace=true
+        - ApplyOutOfSyncOnly=true
+        automated:
+          selfHeal: true
