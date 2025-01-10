@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=docker.io/alpine:3.21.1
+ARG BASE_IMAGE=docker.io/alpine:3.21.2
 
 FROM ${BASE_IMAGE} AS build
 
