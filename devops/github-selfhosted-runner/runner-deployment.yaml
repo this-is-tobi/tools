@@ -1,0 +1,16 @@
+# Self-hosted Github runner template
+#
+# You need to replace all values following the `<variable_name>` pattern
+# see. https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/Generators-Pull-Request/#github
+---
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerDeployment
+metadata:
+  name: <github_repository>
+spec:
+  template:
+    spec:
+      repository: <github_username>/<github_repository>
+      githubAPICredentialsFrom:
+        secretRef:
+          name: <github_username>

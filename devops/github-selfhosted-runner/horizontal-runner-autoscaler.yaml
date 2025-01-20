@@ -1,0 +1,24 @@
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: HorizontalRunnerAutoscaler
+metadata:
+  name: <github_repository>
+spec:
+  scaleDownDelaySecondsAfterScaleOut: 600
+  githubAPICredentialsFrom:
+    secretRef:
+      name: <github_repository>
+  scaleTargetRef:
+    kind: RunnerDeployment
+    name: <github_repository>
+  minReplicas: 2
+  maxReplicas: 4
+  scaleUpTriggers:
+  - githubEvent:
+      workflowJob: {}
+    duration: 30m
+  # metrics:
+  # - type: PercentageRunnersBusy
+  #   scaleUpThreshold: '0.75'
+  #   scaleDownThreshold: '0.25'
+  #   scaleUpFactor: '2'
+  #   scaleDownFactor: '0.5'
