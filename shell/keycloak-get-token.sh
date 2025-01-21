@@ -77,12 +77,12 @@ elif [ -z "$KC_USERNAME" ]; then
 fi
 
 
-ACCESS_TOKEN=$(curl \
+ACCESS_TOKEN=$(curl -fsSL \
+  -X GET "$KC_HOST/realms/$KC_REALM/protocol/openid-connect/token" \
   -d "client_id=$CLIENT_ID" \
   -d "client_secret=$CLIENT_SECRET" \
   -d "username=$KC_USERNAME" \
   -d "password=$KC_PASSWORD" \
-  -d "grant_type=password" \
-  "$KC_HOST/realms/$KC_REALM/protocol/openid-connect/token" | jq -r '.access_token')
+  -d "grant_type=password" | jq -r '.access_token')
 
 jwt_decode "$ACCESS_TOKEN"

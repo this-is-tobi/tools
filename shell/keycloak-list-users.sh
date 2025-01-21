@@ -56,20 +56,15 @@ elif [ -z "$KC_REALM" ]; then
   exit 1
 fi
 
-if [ -x "$(command -v jq)" ]; then
-  echo "jq is required"
-  exit 1
-fi
 
-
-ACCESS_TOKEN=$(curl \
+ACCESS_TOKEN=$(curl -fsSL \
   -X POST "$KC_HOST/realms/master/protocol/openid-connect/token" \
   -d "client_id=admin-cli" \
   -d "username=$KC_USERNAME" \
   -d "password=$KC_PASSWORD" \
   -d "grant_type=password" | jq -r '.access_token')
 
-curl \
-  -X POST "$KC_HOST/admin/realms/$KC_REALM/users" \
+curl -fsSL \
+  -X GET "$KC_HOST/admin/realms/$KC_REALM/users" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $ACCESS_TOKEN" jq '.'
+  -H "Authorization: Bearer $ACCESS_TOKEN" | jq '.'

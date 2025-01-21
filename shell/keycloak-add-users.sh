@@ -63,35 +63,30 @@ elif [ -z "$KC_USERS" ]; then
   exit 1
 fi
 
-if [ -x "$(command -v jq)" ]; then
-  echo "jq is required"
-  exit 1
-fi
 
-
-ACCESS_TOKEN=$(curl \
+ACCESS_TOKEN=$(curl -fsSL \
   -X POST "$KC_HOST/realms/master/protocol/openid-connect/token" \
   -d "client_id=admin-cli" \
   -d "username=admin" \
   -d "password=$KC_PASSWORD" \
   -d "grant_type=password" | jq -r '.access_token')
 
-for user in $(echo "$USERS" | jq -c '.[]'); do 
+for USER in $(echo "$USERS" | jq -c '.[]'); do 
   DATA="{ 
-    \"username\": \"$(echo $user | jq -r '.username')\", 
-    \"firstName\": \"$(echo $user | jq -r '.firstName')\", 
-    \"lastName\": \"$(echo $user | jq -r '.lastName')\", 
-    \"email\": \"$(echo $user | jq -r '.email')\", 
+    \"username\": \"$(echo $USER | jq -r '.username')\", 
+    \"firstName\": \"$(echo $USER | jq -r '.firstName')\", 
+    \"lastName\": \"$(echo $USER | jq -r '.lastName')\", 
+    \"email\": \"$(echo $USER | jq -r '.email')\", 
     \"emailVerified\": true,
     \"enabled\": true,
     \"credentials\": [{
       \"type\": \"password\",
-      \"value\": \"$(echo $user | jq -r '.password')\",
+      \"value\": \"$(echo $USER | jq -r '.password')\",
       \"temporary\": false
     }]
   }"
   echo "$DATA"
-  curl \
+  curl -fsSL \
     -X POST "$KC_HOST/admin/realms/$KC_REALM/users" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer $ACCESS_TOKEN" \
