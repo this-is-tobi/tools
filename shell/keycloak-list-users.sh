@@ -65,6 +65,6 @@ ACCESS_TOKEN=$(curl -fsSL \
   -d "grant_type=password" | jq -r '.access_token')
 
 curl -fsSL \
-  -X GET "$KC_HOST/admin/realms/$KC_REALM/users" \
+  -X GET "$KC_HOST/admin/realms/$KC_REALM/users?max=-1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ACCESS_TOKEN" | jq '.'
