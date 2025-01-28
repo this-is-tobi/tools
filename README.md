@@ -12,6 +12,14 @@ Templates to configure preview environments with ArgoCD by using the Pull Reques
 
 > For further information, see [ArgoCD documentation](https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/Generators-Pull-Request).
 
+### Github self-hosted runners
+
+Templates to deploy Github Actions Runners accross a Kubernetes cluster.
+
+- [runner-deployment.yaml](./devops/github-selfhosted-runner/runner-deployment.yaml)
+
+> For further information, see [ARC documentation](https://github.com/actions/actions-runner-controller).
+
 ## Docker
 
 ### Utils images

@@ -2,7 +2,8 @@
 #
 # You need to replace all values following the `<variable_name>` pattern
 # and adapt some values from the current template.
-# see. https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/Generators-Pull-Request/#github
+# see: 
+#   - https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/Generators-Pull-Request/#github
 ---
 apiVersion: v1
 kind: Secret
