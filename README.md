@@ -75,6 +75,7 @@ __Versions correlation table :__
 | [delete-ghcr-image.sh](./shell/delete-ghcr-image.sh)             | *delete image and subsequent manifests from ghcr.*                          |
 | [eol-infos.sh](./shell/eol-infos.sh)                             | *get package end of life infos.*                                            |
 | [export-argocd-resources.sh](./shell/export-argocd-resources.sh) | *export ready-to-apply argocd resources.*                                   |
+| [export-kube-resources.sh](./shell/export-kube-resources.sh)     | *export ready-to-apply kubernetes resources.*                               |
 | [init-env-files.sh](./shell/init-env-files.sh)                   | *init `.env` and `.yaml` example files by copying them without `-example`.* |
 | [keycloak-add-users.sh](./shell/keycloak-add-users.sh)           | *add keycloak users for a given keycloak realm.*                            |
 | [keycloak-get-token.sh](./shell/keycloak-get-token.sh)           | *display keycloak token for the given infos.*                               |
