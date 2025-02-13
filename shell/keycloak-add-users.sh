@@ -71,24 +71,23 @@ ACCESS_TOKEN=$(curl -fsSL \
   -d "password=$KC_PASSWORD" \
   -d "grant_type=password" | jq -r '.access_token')
 
-for USER in $(echo "$USERS" | jq -c '.[]'); do 
-  DATA="{ 
-    \"username\": \"$(echo $USER | jq -r '.username')\", 
-    \"firstName\": \"$(echo $USER | jq -r '.firstName')\", 
-    \"lastName\": \"$(echo $USER | jq -r '.lastName')\", 
-    \"email\": \"$(echo $USER | jq -r '.email')\", 
-    \"emailVerified\": true,
-    \"enabled\": true,
-    \"credentials\": [{
-      \"type\": \"password\",
-      \"value\": \"$(echo $USER | jq -r '.password')\",
-      \"temporary\": false
-    }]
-  }"
-  echo "$DATA"
+for USER in $(echo "$KC_USERS" | jq -c '.[]'); do
+  USERNAME=$(echo "$USER" | jq -r '.username')
+
   curl -fsSL \
     -X POST "$KC_HOST/admin/realms/$KC_REALM/users" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer $ACCESS_TOKEN" \
-    -d "$DATA"
+    -d "$USER"
+
+  USER_UUID=$(curl -fsSL \
+    -X GET "$KC_HOST/admin/realms/$KC_REALM/users?username=$USERNAME" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" | jq -r '.[0].id')
+
+  if [ "$USER_UUID" != "null" ]; then
+    printf "\User '$USERNAME' created successfully in realm '$KC_REALM'.\n"
+  else
+    printf "\n${red}Error.${no_color} Failed to create user '$USERNAME'.\n"
+  fi
 done
