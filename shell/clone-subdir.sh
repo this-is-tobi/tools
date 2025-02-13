@@ -58,11 +58,11 @@ done
 
 # Script conditions
 if [ -z "$REPO_URL" ]; then
-  printf "\n${red}Error.${no_color} Argument missing : repo url name (flag -u)".
+  printf "\n${red}Error.${no_color} Argument missing: repo url name (flag -u)".
   exit 1
 fi
 if [ -z "$SUB_DIR" ]; then
-  printf "\n${red}Error.${no_color} Argument missing : subdirectory to clone (flag -s)".
+  printf "\n${red}Error.${no_color} Argument missing: subdirectory to clone (flag -s)".
   exit 1
 fi
 

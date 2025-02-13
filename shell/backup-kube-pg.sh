@@ -76,16 +76,16 @@ done
 
 
 if [ -z "$MODE" ]; then
-  printf "\n${red}Error.${no_color} Argument missing : mode (flag -m)".
+  printf "\n${red}Error.${no_color} Argument missing: mode (flag -m)".
   exit 1
 elif [ -z "$TARGET" ]; then
-  printf "\n${red}Error.${no_color} Argument missing : target pod or service (flag -t)".
+  printf "\n${red}Error.${no_color} Argument missing: target pod or service (flag -t)".
   exit 1
 elif [ "$MODE" = "dump" ] || [ "$MODE" = "dump_forward" ] && [ -z "$DB_NAME" ]; then
-  printf "\n${red}Error.${no_color} Argument missing : database name (flag -d)".
+  printf "\n${red}Error.${no_color} Argument missing: database name (flag -d)".
   exit 1
 elif [ "$MODE" = "restore" ] || [ "$MODE" = "restore_forward" ] && [ -z "$DUMP_FILE" ]; then
-  printf "\n${red}Error.${no_color} Argument missing : dump file (flag -f)".
+  printf "\n${red}Error.${no_color} Argument missing: dump file (flag -f)".
   exit 1
 fi
 

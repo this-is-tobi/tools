@@ -50,16 +50,16 @@ done
 
 
 if [ -z "$KC_HOST" ]; then
-  printf "\n${red}Error.${no_color} Argument missing : keycloak host (flag -k)".
+  printf "\n${red}Error.${no_color} Argument missing: keycloak host (flag -k)".
   exit 1
 elif [ -z "$KC_PASSWORD" ]; then
-  printf "\n${red}Error.${no_color} Argument missing : user password (flag -p)".
+  printf "\n${red}Error.${no_color} Argument missing: user password (flag -p)".
   exit 1
 elif [ -z "$KC_REALM" ]; then
-  printf "\n${red}Error.${no_color} Argument missing : keycloak realm (flag -r)".
+  printf "\n${red}Error.${no_color} Argument missing: keycloak realm (flag -r)".
   exit 1
 elif [ -z "$KC_USERS" ]; then
-  printf "\n${red}Error.${no_color} Argument missing : users (flag -d)".
+  printf "\n${red}Error.${no_color} Argument missing: users (flag -d)".
   exit 1
 fi
 

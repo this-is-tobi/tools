@@ -57,22 +57,22 @@ function jwt_decode(){
 }
 
 if [ -z "$CLIENT_ID" ]; then
-  printf "\n${red}Error.${no_color} Argument missing : client id (flag -i)".
+  printf "\n${red}Error.${no_color} Argument missing: client id (flag -i)".
   exit 1
 elif [ -z "$KC_HOST" ]; then
-  printf "\n${red}Error.${no_color} Argument missing : keycloak host (flag -k)".
+  printf "\n${red}Error.${no_color} Argument missing: keycloak host (flag -k)".
   exit 1
 elif [ -z "$KC_PASSWORD" ]; then
-  printf "\n${red}Error.${no_color} Argument missing : user password (flag -p)".
+  printf "\n${red}Error.${no_color} Argument missing: user password (flag -p)".
   exit 1
 elif [ -z "$KC_REALM" ]; then
-  printf "\n${red}Error.${no_color} Argument missing : keycloak realm (flag -r)".
+  printf "\n${red}Error.${no_color} Argument missing: keycloak realm (flag -r)".
   exit 1
 elif [ -z "$CLIENT_SECRET" ]; then
-  printf "\n${red}Error.${no_color} Argument missing : client secret (flag -s)".
+  printf "\n${red}Error.${no_color} Argument missing: client secret (flag -s)".
   exit 1
 elif [ -z "$KC_USERNAME" ]; then
-  printf "\n${red}Error.${no_color} Argument missing : username (flag -u)".
+  printf "\n${red}Error.${no_color} Argument missing: username (flag -u)".
   exit 1
 fi
 
