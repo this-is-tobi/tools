@@ -44,6 +44,17 @@
     }
   },
   {
+    "name": "homelab-utils",
+    "build": {
+      "base": "docker.io/alpine:3.21.2",
+      "context": "./docker/homelab-utils",
+      "dockerfile": "./docker/homelab-utils/Dockerfile",
+      "target": "build",
+      "tag": "0.1.0",
+      "latest": true
+    }
+  },
+  {
     "name": "pg-backup",
     "build": {
       "base": "docker.io/postgres:15.10",
