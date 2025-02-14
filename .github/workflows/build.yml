@@ -13,6 +13,10 @@ on:
         required: true
         type: string
         default: this-is-tobi/tools
+      IMAGES:
+        description: Comma separated list of image to build (leave empty to build all)
+        required: false
+        type: string
       BUILD_AMD64:
         description: Build for amd64
         required: true
@@ -45,7 +49,12 @@ jobs:
       - name: Generate matrix for build
         id: build-matrix
         run: |
-          echo "BUILD_MATRIX=$(jq -c . < ./ci/matrix.json)" >> $GITHUB_OUTPUT
+          if [ ! -z "${{ inputs.IMAGES }}" ]; then
+            JQ_FILTER=$(echo "${{ inputs.IMAGES }}" | jq -R 'split(",")')
+            echo "BUILD_MATRIX=$(jq -c --argjson images "$JQ_FILTER" '[.[] | select(.name | IN($images[]))]' < ./ci/matrix.json)" >> $GITHUB_OUTPUT
+          else
+            echo "BUILD_MATRIX=$(jq -c '.' < ./ci/matrix.json)" >> $GITHUB_OUTPUT
+          fi
 
   build:
     name: Build images
