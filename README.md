@@ -43,7 +43,7 @@ __Versions correlation table :__
 | curl          | 1.2.0         | `docker.io/alpine:3.21.3`          |
 | debug         | 2.1.0         | `docker.io/debian:12`              |
 | dev           | 2.0.2         | `docker.io/debian:12`              |
-| homelab-utils | 0.1.0         | `docker.io/alpine:3.21.2`          |
+| homelab-utils | 0.2.0         | `docker.io/alpine:3.21.3`          |
 | pg-backup     | 3.0.2         | `docker.io/postgres:17.2`          |
 | pg-backup     | 2.0.2         | `docker.io/postgres:16.6`          |
 | pg-backup     | 1.4.5         | `docker.io/postgres:15.10`         |
