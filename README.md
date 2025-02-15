@@ -40,7 +40,7 @@ __Versions correlation table :__
 | Name          | Image version | Base image                         |
 | ------------- | ------------- | ---------------------------------- |
 | act-runner    | 2.0.2         | `docker.io/ubuntu:24.04`           |
-| curl          | 1.1.2         | `docker.io/alpine:3.21.2`          |
+| curl          | 1.2.0         | `docker.io/alpine:3.21.3`          |
 | debug         | 2.1.0         | `docker.io/debian:12`              |
 | dev           | 2.0.2         | `docker.io/debian:12`              |
 | homelab-utils | 0.1.0         | `docker.io/alpine:3.21.2`          |
