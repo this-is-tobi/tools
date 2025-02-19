@@ -44,11 +44,11 @@ __Versions correlation table :__
 | debug         | 2.1.0         | `docker.io/debian:12`              |
 | dev           | 2.0.2         | `docker.io/debian:12`              |
 | homelab-utils | 0.2.0         | `docker.io/alpine:3.21.3`          |
-| pg-backup     | 3.1.0         | `docker.io/postgres:17.3`          |
-| pg-backup     | 2.1.0         | `docker.io/postgres:16.7`          |
-| pg-backup     | 1.4.0         | `docker.io/postgres:15.11`         |
-| s3-backup     | 1.1.4         | `docker.io/debian:12`              |
-| vault-backup  | 1.3.0         | `docker.io/hashicorp/vault:1.18.4` |
+| pg-backup     | 3.2.0         | `docker.io/postgres:17.3`          |
+| pg-backup     | 2.2.0         | `docker.io/postgres:16.7`          |
+| pg-backup     | 1.6.0         | `docker.io/postgres:15.11`         |
+| s3-backup     | 1.2.0         | `docker.io/debian:12`              |
+| vault-backup  | 1.4.0         | `docker.io/hashicorp/vault:1.18.4` |
 
 > [!TIP]
 > The backup images are supplied with a sample kubernetes cronjob in their respective folders.

@@ -12,6 +12,7 @@ data:
   S3_SECRET_KEY: ""
   S3_BUCKET_NAME: ""
   S3_BUCKET_PREFIX: ""
+  S3_PATH_STYLE: ""
   RETENTION: ""
   MC_EXTRA_ARGS: ""
 
