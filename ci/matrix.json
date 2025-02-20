@@ -55,6 +55,17 @@
     }
   },
   {
+    "name": "mc",
+    "build": {
+      "base": "docker.io/alpine:3.21.3",
+      "context": "./docker/mc",
+      "dockerfile": "./docker/mc/Dockerfile",
+      "target": "build",
+      "tag": "1.0.1",
+      "latest": true
+    }
+  },
+  {
     "name": "pg-backup",
     "build": {
       "base": "docker.io/postgres:15.11",
