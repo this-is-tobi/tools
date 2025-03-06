@@ -46,9 +46,9 @@ __Versions correlation table :__
 | dev           | 2.0.2         | `docker.io/debian:12`              |
 | homelab-utils | 0.2.0         | `docker.io/alpine:3.21.3`          |
 | mc            | 1.0.1         | `docker.io/alpine:3.21.3`          |
-| pg-backup     | 3.2.0         | `docker.io/postgres:17.3`          |
-| pg-backup     | 2.2.0         | `docker.io/postgres:16.7`          |
-| pg-backup     | 1.6.0         | `docker.io/postgres:15.11`         |
+| pg-backup     | 3.3.0         | `docker.io/postgres:17.4`          |
+| pg-backup     | 2.3.0         | `docker.io/postgres:16.8`          |
+| pg-backup     | 1.7.0         | `docker.io/postgres:15.12`         |
 | s3-backup     | 1.2.0         | `docker.io/debian:12`              |
 | vault-backup  | 1.5.0         | `docker.io/hashicorp/vault:1.19.0` |
 
