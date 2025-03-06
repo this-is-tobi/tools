@@ -199,7 +199,7 @@ jobs:
           type=raw,value=${{ steps.image-tags.outputs.MAJOR_TAG }}.${{ steps.image-tags.outputs.MINOR_TAG }}.${{ steps.image-tags.outputs.PATCH_TAG }},enable=true
           type=raw,value=${{ steps.image-tags.outputs.MAJOR_TAG }}.${{ steps.image-tags.outputs.MINOR_TAG }},enable=true
           type=raw,value=${{ steps.image-tags.outputs.MAJOR_TAG }},enable=true
-          type=raw,value=latest,enable=true
+          type=raw,value=latest,enable=${{ matrix.images.build.latest && true || false }}
 
     - name: Create manifest list and push
       if: ${{ steps.image-status.outputs.IMAGE_STATUS == '404' }}
