@@ -61,13 +61,52 @@ __Versions correlation table :__
 | -------------------------------------------- | ---------------------------------------------------------- |
 | [nginx](./docker/templates/nginx/Dockerfile) | *bitnami/nignx rootless conf with variables substitution.* |
 
-## Nodejs
+## Git hooks
+
+| Name                                                              | Type         | Description                                                                                                                 |
+| ----------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| [conventional-commit](./git-hooks/commit-msg/conventional-commit) | `commit-msg` | *pure bash check for [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/) pattern in git commit messages.* |
+
+### Quick Setup
+
+Run the following command to download the `commit-msg` hook from the GitHub repository and install it in your current repository:
+
+```sh
+# Define the target file and the URL to download from
+TARGET_FILE=".git/hooks/<git_hook>"
+URL="https://raw.githubusercontent.com/this-is-tobi/tools/main/git-hooks/<git_hook>"
+
+# Check if the target file exists
+if [ -f "$TARGET_FILE" ]; then
+  # File exists, download the content and remove the shebang from the first line
+  curl -fsSL "$URL" | sed '1 s/^#!.*//' >> "$TARGET_FILE"
+else
+  # File does not exist, create the file with the downloaded content
+  curl -fsSL "$URL" -o "$TARGET_FILE"
+fi
+
+# Ensure the file is executable
+chmod +x "$TARGET_FILE"
+```
+
+### Sharing with Your Team
+
+Add the hook to your repository and commit it:
+
+```sh
+git add .git/hooks/commit-msg
+git commit -m "ci: add commit-msg hook"
+git push
+```
+## Scripts
+
+### Nodejs
 
 | Name                            | Description                |
 | ------------------------------- | -------------------------- |
 | [crypto.mjs](./node/crypto.mjs) | *set of crypto functions.* |
 
-## Shell
+### Shell
 
 | Name                                                             | Description                                                                 |
 | ---------------------------------------------------------------- | --------------------------------------------------------------------------- |

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Path to the commit message file
+COMMIT_MSG_FILE=$1
+
+# Regular expression for conventional commit message
+CONVENTIONAL_COMMIT_REGEX='^(feat|fix|docs|style|refactor|perf|test|chore|revert|ci)(\([a-zA-Z0-9\-_ ]+\))?!?: .+'
+
+# Read the commit message
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Check if the commit message matches the conventional commit format
+if ! [[ "$COMMIT_MSG" =~ $CONVENTIONAL_COMMIT_REGEX ]]; then
+  echo "Commit message does not follow conventional commit format."
+  echo "Expected format: <type>(<scope>)!: <subject>"
+  echo "Allowed types: feat, fix, docs, style, refactor, perf, test, chore, revert, ci"
+  exit 1
+fi
