@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# Prerequisite :
+#   - https://github.com/adrienverge/yamllint
+
+# Check if yaml files respect linting rules
+yamllint --config-file <config_path>
