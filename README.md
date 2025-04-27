@@ -66,6 +66,10 @@ __Versions correlation table :__
 | Name                                                              | Type         | Description                                                                                                                 |
 | ----------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------- |
 | [conventional-commit](./git-hooks/commit-msg/conventional-commit) | `commit-msg` | *pure bash check for [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/) pattern in git commit messages.* |
+| [helm-lint](./git-hooks/pre-commit/helm-lint)                     | `pre-commit` | *lint helm charts using [chart-testing](https://github.com/helm/chart-testing).*                                            |
+
+> [!TIP]
+> A [config](./git-hooks/configs) folder is available to help configure tools.
 
 ### Quick Setup
 

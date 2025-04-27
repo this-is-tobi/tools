@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Prerequisite :
+#   - https://github.com/helm/chart-testing
+#   - https://github.com/adrienverge/yamllint
+
+# Check if charts respect linting rules
+ct lint --config <config_path> --lint-conf <config_path>
