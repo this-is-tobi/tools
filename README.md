@@ -94,24 +94,13 @@ fi
 chmod +x "$TARGET_FILE"
 ```
 
-### Sharing with Your Team
-
-Add the hook to your repository and commit it:
-
-```sh
-git add .git/hooks/commit-msg
-git commit -m "ci: add commit-msg hook"
-git push
-```
-## Scripts
-
-### Nodejs
+## Nodejs
 
 | Name                            | Description                |
 | ------------------------------- | -------------------------- |
 | [crypto.mjs](./node/crypto.mjs) | *set of crypto functions.* |
 
-### Shell
+## Shell
 
 | Name                                                             | Description                                                                 |
 | ---------------------------------------------------------------- | --------------------------------------------------------------------------- |
