@@ -4,4 +4,4 @@
 #   - https://github.com/adrienverge/yamllint
 
 # Check if yaml files respect linting rules
-yamllint --config-file <config_path>
+yamllint --config-file <config_path> .
