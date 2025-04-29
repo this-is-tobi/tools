@@ -16,9 +16,16 @@ Templates to configure preview environments with ArgoCD by using the Pull Reques
 
 Templates to deploy Github Actions Runners accross a Kubernetes cluster.
 
-- [runner-deployment.yaml](./devops/github-selfhosted-runner/runner-deployment.yaml)
+Using __legacy__ install :
+  1. Install [actions-runner-controller](https://github.com/actions/actions-runner-controller) helm chart ([repo link](https://actions-runner-controller.github.io/actions-runner-controller/actions-runner-controller)).
+  2. Deploy the [runner-deployment.yaml](./devops/github-selfhosted-runner/runner-deployment.yaml).
 
-> For further information, see [ARC documentation](https://github.com/actions/actions-runner-controller).
+Using __github__ install :
+  1. Install [actions-runner-controller](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners-with-actions-runner-controller/quickstart-for-actions-runner-controller) helm chart ([repo link](oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller)).
+
+> For further information, see :
+> - [Legacy ARC documentation](https://github.com/actions/actions-runner-controller).
+> - [Github ARC documentation](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners-with-actions-runner-controller/about-actions-runner-controller).
 
 ## Docker
 
