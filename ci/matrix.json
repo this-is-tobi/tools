@@ -44,6 +44,17 @@
     }
   },
   {
+    "name": "gh-runner",
+    "build": {
+      "base": "ghcr.io/actions/actions-runner:2.323.0",
+      "context": "./docker/gh-runner",
+      "dockerfile": "./docker/gh-runner/Dockerfile",
+      "target": "build",
+      "tag": "1.0.0",
+      "latest": true
+    }
+  },
+  {
     "name": "homelab-utils",
     "build": {
       "base": "docker.io/alpine:3.21.3",
