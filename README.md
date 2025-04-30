@@ -52,7 +52,7 @@ __Versions correlation table :__
 | curl          | 1.2.0         | `docker.io/alpine:3.21.3`                |
 | debug         | 2.1.0         | `docker.io/debian:12`                    |
 | dev           | 2.0.2         | `docker.io/debian:12`                    |
-| gh-runner     | 1.0.0         | `ghcr.io/actions/actions-runner:2.323.0` |
+| gh-runner     | 1.1.0         | `ghcr.io/actions/actions-runner:2.323.0` |
 | homelab-utils | 0.2.0         | `docker.io/alpine:3.21.3`                |
 | mc            | 1.0.1         | `docker.io/alpine:3.21.3`                |
 | pg-backup     | 3.3.0         | `docker.io/postgres:17.4`                |
