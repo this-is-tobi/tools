@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# Prerequisite :
+#   - https://github.com/eslint/eslint
+#   - https://github.com/antfu/eslint-config
+
+
+# Check if js, ts, json, markdown and yaml files respect linting rules
+eslint --config <config_path> .

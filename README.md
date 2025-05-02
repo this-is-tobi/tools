@@ -72,14 +72,12 @@ __Versions correlation table :__
 
 ## Git hooks
 
-| Name                                                              | Type         | Description                                                                                                                 |
-| ----------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| [conventional-commit](./git-hooks/commit-msg/conventional-commit) | `commit-msg` | *pure bash check for [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/) pattern in git commit messages.* |
-| [helm-lint](./git-hooks/pre-commit/helm-lint)                     | `pre-commit` | *lint helm charts using [chart-testing](https://github.com/helm/chart-testing).*                                            |
-| [yaml-lint](./git-hooks/pre-commit/yaml-lint)                     | `pre-commit` | *lint yaml using [yamllint](https://github.com/adrienverge/yamllint).*                                                      |
-
-> [!TIP]
-> A [config](./git-hooks/configs) folder is available to help configure tools.
+| Name                                                              | Type         | Description                                                                                                                 | Config                                                       |
+| ----------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| [conventional-commit](./git-hooks/commit-msg/conventional-commit) | `commit-msg` | *pure bash check for [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/) pattern in git commit messages.* | -                                                            |
+| [eslint-lint](./git-hooks/pre-commit/eslint-lint)                 | `pre-commit` | *lint js, ts and many more files using [eslint](https://github.com/eslint/eslint).*                                         | [eslint.config.js](./git-hooks/configs/eslint.config.js)     |
+| [helm-lint](./git-hooks/pre-commit/helm-lint)                     | `pre-commit` | *lint helm charts using [chart-testing](https://github.com/helm/chart-testing).*                                            | [chart-testing.yaml](./git-hooks/configs/chart-testing.yaml) |
+| [yaml-lint](./git-hooks/pre-commit/yaml-lint)                     | `pre-commit` | *lint yaml using [yamllint](https://github.com/adrienverge/yamllint).*                                                      | [yamllint.yaml](./git-hooks/configs/yamllint.yaml)           |
 
 ### Quick Setup
 
