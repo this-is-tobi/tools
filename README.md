@@ -17,11 +17,23 @@ Templates to configure preview environments with ArgoCD by using the Pull Reques
 Templates to deploy Github Actions Runners accross a Kubernetes cluster.
 
 Using __legacy__ install :
-  1. Install [actions-runner-controller](https://github.com/actions/actions-runner-controller) helm chart ([repo link](https://actions-runner-controller.github.io/actions-runner-controller/actions-runner-controller)).
-  2. Deploy the [runner-deployment.yaml](./devops/github-selfhosted-runner/runner-deployment.yaml).
+  1. Install [actions-runner-controller](https://github.com/actions/actions-runner-controller) helm chart.
+      ```sh
+      # Get chart informations
+
+      helm show chart actions-runner-controller --repo https://actions-runner-controller.github.io/actions-runner-controller
+      helm show values actions-runner-controller --repo https://actions-runner-controller.github.io/actions-runner-controller
+      ```
+  1. Deploy the [runner-deployment.yaml](./devops/github-selfhosted-runner/runner-deployment.yaml).
 
 Using __github__ install :
-  1. Install [actions-runner-controller](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners-with-actions-runner-controller/quickstart-for-actions-runner-controller) helm chart ([repo link](oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller)).
+  1. Install [actions-runner-controller](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners-with-actions-runner-controller/quickstart-for-actions-runner-controller) helm chart.
+      ```sh
+      # Get chart informations
+
+      helm show chart oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller
+      helm show values oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller
+      ```
 
 > For further information, see :
 > - [Legacy ARC documentation](https://github.com/actions/actions-runner-controller).
