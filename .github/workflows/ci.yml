@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  workflow_dispatch:
+    inputs:
+      REGISTRY:
+        description: Target registry to push images
+        required: true
+        type: string
+        default: ghcr.io
+      NAMESPACE:
+        description: Target namespace to the given registry
+        required: true
+        type: string
+        default: this-is-tobi/tools
+      IMAGES:
+        description: Comma separated list of image to build (leave empty to build all)
+        required: false
+        type: string
+      BUILD_AMD64:
+        description: Build for amd64
+        required: true
+        type: boolean
+        default: true
+      BUILD_ARM64:
+        description: Build for arm64
+        required: true
+        type: boolean
+        default: true
+      USE_QEMU:
+        description: Use QEMU for non amd64 builds
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  build-amd64:
+    uses: ./.github/workflows/build.yml
+    if: ${{ inputs.BUILD_AMD64 }}
+    with:
+      REGISTRY: ${{ inputs.REGISTRY }}
+      NAMESPACE: ${{ inputs.NAMESPACE }}
+      IMAGES: ${{ inputs.IMAGES }}
+      BUILD_AMD64: ${{ inputs.BUILD_AMD64 == true }}
+      BUILD_ARM64: false
+      USE_QEMU: ${{ inputs.USE_QEMU == true }}
+
+  build-arm64:
+    uses: ./.github/workflows/build.yml
+    if: ${{ inputs.BUILD_ARM64 }}
+    with:
+      REGISTRY: ${{ inputs.REGISTRY }}
+      NAMESPACE: ${{ inputs.NAMESPACE }}
+      IMAGES: ${{ inputs.IMAGES }}
+      BUILD_AMD64: false
+      BUILD_ARM64: ${{ inputs.BUILD_ARM64 == true }}
+      USE_QEMU: ${{ inputs.USE_QEMU == true }}
