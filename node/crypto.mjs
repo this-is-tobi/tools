@@ -10,15 +10,15 @@ const ivLength = 16
  * @function generateHash
  * @param {string} password - Password to hash.
  * @returns {promise} Hash of input password.
-*/
-export const generateHash = async (password) => {
+ */
+export async function generateHash(password) {
   return new Promise((resolve, reject) => {
     const salt = crypto.randomBytes(8).toString('hex')
     crypto.scrypt(password, salt, 64, (err, derivedKey) => {
       if (err) {
         reject(err)
       }
-      resolve(salt + ':' + derivedKey.toString('hex'))
+      resolve(`${salt}:${derivedKey.toString('hex')}`)
     })
   })
 }
@@ -29,8 +29,8 @@ export const generateHash = async (password) => {
  * @param {string} password - Password to compare with hash.
  * @param {string} hash - Hash to compare with password.
  * @returns {promise} Equality of password and hash.
-*/
-export const compareToHash = async (password, hash) => {
+ */
+export async function compareToHash(password, hash) {
   return new Promise((resolve, reject) => {
     const [salt, key] = hash.split(':')
     const keyBuffer = Buffer.from(key, 'hex')
@@ -48,15 +48,15 @@ export const compareToHash = async (password, hash) => {
  * @function encrypt
  * @param {string} text - Text to encrypt.
  * @returns {promise} Encrypted text.
-*/
-export const encrypt = (text) => {
+ */
+export function encrypt(text) {
   return new Promise((resolve, reject) => {
     try {
       const iv = crypto.randomBytes(ivLength)
       const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(encryptionKey), iv)
       let encrypted = cipher.update(text)
       encrypted = Buffer.concat([encrypted, cipher.final()])
-      resolve(iv.toString('hex') + ':' + encrypted.toString('hex'))
+      resolve(`${iv.toString('hex')}:${encrypted.toString('hex')}`)
     } catch (err) {
       reject(err)
     }
@@ -68,8 +68,8 @@ export const encrypt = (text) => {
  * @function decrypt
  * @param {string} text - Encrypted text to decrypt.
  * @returns {promise} Decrypted text.
-*/
-export const decrypt = (text) => {
+ */
+export function decrypt(text) {
   return new Promise((resolve, reject) => {
     try {
       const textParts = text.split(':')
@@ -88,13 +88,13 @@ export const decrypt = (text) => {
 /**
  * Generate a random password
  * @function generateRandomPassword
- * @param {number} [length=24] - Length of the generated password.
+ * @param {number} [length] - Length of the generated password.
  * @returns {string} Generated password.
-*/
-export const generateRandomPassword = (length = 24) => {
+ */
+export function generateRandomPassword(length = 24) {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789?!@-_#*'
   return Array.from(crypto.getRandomValues(new Uint32Array(length)))
-    .map((x) => chars[x % chars.length])
+    .map(x => chars[x % chars.length])
     .join('')
 }
 
@@ -110,13 +110,13 @@ export const generateRandomPassword = (length = 24) => {
 
   const generatedPassword = generateRandomPassword()
 
-  console.log({ 
-    password, 
+  console.log({
+    password,
     encryptionKey,
     hash,
     isHashEqual,
-    encrypted, 
+    encrypted,
     decrypted,
-    generatedPassword
+    generatedPassword,
   })
 })()

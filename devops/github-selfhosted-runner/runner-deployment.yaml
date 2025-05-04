@@ -1,7 +1,7 @@
 # Self-hosted Github runner template
 #
 # You need to replace all values following the `<variable_name>` pattern
-# see: 
+# see:
 #  - https://github.com/actions/actions-runner-controller/blob/master/docs/installing-arc.md
 #  - https://github.com/actions/actions-runner-controller/blob/master/docs/authenticating-to-the-github-api.md#deploying-using-github-app-authentication
 #  - https://github.com/actions/actions-runner-controller/blob/master/docs/deploying-arc-runners.md
@@ -11,8 +11,8 @@ kind: Secret
 metadata:
   name: <github_username>
 stringData:
-  github_app_id: '<github_app_id>'
-  github_app_installation_id: '<github_app_installation_id>'
+  github_app_id: <github_app_id>
+  github_app_installation_id: <github_app_installation_id>
   github_app_private_key: |-
     <github_app_private_key>
 

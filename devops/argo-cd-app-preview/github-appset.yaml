@@ -2,7 +2,7 @@
 #
 # You need to replace all values following the `<variable_name>` pattern
 # and adapt some values from the current template.
-# see: 
+# see:
 #   - https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/Generators-Pull-Request/#github
 ---
 apiVersion: v1
@@ -14,8 +14,8 @@ metadata:
   name: <github_repository>-preview-creds
   namespace: <argocd_namespace>
 stringData:
-  githubAppID: '<github_app_id>'
-  githubAppInstallationID: '<github_app_installation_id>'
+  githubAppID: <github_app_id>
+  githubAppInstallationID: <github_app_installation_id>
   githubAppPrivateKey: |-
     <github_app_private_key>
 

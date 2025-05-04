@@ -1,11 +1,11 @@
-version: '3.9'
+version: "3.9"
 
 services:
   registry:
     image: docker.io/registry:2
     restart: always
     ports:
-      - 5555:5000
+    - 5555:5000
     environment:
       REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
       REGISTRY_AUTH: htpasswd
@@ -15,6 +15,6 @@ services:
       REGISTRY_HTTP_TLS_CERTIFICATE: /certs/registry.local.crt
       REGISTRY_HTTP_TLS_KEY: /certs/registry.local.key
     volumes:
-      - ./auth:/auth
-      - ./data:/data
-      - ./certs:/certs
+    - ./auth:/auth
+    - ./data:/data
+    - ./certs:/certs

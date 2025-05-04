@@ -1,5 +1,5 @@
 api:
-  image: 
+  image:
     repository: template-monorepo-ts/api
     tag: prod
   ingress:
@@ -9,11 +9,11 @@ api:
     hosts:
     - host: api.domain.local
       paths:
-        - path: /api/
-          pathType: Prefix
+      - path: /api/
+        pathType: Prefix
 
 docs:
-  image: 
+  image:
     repository: template-monorepo-ts/docs
     tag: prod
   ingress:

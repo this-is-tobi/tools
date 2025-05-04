@@ -1,5 +1,5 @@
 api:
-  image: 
+  image:
     repository: template-monorepo-ts/api
     tag: dev
   ingress:
@@ -20,7 +20,7 @@ api:
     mountPath: /app/apps/api/src
 
 docs:
-  image: 
+  image:
     repository: template-monorepo-ts/docs
     tag: dev
   ingress:
