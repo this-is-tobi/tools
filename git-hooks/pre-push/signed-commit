@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Function to check if a commit is signed
+is_commit_signed() {
+  local commit_hash=$1
+  git verify-commit "$commit_hash" > /dev/null 2>&1
+  return $?
+}
+
+# Read the remote name and URL from the input
+read local_ref local_sha remote_ref remote_sha
+
+# Get the range of commits to check
+commit_range=$(git rev-list "$local_sha".."$remote_sha")
+
+# Check each commit in the range
+for commit in $commit_range; do
+  if ! is_commit_signed "$commit"; then
+    echo "Error: Commit $commit is not signed."
+    exit 1
+  fi
+done
+
+echo "All commits are signed."
+exit 0
