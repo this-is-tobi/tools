@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=docker.io/hashicorp/vault:1.19.0
+ARG BASE_IMAGE=docker.io/hashicorp/vault:1.19.3
 
 FROM ${BASE_IMAGE} AS build
 
