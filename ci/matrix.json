@@ -55,17 +55,6 @@
     }
   },
   {
-    "name": "homelab-utils",
-    "build": {
-      "base": "docker.io/alpine:3.21.3",
-      "context": "./docker/homelab-utils",
-      "dockerfile": "./docker/homelab-utils/Dockerfile",
-      "target": "build",
-      "tag": "0.2.0",
-      "latest": true
-    }
-  },
-  {
     "name": "mc",
     "build": {
       "base": "docker.io/alpine:3.21.3",
