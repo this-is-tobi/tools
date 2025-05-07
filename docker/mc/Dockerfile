@@ -11,7 +11,9 @@ ENV HOME=/home/${USERNAME}
 WORKDIR ${HOME}
 RUN apk add \
   bash \
+  curl \
   jq \
+  openssl \
   wget \
   yq \
   && rm -rf /var/cache/apk/* \

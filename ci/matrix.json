@@ -11,17 +11,6 @@
     }
   },
   {
-    "name": "curl",
-    "build": {
-      "base": "docker.io/alpine:3.21.3",
-      "context": "./docker/curl",
-      "dockerfile": "./docker/curl/Dockerfile",
-      "target": "build",
-      "tag": "1.2.0",
-      "latest": true
-    }
-  },
-  {
     "name": "debug",
     "build": {
       "base": "docker.io/debian:12",
@@ -61,7 +50,7 @@
       "context": "./docker/mc",
       "dockerfile": "./docker/mc/Dockerfile",
       "target": "build",
-      "tag": "1.0.1",
+      "tag": "1.1.0",
       "latest": true
     }
   },
