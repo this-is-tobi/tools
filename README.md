@@ -90,7 +90,7 @@ __Versions correlation table :__
 
 ### Quick Setup
 
-Run the following command to download the `commit-msg` hook from the GitHub repository and install it in your current repository:
+Run the following command to download the hook from the GitHub repository and install it in your current repository:
 
 ```sh
 # Define the target file and the URL to download from
