@@ -1,6 +1,6 @@
 #!/bin/sh
 
-ROOT_DIR=/opt/bitnami/nginx/html
+ROOT_DIR=/usr/share/nginx/html
 # Prefix that is used to find variables in js files 
 # ex: `const test = provess.env.SERVER_HOST || 'runtime-server-host'`
 KEY_PREFIX=runtime
