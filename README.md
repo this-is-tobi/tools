@@ -67,7 +67,7 @@ __Versions correlation table :__
 | pg-backup    | 2.4.0         | `docker.io/postgres:16.9`                |
 | pg-backup    | 1.8.0         | `docker.io/postgres:15.13`               |
 | s3-backup    | 1.2.0         | `docker.io/debian:12`                    |
-| vault-backup | 1.5.1         | `docker.io/hashicorp/vault:1.19.3`       |
+| vault-backup | 1.5.2         | `docker.io/hashicorp/vault:1.19.4`       |
 
 > [!TIP]
 > The backup images are supplied with a sample kubernetes cronjob in their respective folders.
