@@ -17,7 +17,7 @@
       "context": "./docker/debug",
       "dockerfile": "./docker/debug/Dockerfile",
       "target": "build",
-      "tag": "2.1.0",
+      "tag": "2.1.1",
       "latest": true
     }
   },
@@ -28,7 +28,7 @@
       "context": "./docker/dev",
       "dockerfile": "./docker/dev/Dockerfile",
       "target": "build",
-      "tag": "2.0.2",
+      "tag": "2.0.3",
       "latest": true
     }
   },
@@ -46,11 +46,11 @@
   {
     "name": "mc",
     "build": {
-      "base": "docker.io/alpine:3.21.3",
+      "base": "docker.io/alpine:3.22.0",
       "context": "./docker/mc",
       "dockerfile": "./docker/mc/Dockerfile",
       "target": "build",
-      "tag": "1.1.0",
+      "tag": "1.1.1",
       "latest": true
     }
   },
