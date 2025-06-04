@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=ghcr.io/actions/actions-runner:2.324.0
+ARG BASE_IMAGE=ghcr.io/actions/actions-runner:2.325.0
 
 FROM ${BASE_IMAGE} AS build
 
@@ -68,12 +68,13 @@ RUN curl -fsSL https://moonrepo.dev/install/proto.sh | bash -s -- --yes \
   && proto install pnpm \
   && proto install yarn \
   && proto install go \
-  && proto install python \
   && proto install uv \
   && proto install rust
 
 # Install python packages
-RUN pip install --user ansible
+RUN uv venv ${HOME}/.venv \
+  && . ${HOME}/.venv/bin/activate \
+  && uv pip install ansible
 
 # Install packages with shell
 RUN CT_VERSION=$(curl -fsSL "https://api.github.com/repos/helm/chart-testing/releases/latest" | jq -r '.tag_name' | sed 's/v//g') \

@@ -35,11 +35,11 @@
   {
     "name": "gh-runner",
     "build": {
-      "base": "ghcr.io/actions/actions-runner:2.324.0",
+      "base": "ghcr.io/actions/actions-runner:2.325.0",
       "context": "./docker/gh-runner",
       "dockerfile": "./docker/gh-runner/Dockerfile",
       "target": "build",
-      "tag": "1.2.0",
+      "tag": "1.2.1",
       "latest": true
     }
   },
