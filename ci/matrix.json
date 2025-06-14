@@ -101,11 +101,11 @@
   {
     "name": "vault-backup",
     "build": {
-      "base": "docker.io/hashicorp/vault:1.19.4",
+      "base": "docker.io/hashicorp/vault:1.19.5",
       "context": "./docker/vault-backup",
       "dockerfile": "./docker/vault-backup/Dockerfile",
       "target": "build",
-      "tag": "1.5.2",
+      "tag": "1.5.3",
       "latest": true
     }
   }
