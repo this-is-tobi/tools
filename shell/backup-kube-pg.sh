@@ -9,6 +9,7 @@ no_color='\033[0m'
 # Default
 NAMESPACE="$(kubectl config view --minify -o jsonpath='{..namespace}')"
 DB_USER="postgres"
+DB_OWNER="postgres"
 EXPORT_DIR="./backups"
 DATE_TIME=$(date +"%Y%m%dT%H%M")
 CLEAN_RESTORE="false"
@@ -35,15 +36,17 @@ Following flags are available:
   -o    Output directory where to export files.
         Default is '$EXPORT_DIR'.
 
-  -p    Password of the database user that will run the dump command.
+  -p    Password of the database user that will run the dump / restore command.
 
-  -t    Target name of the pod or service to run the dump on.
+  -t    Target name of the pod or service to run the dump / restore.
 
-  -u    Database user used to dump the database.
+  -u    Database user used to dump / restore the database.
         Default is '$DB_USER'.
 
-  -z    Drop the database if exists before restore.
-        Default is '$CLEAN_RESTORE'.
+  -x    Owner of the postgres database when restore.
+        Default is '$DB_OWNER'.
+
+  -z    Close the connections, drop the database if exists and re-create it before restore.
 
   -h    Print script help.\n\n"
 
@@ -52,7 +55,7 @@ print_help() {
 }
 
 # Parse options
-while getopts hc:d:f:m:n:o:p:t:u:z flag; do
+while getopts hc:d:f:m:n:o:p:t:u:x:z flag; do
   case "${flag}" in
     c)
       CONTAINER_NAME=${OPTARG};;
@@ -72,6 +75,8 @@ while getopts hc:d:f:m:n:o:p:t:u:z flag; do
       TARGET=${OPTARG};;
     u)
       DB_USER=${OPTARG};;
+    x)
+      DB_OWNER=${OPTARG};;
     z)
       CLEAN_RESTORE="true";;
     h | *)
@@ -122,6 +127,18 @@ getPodFromService () {
   fi
 }
 
+urlEncode () {
+  jq -rn --arg x "$1" '$x | @uri'
+}
+
+getPgUri () {
+  if [ -z ${DB_PASS} ]; then
+    echo "postgresql://${DB_USER}@localhost:5432/$1"
+  else
+    echo "postgresql://${DB_USER}:$(urlEncode ${DB_PASS})@localhost:5432/$1"
+  fi
+}
+
 
 if [[ "$TARGET" == svc/* || "$TARGET" == service/* ]]; then
   SERVICE_NAME="${TARGET#*/}"
@@ -137,8 +154,8 @@ fi
 
 printf "Settings:
   > MODE: ${MODE}
-  > EXPORT_DIR: $([ ${MODE} = 'dump' ] || [ ${MODE} = 'dump_forward' ] && ${EXPORT_DIR} || echo '-')
-  > DUMP_FILE: $([ ${MODE} = 'restore' ] || [ ${MODE} = 'restore_forward' ] && ${DUMP_FILE} || echo '-')
+  > EXPORT_DIR: $(([ ${MODE} = 'dump' ] || [ ${MODE} = 'dump_forward' ]) && echo \"${EXPORT_DIR}\" || echo '-')
+  > DUMP_FILE: $(([ ${MODE} = 'restore' ] || [ ${MODE} = 'restore_forward' ]) && echo \"${DUMP_FILE}\" || echo '-')
   > DB_NAME: ${DB_NAME}
   > DB_USER: ${DB_USER}
   > DB_PASS: $(if [ -n $DB_PASS ]; then printf "%*s" $(( ${#DB_PASS} - 3 )) "" | tr " " "*"; echo ${DB_PASS: -3}; else echo ''; fi)
@@ -146,7 +163,7 @@ printf "Settings:
   > TARGET: ${TARGET}
   > POD_NAME: ${POD_NAME}
   > CONTAINER_NAME: ${CONTAINER_NAME}
-  > CLEAN_RESTORE: $([ ${MODE} = 'restore' ] || [ ${MODE} = 'restore_forward' ] && ${CLEAN_RESTORE} || echo '-')\n\n"
+  > CLEAN_RESTORE: $(([ ${MODE} = 'restore' ] || [ ${MODE} = 'restore_forward' ]) && echo \"${CLEAN_RESTORE}\" || echo '-')\n\n"
 
 
 DUMP_PATH=""
@@ -183,7 +200,7 @@ if [ "$MODE" = "dump" ]; then
 
   # Dump database
   printf "\n\n${red}[Dump wrapper].${no_color} Dump database.\n\n"
-  kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "PGPASSWORD=${DB_PASS} pg_dump -Fc -d postgresql://${DB_USER}:${DB_PASS}@localhost:5432/${DB_NAME} > ${DUMP_PATH}/${DUMP_FILENAME}"
+  kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "pg_dump -Fc -d $(getPgUri \"${DB_NAME}\") > ${DUMP_PATH}/${DUMP_FILENAME}"
 
   # Copy dump locally
   printf "\n\n${red}[Dump wrapper].${no_color} Copy dump file locally (path: '${DESTINATION_DUMP}').\n\n"
@@ -200,9 +217,9 @@ elif [ "$MODE" = "dump_forward" ]; then
   # Dump database
   printf "\n\n${red}[Dump wrapper].${no_color} Dump database locally (path: '${DESTINATION_DUMP}').\n\n"
   set +e
-  kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5555:5432 &
+  kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5432:5432 &
   sleep 1
-  pg_dump -Fc -d postgresql://${DB_USER}:${DB_PASS}@localhost:5555/${DB_NAME} ${DB_NAME_ARG} > ${DESTINATION_DUMP}
+  pg_dump -Fc -d $(getPgUri \"${DB_NAME}\") ${DB_NAME_ARG} > ${DESTINATION_DUMP}
 
   kill %1
 
@@ -216,26 +233,26 @@ elif [ "$MODE" = "restore" ]; then
   # Restore database
   printf "\n\n${red}[Dump wrapper].${no_color} Restore database.\n\n"
   if [ "$CLEAN_RESTORE" = "true" ]; then
-    kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "PGPASSWORD='${DB_PASS}' psql -d postgresql://${DB_USER}:${DB_PASS}@localhost:5432/${DB_NAME} -c 'DROP DATABASE  IF EXISTS ${DB_NAME}; CREATE DATABASE ${DB_NAME};'"
+    kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "psql -d $(getPgUri 'postgres') -c 'SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = '\''"${DB_NAME}"'\'';'"
+    kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "psql -d $(getPgUri 'postgres') -c 'DROP DATABASE IF EXISTS \"${DB_NAME}\";'"
+    kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "psql -d $(getPgUri 'postgres') -c 'CREATE DATABASE \"${DB_NAME}\";'"
   fi
-  kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "pg_restore -Fc -d postgresql://${DB_USER}:${DB_PASS}@localhost:5432/${DB_NAME} ${DUMP_PATH}/${DUMP_FILE_BASENAME}"
-  if [ "$CLEAN_RESTORE" = "true" ]; then
-    kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "PGPASSWORD='${DB_PASS}' psql -d postgresql://${DB_USER}:${DB_PASS}@localhost:5432/${DB_NAME} -c 'ALTER DATABASE ${DB_NAME} OWNER TO ${DB_USER};'"
-  fi
+  kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "pg_restore -Fc -d $(getPgUri \"${DB_NAME}\") ${DUMP_PATH}/${DUMP_FILE_BASENAME}"
+  kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "psql -d $(getPgUri 'postgres') -c 'ALTER DATABASE \"${DB_NAME}\" OWNER TO \"${DB_OWNER}\";'"
 
 elif [ "$MODE" = "restore_forward" ]; then
   # Restore database
   printf "\n\n${red}[Dump wrapper].${no_color} Restore database.\n\n"
   set +e
-  kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5555:5432 &
+  kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5432:5432 &
   sleep 1
   if [ "$CLEAN_RESTORE" = "true" ]; then
-    kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "PGPASSWORD='${DB_PASS}' psql -d postgresql://${DB_USER}:${DB_PASS}@localhost:5432/${DB_NAME} -c 'DROP DATABASE  IF EXISTS ${DB_NAME}; CREATE DATABASE ${DB_NAME};'"
+    psql -d $(getPgUri 'postgres') -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = '${DB_NAME}';"
+    psql -d $(getPgUri 'postgres') -c "DROP DATABASE IF EXISTS \"${DB_NAME}\";"
+    psql -d $(getPgUri 'postgres') -c "CREATE DATABASE \"${DB_NAME}\";"
   fi
-  pg_restore -Fc -d postgresql://${DB_USER}:${DB_PASS}@localhost:5555/${DB_NAME} ${DB_NAME_ARG} ${DUMP_FILE}
-  if [ "$CLEAN_RESTORE" = "true" ]; then
-    kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "PGPASSWORD='${DB_PASS}' psql -d postgresql://${DB_USER}:${DB_PASS}@localhost:5432/${DB_NAME} -c 'ALTER DATABASE ${DB_NAME} OWNER TO ${DB_USER};'"
-  fi
+  pg_restore -Fc -d $(getPgUri \"${DB_NAME}\") ${DUMP_FILE}
+  psql -d $(getPgUri 'postgres') -c "ALTER DATABASE \"${DB_NAME}\" OWNER TO \"${DB_OWNER}\";"
 
   kill %1
 fi
