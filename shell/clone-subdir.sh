@@ -80,9 +80,15 @@ git config core.sparsecheckout true
 # Clone sub directory from the target repository
 printf "\n\n${red}[clone subdir]${no_color} Clone repository\n\n"
 
-echo "$SUB_DIR/*" >> .git/info/sparse-checkout
-git pull origin "$GIT_BRANCH"
-cp -aR "$SUB_DIR/." . && rm -rf "$SUB_DIR"
+if [ -d "$SUB_DIR" ]; then
+  echo "$SUB_DIR/*" >> .git/info/sparse-checkout
+  git pull origin "$GIT_BRANCH"
+  cp -aR "$SUB_DIR/." . && rm -rf "$SUB_DIR"
+else
+  echo "$SUB_DIR" >> .git/info/sparse-checkout
+  git pull origin "$GIT_BRANCH"
+  cp -a "$SUB_DIR" . && rm -rf $(dirname "$SUB_DIR")
+fi
 cd - > /dev/null
 
 # Delete git artifacts in the fresh cloned repo
