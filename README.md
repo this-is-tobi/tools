@@ -129,6 +129,7 @@ chmod +x "$TARGET_FILE"
 | [eol-infos.sh](./shell/eol-infos.sh)                             | *get package end of life infos.*                                            |
 | [export-argocd-resources.sh](./shell/export-argocd-resources.sh) | *export ready-to-apply argocd resources.*                                   |
 | [export-kube-resources.sh](./shell/export-kube-resources.sh)     | *export ready-to-apply kubernetes resources.*                               |
+| [helm-template.sh](./shell/helm-template.sh)                     | *generate helm template.*                                                   |
 | [init-env-files.sh](./shell/init-env-files.sh)                   | *init '.env' and '.yaml' example files by copying them without '-example'.* |
 | [keycloak-add-clients.sh](./shell/keycloak-add-clients.sh)       | *add keycloak clients for a given keycloak realm.*                          |
 | [keycloak-add-users.sh](./shell/keycloak-add-users.sh)           | *add keycloak users for a given keycloak realm.*                            |
