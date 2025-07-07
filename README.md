@@ -67,7 +67,7 @@ __Versions correlation table :__
 | pg-backup    | 2.4.0         | `docker.io/postgres:16.9`                |
 | pg-backup    | 1.8.0         | `docker.io/postgres:15.13`               |
 | s3-backup    | 1.2.0         | `docker.io/debian:12`                    |
-| vault-backup | 1.5.3         | `docker.io/hashicorp/vault:1.19.5`       |
+| vault-backup | 1.6.0         | `docker.io/hashicorp/vault:1.20.0`       |
 
 > [!TIP]
 > The backup images are supplied with a sample kubernetes cronjob in their respective folders.
@@ -120,7 +120,7 @@ chmod +x "$TARGET_FILE"
 
 | Name                                                             | Description                                                                 |
 | ---------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| [backup-kube-pg.sh](./shell/backup-kube-pg.sh)                   | *backup / restore postgres database from / to a kubernetes pod.*            |
+| [backup-kube-pg.sh](./shell/backup-kube-pg.sh)                   | *backup / restore postgres database **from** / to a kubernetes pod.*        |
 | [backup-kube-vault.sh](./shell/backup-kube-vault.sh)             | *backup / restore vault raft cluster from / to a kubernetes pod.*           |
 | [clone-subdir.sh](./shell/clone-subdir.sh)                       | *clone a subdirectory from a git repository.*                               |
 | [compose-to-matrix.sh](./shell/compose-to-matrix.sh)             | *parse docker-compose file to create github matrix.*                        |
