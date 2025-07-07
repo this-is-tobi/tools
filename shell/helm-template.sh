@@ -87,8 +87,10 @@ if [ -n "$SERVICE_NAME" ]; then
 
   # Update service name in values file
   printf "\n\n${red}[helm template]${no_color} Rename service in 'values.yaml' file\n\n"
+  SERVICE_NAME_CAPITALIZED="$(echo "$SERVICE_NAME" | cut -c1 | tr '[:lower:]' '[:upper:]')$(echo "$SERVICE_NAME" | cut -c2-)"
   yq eval ".${SERVICE_NAME} = .servicename | del(.servicename)" -i ${OUTPUT_DIR}/values.yaml
   ${SED_COMMAND} -i "s/servicename/${SERVICE_NAME}/g" ${OUTPUT_DIR}/values.yaml
+  ${SED_COMMAND} -i "s/Servicename/${SERVICE_NAME_CAPITALIZED}/g" ${OUTPUT_DIR}/values.yaml
 
   # Update chart name in values
   printf "\n\n${red}[helm template]${no_color} Rename chart in 'values.yaml' file\n\n"
@@ -120,6 +122,7 @@ if [ -n "$ADDITIONAL_SERVICE_NAME" ]; then
 
   # Update service name in values file
   printf "\n\n${red}[helm template]${no_color} Rename service in 'values.yaml' file\n\n"
+  ADDITIONAL_SERVICE_NAME_CAPITALIZED="$(echo "$ADDITIONAL_SERVICE_NAME" | cut -c1 | tr '[:lower:]' '[:upper:]')$(echo "$ADDITIONAL_SERVICE_NAME" | cut -c2-)"
   curl -fsSL https://raw.githubusercontent.com/this-is-tobi/tools/main/shell/clone-subdir.sh | bash -s -- \
     -u "https://github.com/this-is-tobi/helm-charts" \
     -s "template/values.yaml" \
@@ -127,6 +130,7 @@ if [ -n "$ADDITIONAL_SERVICE_NAME" ]; then
     -d
   yq eval ".${ADDITIONAL_SERVICE_NAME} = load(\"${OUTPUT_DIR}/tmp/values.yaml\").servicename" -i ${OUTPUT_DIR}/values.yaml
   ${SED_COMMAND} -i "s/servicename/${ADDITIONAL_SERVICE_NAME}/g" ${OUTPUT_DIR}/values.yaml
+  ${SED_COMMAND} -i "s/Servicename/${ADDITIONAL_SERVICE_NAME_CAPITALIZED}/g" ${OUTPUT_DIR}/values.yaml
 
   # Update chart name in values
   printf "\n\n${red}[helm template]${no_color} Rename chart in 'values.yaml' file\n\n"
@@ -134,4 +138,10 @@ if [ -n "$ADDITIONAL_SERVICE_NAME" ]; then
 
   # Delete tmp directory
   rm -rf ${OUTPUT_DIR}/tmp
+fi
+
+if ([ -n "$SERVICE_NAME" ] || [ -n "$ADDITIONAL_SERVICE_NAME" ]) && [ -x "$(command -v helm-docs)" ]; then
+  # Update chart readme file
+  printf "\n\n${red}[helm template]${no_color} Update 'readme.md' file\n\n"
+  helm-docs -u ${OUTPUT_DIR}
 fi
