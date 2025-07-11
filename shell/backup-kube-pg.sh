@@ -147,6 +147,8 @@ if [[ "$TARGET" == svc/* || "$TARGET" == service/* ]]; then
     echo "No pods found for service : $SERVICE_NAME"
     exit 1
   fi
+elif [[ "$TARGET" == pod/* ]]; then
+  POD_NAME="${TARGET#*/}"
 else
   POD_NAME="$TARGET"
 fi
