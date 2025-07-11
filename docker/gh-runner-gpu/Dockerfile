@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=ghcr.io/actions/actions-runner:2.325.0
+ARG BASE_IMAGE=ghcr.io/actions/actions-runner:2.326.0
 
 FROM ${BASE_IMAGE} AS build
 
@@ -60,16 +60,6 @@ RUN sudo mkdir -m 0755 -p /etc/apt/keyrings \
   && sudo apt-get install -y containerd.io docker-buildx-plugin docker-ce docker-ce-cli docker-compose-plugin \
   && sudo rm -rf /var/lib/apt/lists/*
 
-# Install NVIDIA Container Toolkit
-RUN curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /etc/apt/keyrings/nvidia-container-toolkit-keyring.gpg \
-  && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-      sed 's#deb https://#deb [signed-by=/etc/apt/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-      sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list \
-  && sudo chmod a+r /etc/apt/keyrings/nvidia-container-toolkit-keyring.gpg \
-  && sudo apt-get update \
-  && sudo apt-get install -y nvidia-container-toolkit \
-  && sudo rm -rf /var/lib/apt/lists/*
-
 # Install proto packages
 RUN curl -fsSL https://moonrepo.dev/install/proto.sh | bash -s -- --yes \
   && proto install bun \
@@ -93,3 +83,13 @@ RUN CT_VERSION=$(curl -fsSL "https://api.github.com/repos/helm/chart-testing/rel
   && sudo mv /tmp/ct /usr/local/bin/ct \
   && chmod +x /usr/local/bin/ct \
   && sudo rm /tmp/chart-testing.tar.gz
+
+# Install NVIDIA Container Toolkit
+RUN curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /etc/apt/keyrings/nvidia-container-toolkit-keyring.gpg \
+  && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed 's#deb https://#deb [signed-by=/etc/apt/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list \
+  && sudo chmod a+r /etc/apt/keyrings/nvidia-container-toolkit-keyring.gpg \
+  && sudo apt-get update \
+  && sudo apt-get install -y nvidia-container-toolkit \
+  && sudo rm -rf /var/lib/apt/lists/*
