@@ -93,7 +93,7 @@ cd - > /dev/null
 
 # Delete git artifacts in the fresh cloned repo
 if [ "$DELETE_GIT_DIR" == "true" ]; then
-  printf "\n\n${red}[clone subdir]${no_color} ungit cloned repoitory\n\n"
+  printf "\n\n${red}[clone subdir]${no_color} Ungit cloned repoitory\n\n"
 
   rm -rf "${OUTPUT_DIR%/}/.git"
 fi
