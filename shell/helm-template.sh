@@ -74,8 +74,7 @@ if [ -n "$SERVICE_NAME" ]; then
 
   # Rename the chart
   printf "\n\n${red}[helm template]${no_color} Rename chart in 'Chart.yaml' file\n\n"
-  CHART_NAME_CAPITALIZED="$(echo "$CHART_NAME" | cut -c1 | tr '[:lower:]' '[:upper:]')$(echo "$CHART_NAME" | cut -c2-)"
-  ${SED_COMMAND} -i "s/chartname/${CHART_NAME_CAPITALIZED}/g" ${OUTPUT_DIR}/Chart.yaml
+  ${SED_COMMAND} -i "s/chartname/${CHART_NAME}/g" ${OUTPUT_DIR}/Chart.yaml
 
   # Rename templates directory
   printf "\n\n${red}[helm template]${no_color} Rename templates directory\n\n"
