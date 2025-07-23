@@ -53,7 +53,22 @@ while getopts ha:c:o:s: flag; do
 done
 
 
+if [ ! -x "$(command -v curl)" ]; then
+  printf "\n${red}[helm template]${no_color} Error: 'curl' is required but not installed.\n"
+  exit 1
+fi
+
+if [ ! -x "$(command -v yq)" ]; then
+  printf "\n${red}[helm template]${no_color} Error: 'yq' is required but not installed.\n"
+  exit 1
+fi
+
 if [ "$(uname -s)" = "Darwin" ]; then
+  if [ ! -x $(command -v gsed) ]; then
+    printf "\n${red}[helm template]${no_color} Error: 'gsed' is required but not installed.\n"
+    printf "Please install GNU sed with 'brew install gnu-sed' and try again.\n\n"
+    exit 1
+  fi
   SED_COMMAND="gsed"
 else
   SED_COMMAND="sed"
@@ -142,8 +157,12 @@ for ADDITIONAL_SERVICE_NAME in "${ADDITIONAL_SERVICE_NAMES[@]}"; do
   rm -rf ${OUTPUT_DIR}/tmp
 done
 
-if ([ -n "$SERVICE_NAME" ] || [ ${#ADDITIONAL_SERVICE_NAMES[@]} -gt 0 ]) && [ -x "$(command -v helm-docs)" ]; then
-  # Update chart readme file
-  printf "\n\n${red}[helm template]${no_color} Update 'readme.md' file\n\n"
-  helm-docs -u ${OUTPUT_DIR}
+if [ -n "$SERVICE_NAME" ] || [ ${#ADDITIONAL_SERVICE_NAMES[@]} -gt 0 ]; then
+  if [ -x "$(command -v helm-docs)" ]; then
+    # Update chart readme file
+    printf "\n\n${red}[helm template]${no_color} Update 'readme.md' file\n\n"
+    helm-docs -u ${OUTPUT_DIR}
+  else
+    printf "\n${red}[helm template]${no_color} Warning: 'helm-docs' is not installed. Skipping readme update.\n"
+  fi
 fi
