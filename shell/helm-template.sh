@@ -10,13 +10,15 @@ no_color='\033[0m'
 # Defaults
 CHART_NAME="my-awesome-chart"
 OUTPUT_DIR="$(pwd)/$CHART_NAME"
+ADDITIONAL_SERVICE_NAMES=()
 
 # Declare script helper
 TEXT_HELPER="\nThis script aims to create a generic Helm chart.
 
 Following flags are available:
 
-  -a  Helm additional service name.
+  -a  Helm additional service name. You can specify multiple additional services by using this flag multiple times.
+      Default is an empty list.
 
   -c  Helm chart name.
       Default is '$CHART_NAME'.
@@ -36,7 +38,7 @@ print_help() {
 while getopts ha:c:o:s: flag; do
   case "${flag}" in
     a)
-      ADDITIONAL_SERVICE_NAME="${OPTARG}";;
+      ADDITIONAL_SERVICE_NAMES+=("${OPTARG}");;
     c)
       CHART_NAME="${OPTARG}"
       OUTPUT_DIR="$(pwd)/$CHART_NAME";;
@@ -100,7 +102,8 @@ if [ -n "$SERVICE_NAME" ]; then
 fi
 
 
-if [ -n "$ADDITIONAL_SERVICE_NAME" ]; then
+# Handle additional services
+for ADDITIONAL_SERVICE_NAME in "${ADDITIONAL_SERVICE_NAMES[@]}"; do
   # Create tmp directory
   mkdir -p ${OUTPUT_DIR}/tmp
 
@@ -137,9 +140,9 @@ if [ -n "$ADDITIONAL_SERVICE_NAME" ]; then
 
   # Delete tmp directory
   rm -rf ${OUTPUT_DIR}/tmp
-fi
+done
 
-if ([ -n "$SERVICE_NAME" ] || [ -n "$ADDITIONAL_SERVICE_NAME" ]) && [ -x "$(command -v helm-docs)" ]; then
+if ([ -n "$SERVICE_NAME" ] || [ ${#ADDITIONAL_SERVICE_NAMES[@]} -gt 0 ]) && [ -x "$(command -v helm-docs)" ]; then
   # Update chart readme file
   printf "\n\n${red}[helm template]${no_color} Update 'readme.md' file\n\n"
   helm-docs -u ${OUTPUT_DIR}
