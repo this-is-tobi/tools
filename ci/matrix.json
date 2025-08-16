@@ -35,22 +35,22 @@
   {
     "name": "gh-runner",
     "build": {
-      "base": "ghcr.io/actions/actions-runner:2.326.0",
+      "base": "ghcr.io/actions/actions-runner:2.327.0",
       "context": "./docker/gh-runner",
       "dockerfile": "./docker/gh-runner/Dockerfile",
       "target": "build",
-      "tag": "1.2.2",
+      "tag": "1.3.0",
       "latest": true
     }
   },
   {
     "name": "gh-runner-gpu",
     "build": {
-      "base": "ghcr.io/actions/actions-runner:2.326.0",
+      "base": "ghcr.io/actions/actions-runner:2.327.0",
       "context": "./docker/gh-runner-gpu",
       "dockerfile": "./docker/gh-runner-gpu/Dockerfile",
       "target": "build",
-      "tag": "1.0.1",
+      "tag": "1.1.0",
       "latest": true
     }
   },
