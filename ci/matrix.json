@@ -6,7 +6,7 @@
       "context": "./docker/act-runner",
       "dockerfile": "./docker/act-runner/Dockerfile",
       "target": "build",
-      "tag": "2.0.2",
+      "tag": "2.0.3",
       "latest": true
     }
   },
@@ -39,7 +39,7 @@
       "context": "./docker/gh-runner",
       "dockerfile": "./docker/gh-runner/Dockerfile",
       "target": "build",
-      "tag": "1.4.0",
+      "tag": "1.4.1",
       "latest": true
     }
   },
@@ -50,7 +50,7 @@
       "context": "./docker/gh-runner-gpu",
       "dockerfile": "./docker/gh-runner-gpu/Dockerfile",
       "target": "build",
-      "tag": "1.2.0",
+      "tag": "1.2.1",
       "latest": true
     }
   },

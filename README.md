@@ -59,11 +59,11 @@ __Versions correlation table :__
 
 | Name          | Image version | Base image                               |
 | ------------- | ------------- | ---------------------------------------- |
-| act-runner    | 2.0.2         | `docker.io/ubuntu:24.04`                 |
+| act-runner    | 2.0.3         | `docker.io/ubuntu:24.04`                 |
 | debug         | 2.1.1         | `docker.io/debian:12`                    |
 | dev           | 2.0.3         | `docker.io/debian:12`                    |
-| gh-runner     | 1.4.0         | `ghcr.io/actions/actions-runner:2.328.0` |
-| gh-runner-gpu | 1.2.0         | `ghcr.io/actions/actions-runner:2.328.0` |
+| gh-runner     | 1.4.1         | `ghcr.io/actions/actions-runner:2.328.0` |
+| gh-runner-gpu | 1.2.1         | `ghcr.io/actions/actions-runner:2.328.0` |
 | mc            | 1.1.2         | `docker.io/alpine:3.22.1`                |
 | pg-backup     | 3.5.0         | `docker.io/postgres:17.6`                |
 | pg-backup     | 2.5.0         | `docker.io/postgres:16.10`               |
