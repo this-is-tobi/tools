@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=docker.io/postgres:17.5
+ARG BASE_IMAGE=docker.io/postgres:17.6
 
 FROM ${BASE_IMAGE} AS build
 

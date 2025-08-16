@@ -65,9 +65,9 @@ __Versions correlation table :__
 | gh-runner     | 1.4.0         | `ghcr.io/actions/actions-runner:2.328.0` |
 | gh-runner-gpu | 1.2.0         | `ghcr.io/actions/actions-runner:2.328.0` |
 | mc            | 1.1.2         | `docker.io/alpine:3.22.1`                |
-| pg-backup     | 3.4.0         | `docker.io/postgres:17.5`                |
-| pg-backup     | 2.4.0         | `docker.io/postgres:16.9`                |
-| pg-backup     | 1.8.0         | `docker.io/postgres:15.13`               |
+| pg-backup     | 3.5.0         | `docker.io/postgres:17.6`                |
+| pg-backup     | 2.5.0         | `docker.io/postgres:16.10`               |
+| pg-backup     | 1.9.0         | `docker.io/postgres:15.14`               |
 | s3-backup     | 1.2.0         | `docker.io/debian:12`                    |
 | vault-backup  | 1.6.0         | `docker.io/hashicorp/vault:1.20.0`       |
 
