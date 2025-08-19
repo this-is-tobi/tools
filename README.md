@@ -82,6 +82,8 @@ __Versions correlation table :__
 
 ## Git hooks
 
+### Hooks list
+
 | Name                                                              | Type         | Description                                                                                                                 | Config                                                       |
 | ----------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | [conventional-commit](./git-hooks/commit-msg/conventional-commit) | `commit-msg` | *pure bash check for [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/) pattern in git commit messages.* | -                                                            |
@@ -95,9 +97,11 @@ __Versions correlation table :__
 Run the following command to download the hook from the GitHub repository and install it in your current repository:
 
 ```sh
-# Define the target file and the URL to download from
-TARGET_FILE=".git/hooks/<git_hook>"
-URL="https://raw.githubusercontent.com/this-is-tobi/tools/main/git-hooks/<git_hook>"
+# Define the target hook, file and the URL to download from
+# Replace '<git_hook>' by the name of the hook you want to copy (eg. 'conventional-commit')
+HOOK_NAME="<git_hook>"
+TARGET_FILE=".git/hooks/$HOOK_NAME"
+URL="https://raw.githubusercontent.com/this-is-tobi/tools/main/git-hooks/$HOOK_NAME"
 
 # Check if the target file exists
 if [ -f "$TARGET_FILE" ]; then
@@ -112,13 +116,15 @@ fi
 chmod +x "$TARGET_FILE"
 ```
 
-## Nodejs
+## Scripts
+
+### Nodejs
 
 | Name                            | Description                |
 | ------------------------------- | -------------------------- |
 | [crypto.mjs](./node/crypto.mjs) | *set of crypto functions.* |
 
-## Shell
+### Shell
 
 | Name                                                             | Description                                                                 |
 | ---------------------------------------------------------------- | --------------------------------------------------------------------------- |
