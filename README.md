@@ -96,6 +96,7 @@ This section provides a collection of pre-built Docker images and templates desi
 | `ghcr.io/this-is-tobi/tools/dev`           | *development image with all convenients tools (debian based).*                    | [Dockerfile](./docker/utils/dev/Dockerfile)           |
 | `ghcr.io/this-is-tobi/tools/gh-runner`     | *github self hosted runner with common packages (ubuntu based).*                  | [Dockerfile](./docker/utils/gh-runner/Dockerfile)     |
 | `ghcr.io/this-is-tobi/tools/gh-runner-gpu` | *github self hosted runner with common packages and GPU binaries (ubuntu based).* | [Dockerfile](./docker/utils/gh-runner-gpu/Dockerfile) |
+| `ghcr.io/this-is-tobi/tools/homelab-utils` | *helper image used for homelab configuration (alpine based).*                     | [Dockerfile](./docker/utils/homelab-utils/Dockerfile) |
 | `ghcr.io/this-is-tobi/tools/mc`            | *ligthweight image with tools for s3 manipulations (alpine based).*               | [Dockerfile](./docker/utils/mc/Dockerfile)            |
 | `ghcr.io/this-is-tobi/tools/pg-backup`     | *helper image to backup postgresql to s3 (postgres based).*                       | [Dockerfile](./docker/utils/pg-backup/Dockerfile)     |
 | `ghcr.io/this-is-tobi/tools/s3-backup`     | *helper image to backup s3 bucket to another s3 bucket (debian based).*           | [Dockerfile](./docker/utils/s3-backup/Dockerfile)     |
@@ -110,6 +111,7 @@ This section provides a collection of pre-built Docker images and templates desi
 | dev           | 2.0.3         | `docker.io/debian:12`                    |
 | gh-runner     | 1.4.1         | `ghcr.io/actions/actions-runner:2.328.0` |
 | gh-runner-gpu | 1.2.1         | `ghcr.io/actions/actions-runner:2.328.0` |
+| homelab-utils | 0.0.1         | `ghcr.io/actions/alpine:3.22.1`          |
 | mc            | 1.1.2         | `docker.io/alpine:3.22.1`                |
 | pg-backup     | 3.5.0         | `docker.io/postgres:17.6`                |
 | pg-backup     | 2.5.0         | `docker.io/postgres:16.10`               |

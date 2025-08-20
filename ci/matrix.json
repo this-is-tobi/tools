@@ -55,6 +55,17 @@
     }
   },
   {
+    "name": "homlelab-utils",
+    "build": {
+      "base": "ghcr.io/actions/actions-runner:2.328.0",
+      "context": "./docker/utils/homlelab-utils",
+      "dockerfile": "./docker/utils/homlelab-utils/Dockerfile",
+      "target": "build",
+      "tag": "0.0.1",
+      "latest": true
+    }
+  },
+  {
     "name": "mc",
     "build": {
       "base": "docker.io/alpine:3.22.1",
