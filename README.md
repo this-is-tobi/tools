@@ -1,6 +1,6 @@
 # Tools :wrench:
 
-Utility tools & scripts.
+A comprehensive collection of utility tools, scripts, and templates for modern development workflows. This repository provides reusable components for DevOps, CI/CD, containerization, and development automation.
 
 ## Copilot
 
@@ -44,9 +44,11 @@ curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/in
 - __Modular Design__: Mix and match technologies as needed
 - __VS Code Compatible__: Full support for advanced scoped instructions
 
-## Devops
+## DevOps
 
-### ArgoCD app previews
+This section contains templates and configurations for modern DevOps practices, focusing on Kubernetes orchestration and CI/CD automation.
+
+### ArgoCD App Previews
 
 Templates to configure preview environments with ArgoCD by using the Pull Request Generator. The Pull Request generator uses the API of an SCMaaS provider (GitHub, GitLab, Gitea, Bitbucket, ...) to automatically discover open pull requests within a repository, this fits well with the style of building a test environment when you create a pull request.
 
@@ -54,11 +56,11 @@ Templates to configure preview environments with ArgoCD by using the Pull Reques
 
 > For further information, see [ArgoCD documentation](https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/Generators-Pull-Request).
 
-### Github self-hosted runners
+### Github Self-Hosted Runners
 
-Templates to deploy Github Actions Runners accross a Kubernetes cluster.
+Templates to deploy Github Actions Runners across a Kubernetes cluster.
 
-Using __legacy__ install :
+Using **legacy** install:
   1. Install [actions-runner-controller](https://github.com/actions/actions-runner-controller) helm chart.
       ```sh
       # Get chart informations
@@ -68,7 +70,7 @@ Using __legacy__ install :
       ```
   1. Deploy the [runner-deployment.yaml](./devops/github-selfhosted-runner/runner-deployment.yaml).
 
-Using __github__ install :
+Using **github** install:
   1. Install [actions-runner-controller](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners-with-actions-runner-controller/quickstart-for-actions-runner-controller) helm chart.
       ```sh
       # Get chart informations
@@ -83,7 +85,9 @@ Using __github__ install :
 
 ## Docker
 
-### Utils images
+This section provides a collection of pre-built Docker images and templates designed for various development and operational tasks.
+
+### Utils Images
 
 | Image                                      | Description                                                                       | Dockerfiles                                    |
 | ------------------------------------------ | --------------------------------------------------------------------------------- | ---------------------------------------------- |
@@ -97,7 +101,7 @@ Using __github__ install :
 | `ghcr.io/this-is-tobi/tools/s3-backup`     | *helper image to backup s3 bucket to another s3 bucket (debian based).*           | [Dockerfile](./docker/s3-backup/Dockerfile)    |
 | `ghcr.io/this-is-tobi/tools/vault-backup`  | *helper image to backup vault raft cluster to s3 bucket (vault based).*           | [Dockerfile](./docker/vault-backup/Dockerfile) |
 
-__Versions correlation table :__
+**Versions correlation table:**
 
 | Name          | Image version | Base image                               |
 | ------------- | ------------- | ---------------------------------------- |
@@ -116,15 +120,19 @@ __Versions correlation table :__
 > [!TIP]
 > The backup images are supplied with a sample kubernetes cronjob in their respective folders.
 
-### Templates images
+### Template Images
+
+Pre-configured Docker image templates that can be customized for specific use cases.
 
 | Name                                         | Description                                                |
 | -------------------------------------------- | ---------------------------------------------------------- |
 | [nginx](./docker/templates/nginx/Dockerfile) | *bitnami/nignx rootless conf with variables substitution.* |
 
-## Git hooks
+## Git Hooks
 
-### Hooks list
+This section provides a collection of Git hooks to enforce code quality, commit conventions, and security practices in your repositories.
+
+### Hooks List
 
 | Name                                                              | Type         | Description                                                                                                                 | Config                                                       |
 | ----------------------------------------------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
@@ -160,13 +168,17 @@ chmod +x "$TARGET_FILE"
 
 ## Scripts
 
-### Nodejs
+A collection of utility scripts for common development and operations tasks, organized by technology and purpose.
+
+### Node.js Utilities
 
 | Name                            | Description                |
 | ------------------------------- | -------------------------- |
 | [crypto.mjs](./node/crypto.mjs) | *set of crypto functions.* |
 
-### Shell
+### Shell Scripts
+
+Bash/shell scripts for automation, backup operations, and system administration tasks.
 
 | Name                                                             | Description                                                                 |
 | ---------------------------------------------------------------- | --------------------------------------------------------------------------- |
@@ -197,7 +209,9 @@ chmod +x "$TARGET_FILE"
 > curl -s https://raw.githubusercontent.com/this-is-tobi/tools/main/shell/<script_name> | bash -s -- -h
 > ```
 
-## Tools
+## Development Tools
+
+Local development environment tools and wrappers for testing and development workflows.
 
 | Name                     | Description                        |
 | ------------------------ | ---------------------------------- |
