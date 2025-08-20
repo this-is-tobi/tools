@@ -89,17 +89,17 @@ This section provides a collection of pre-built Docker images and templates desi
 
 ### Utils Images
 
-| Image                                      | Description                                                                       | Dockerfiles                                    |
-| ------------------------------------------ | --------------------------------------------------------------------------------- | ---------------------------------------------- |
-| `ghcr.io/this-is-tobi/tools/act-runner`    | *act runner image for local CI tests (ubuntu based).*                             | [Dockerfile](./docker/act-runner/Dockerfile)   |
-| `ghcr.io/this-is-tobi/tools/debug`         | *debug image with all convenients tools (debian based).*                          | [Dockerfile](./docker/debug/Dockerfile)        |
-| `ghcr.io/this-is-tobi/tools/dev`           | *development image with all convenients tools (debian based).*                    | [Dockerfile](./docker/dev/Dockerfile)          |
-| `ghcr.io/this-is-tobi/tools/gh-runner`     | *github self hosted runner with common packages (ubuntu based).*                  | [Dockerfile](./docker/gh-runner/Dockerfile)    |
-| `ghcr.io/this-is-tobi/tools/gh-runner-gpu` | *github self hosted runner with common packages and GPU binaries (ubuntu based).* | [Dockerfile](./docker/gh-runner/Dockerfile)    |
-| `ghcr.io/this-is-tobi/tools/mc`            | *ligthweight image with tools for s3 manipulations (alpine based).*               | [Dockerfile](./docker/mc/Dockerfile)           |
-| `ghcr.io/this-is-tobi/tools/pg-backup`     | *helper image to backup postgresql to s3 (postgres based).*                       | [Dockerfile](./docker/pg-backup/Dockerfile)    |
-| `ghcr.io/this-is-tobi/tools/s3-backup`     | *helper image to backup s3 bucket to another s3 bucket (debian based).*           | [Dockerfile](./docker/s3-backup/Dockerfile)    |
-| `ghcr.io/this-is-tobi/tools/vault-backup`  | *helper image to backup vault raft cluster to s3 bucket (vault based).*           | [Dockerfile](./docker/vault-backup/Dockerfile) |
+| Image                                      | Description                                                                       | Dockerfiles                                           |
+| ------------------------------------------ | --------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `ghcr.io/this-is-tobi/tools/act-runner`    | *act runner image for local CI tests (ubuntu based).*                             | [Dockerfile](./docker/utils/act-runner/Dockerfile)    |
+| `ghcr.io/this-is-tobi/tools/debug`         | *debug image with all convenients tools (debian based).*                          | [Dockerfile](./docker/utils/debug/Dockerfile)         |
+| `ghcr.io/this-is-tobi/tools/dev`           | *development image with all convenients tools (debian based).*                    | [Dockerfile](./docker/utils/dev/Dockerfile)           |
+| `ghcr.io/this-is-tobi/tools/gh-runner`     | *github self hosted runner with common packages (ubuntu based).*                  | [Dockerfile](./docker/utils/gh-runner/Dockerfile)     |
+| `ghcr.io/this-is-tobi/tools/gh-runner-gpu` | *github self hosted runner with common packages and GPU binaries (ubuntu based).* | [Dockerfile](./docker/utils/gh-runner-gpu/Dockerfile) |
+| `ghcr.io/this-is-tobi/tools/mc`            | *ligthweight image with tools for s3 manipulations (alpine based).*               | [Dockerfile](./docker/utils/mc/Dockerfile)            |
+| `ghcr.io/this-is-tobi/tools/pg-backup`     | *helper image to backup postgresql to s3 (postgres based).*                       | [Dockerfile](./docker/utils/pg-backup/Dockerfile)     |
+| `ghcr.io/this-is-tobi/tools/s3-backup`     | *helper image to backup s3 bucket to another s3 bucket (debian based).*           | [Dockerfile](./docker/utils/s3-backup/Dockerfile)     |
+| `ghcr.io/this-is-tobi/tools/vault-backup`  | *helper image to backup vault raft cluster to s3 bucket (vault based).*           | [Dockerfile](./docker/utils/vault-backup/Dockerfile)  |
 
 **Versions correlation table:**
 

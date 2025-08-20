@@ -3,8 +3,8 @@
     "name": "act-runner",
     "build": {
       "base": "docker.io/ubuntu:24.04",
-      "context": "./docker/act-runner",
-      "dockerfile": "./docker/act-runner/Dockerfile",
+      "context": "./docker/utils/act-runner",
+      "dockerfile": "./docker/utils/act-runner/Dockerfile",
       "target": "build",
       "tag": "2.0.3",
       "latest": true
@@ -14,8 +14,8 @@
     "name": "debug",
     "build": {
       "base": "docker.io/debian:12",
-      "context": "./docker/debug",
-      "dockerfile": "./docker/debug/Dockerfile",
+      "context": "./docker/utils/debug",
+      "dockerfile": "./docker/utils/debug/Dockerfile",
       "target": "build",
       "tag": "2.1.1",
       "latest": true
@@ -25,8 +25,8 @@
     "name": "dev",
     "build": {
       "base": "docker.io/debian:12",
-      "context": "./docker/dev",
-      "dockerfile": "./docker/dev/Dockerfile",
+      "context": "./docker/utils/dev",
+      "dockerfile": "./docker/utils/dev/Dockerfile",
       "target": "build",
       "tag": "2.0.3",
       "latest": true
@@ -36,8 +36,8 @@
     "name": "gh-runner",
     "build": {
       "base": "ghcr.io/actions/actions-runner:2.328.0",
-      "context": "./docker/gh-runner",
-      "dockerfile": "./docker/gh-runner/Dockerfile",
+      "context": "./docker/utils/gh-runner",
+      "dockerfile": "./docker/utils/gh-runner/Dockerfile",
       "target": "build",
       "tag": "1.4.1",
       "latest": true
@@ -47,8 +47,8 @@
     "name": "gh-runner-gpu",
     "build": {
       "base": "ghcr.io/actions/actions-runner:2.328.0",
-      "context": "./docker/gh-runner-gpu",
-      "dockerfile": "./docker/gh-runner-gpu/Dockerfile",
+      "context": "./docker/utils/gh-runner-gpu",
+      "dockerfile": "./docker/utils/gh-runner-gpu/Dockerfile",
       "target": "build",
       "tag": "1.2.1",
       "latest": true
@@ -58,8 +58,8 @@
     "name": "mc",
     "build": {
       "base": "docker.io/alpine:3.22.1",
-      "context": "./docker/mc",
-      "dockerfile": "./docker/mc/Dockerfile",
+      "context": "./docker/utils/mc",
+      "dockerfile": "./docker/utils/mc/Dockerfile",
       "target": "build",
       "tag": "1.1.2",
       "latest": true
@@ -69,8 +69,8 @@
     "name": "pg-backup",
     "build": {
       "base": "docker.io/postgres:15.14",
-      "context": "./docker/pg-backup",
-      "dockerfile": "./docker/pg-backup/Dockerfile",
+      "context": "./docker/utils/pg-backup",
+      "dockerfile": "./docker/utils/pg-backup/Dockerfile",
       "target": "build",
       "tag": "1.9.0",
       "latest": false
@@ -80,8 +80,8 @@
     "name": "pg-backup",
     "build": {
       "base": "docker.io/postgres:16.10",
-      "context": "./docker/pg-backup",
-      "dockerfile": "./docker/pg-backup/Dockerfile",
+      "context": "./docker/utils/pg-backup",
+      "dockerfile": "./docker/utils/pg-backup/Dockerfile",
       "target": "build",
       "tag": "2.5.0",
       "latest": false
@@ -91,8 +91,8 @@
     "name": "pg-backup",
     "build": {
       "base": "docker.io/postgres:17.6",
-      "context": "./docker/pg-backup",
-      "dockerfile": "./docker/pg-backup/Dockerfile",
+      "context": "./docker/utils/pg-backup",
+      "dockerfile": "./docker/utils/pg-backup/Dockerfile",
       "target": "build",
       "tag": "3.5.0",
       "latest": true
@@ -102,8 +102,8 @@
     "name": "s3-backup",
     "build": {
       "base": "docker.io/debian:12",
-      "context": "./docker/s3-backup",
-      "dockerfile": "./docker/s3-backup/Dockerfile",
+      "context": "./docker/utils/s3-backup",
+      "dockerfile": "./docker/utils/s3-backup/Dockerfile",
       "target": "build",
       "tag": "1.2.0",
       "latest": true
@@ -113,8 +113,8 @@
     "name": "vault-backup",
     "build": {
       "base": "docker.io/hashicorp/vault:1.20.2",
-      "context": "./docker/vault-backup",
-      "dockerfile": "./docker/vault-backup/Dockerfile",
+      "context": "./docker/utils/vault-backup",
+      "dockerfile": "./docker/utils/vault-backup/Dockerfile",
       "target": "build",
       "tag": "1.6.2",
       "latest": true
