@@ -2,6 +2,48 @@
 
 Utility tools & scripts.
 
+## Copilot
+
+### Available instructions
+
+- [Consolidated Instructions](./copilot/copilot-instructions.md) - All technologies in one file
+- [JavaScript/TypeScript](./copilot/instructions/javascript.instructions.md) - Scoped to JS/TS files
+- [Go](./copilot/instructions/go.instructions.md) - Scoped to Go files
+- [Kubernetes/Helm](./copilot/instructions/kubernetes.instructions.md) - Scoped to K8s YAML files
+- [GitHub Actions](./copilot/instructions/github-actions.instructions.md) - Scoped to workflow files
+- [Docker](./copilot/instructions/docker.instructions.md) - Scoped to Dockerfiles
+- [Bash/Shell](./copilot/instructions/shell.instructions.md) - Scoped to shell scripts
+- [General Development](./copilot/instructions/general.instructions.md) - Universal practices
+
+### Usage
+
+This collection follows GitHub's official Copilot instructions format with two approaches:
+
+**Option 1: Single File** (Recommended for most projects)
+```sh
+curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/copilot-instructions.md" \
+  -o ".github/copilot-instructions.md"
+```
+
+**Option 2: Scoped Instructions** (For complex multi-technology projects)
+```sh
+# Create instructions directory
+mkdir -p .github/instructions
+
+# Copy specific technology instructions
+TECHNOLOGY="javascript"  # or "go", "docker", "kubernetes", etc.
+curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/instructions/$TECHNOLOGY.instructions.md" \
+  -o ".github/instructions/$TECHNOLOGY.instructions.md"
+```
+
+### Features
+
+- __GitHub Official Format__: Uses `.github/copilot-instructions.md` and `.github/instructions/*.instructions.md`
+- __Scoped Instructions__: Technology-specific instructions with `applyTo` frontmatter
+- __File Targeting__: Instructions only apply to relevant file types
+- __Modular Design__: Mix and match technologies as needed
+- __VS Code Compatible__: Full support for advanced scoped instructions
+
 ## Devops
 
 ### ArgoCD app previews
@@ -128,7 +170,7 @@ chmod +x "$TARGET_FILE"
 
 | Name                                                             | Description                                                                 |
 | ---------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| [backup-kube-pg.sh](./shell/backup-kube-pg.sh)                   | *backup / restore postgres database **from** / to a kubernetes pod.*        |
+| [backup-kube-pg.sh](./shell/backup-kube-pg.sh)                   | *backup / restore postgres database from / to a kubernetes pod.*            |
 | [backup-kube-vault.sh](./shell/backup-kube-vault.sh)             | *backup / restore vault raft cluster from / to a kubernetes pod.*           |
 | [clone-subdir.sh](./shell/clone-subdir.sh)                       | *clone a subdirectory from a git repository.*                               |
 | [compose-to-matrix.sh](./shell/compose-to-matrix.sh)             | *parse docker-compose file to create github matrix.*                        |
