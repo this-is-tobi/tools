@@ -2,29 +2,41 @@
 
 set -e
 
-# Colorize terminal
+# Colors
 COLOR_OFF='\033[0m'
 COLOR_BLUE='\033[0;34m'
 COLOR_RED='\033[0;31m'
 COLOR_GREEN='\033[0;32m'
 COLOR_YELLOW='\033[0;33m'
 
-# Declare script helper
-TEXT_HELPER="\nThis script aims to perform a EOL search for a given package.
-Following flags are available:
+# Script helper
+TEXT_HELPER="
+This script aims to perform a EOL search for a given package.
 
+Available flags:
   -b    Enable boolean mode to print 'true' when the package version is the LTS version, otherwise print 'false'.
-
   -p    Package name to perform EOL search.
-
   -s    Enable search mode to find a package.
-
   -v    Package version (cycle) to perform EOL search.
+  -h    Print script help.
 
-  -h    Print script help.\n\n"
+Example:
+  ./eol-infos.sh \\
+    -p 'nodejs' \\
+    -v '18' \\
+    -b
+"
 
+# Functions
 print_help() {
   printf "$TEXT_HELPER"
+}
+
+check_status() {
+  if [ "$(curl -o /dev/null -sL -w "%{http_code}" "https://endoflife.date/api/$PACKAGE_NAME.json")" -eq 404 ]; then
+    echo "Package $PACKAGE_NAME not found.\n"
+    exit 1
+  fi
 }
 
 # Parse options
@@ -44,15 +56,14 @@ while getopts hbp:sv: flag; do
   esac
 done
 
-
-# Functions
-check_status() {
-  if [ "$(curl -o /dev/null -sL -w "%{http_code}" "https://endoflife.date/api/$PACKAGE_NAME.json")" -eq 404 ]; then
-    echo "Package $PACKAGE_NAME not found.\n"
-    exit 1
-  fi
-}
-
+# Settings
+printf "
+Settings:
+  > PACKAGE_NAME: ${PACKAGE_NAME}
+  > PACKAGE_VERSION: ${PACKAGE_VERSION}
+  > BOOLEAN_MODE: ${BOOLEAN_MODE}
+  > SEARCH_MODE: ${SEARCH_MODE}
+"
 
 if [ "$SEARCH_MODE" = "true" ]; then
   EOL_INFOS=$(curl -sL --request GET \

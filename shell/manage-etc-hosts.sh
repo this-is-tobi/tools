@@ -1,23 +1,30 @@
 #!/bin/bash
 
-# Colorize terminal
-red='\e[0;31m'
-no_color='\033[0m'
-# Console step increment
-i=1
+set -e
 
+# Colors
+COLOR_OFF='\033[0m'
+COLOR_BLUE='\033[0;34m'
+COLOR_RED='\033[0;31m'
+COLOR_GREEN='\033[0;32m'
+COLOR_YELLOW='\033[0;33m'
 
-# Declare script helper
-TEXT_HELPER="\nThis script aims to insert or update /etc/hosts file with given values.
+# Script helper
+TEXT_HELPER="
+This script aims to insert or update /etc/hosts file with given values.
 
-Following flags are available:
+Available flags:
+  -i    Host IP address to add / update.
+  -n    Host name to add / update.
+  -h    Print script help.
 
-  -i  Host IP address to add / update.
+Example:
+  ./manage-etc-hosts.sh \\
+    -i '192.168.1.1' \\
+    -n 'my-host-name.com'
+"
 
-  -n  Host name to add / update.
-
-  -h  Print script help.\n\n"
-
+# Functions
 print_help() {
   printf "$TEXT_HELPER"
 }
@@ -35,6 +42,14 @@ while getopts hi:n: flag; do
   esac
 done
 
+# Settings
+printf "
+Settings:
+  > IP_ADDRESS: ${IP_ADDRESS}
+  > HOST_NAME: ${HOST_NAME}
+"
+
+# Options validation
 if [ -z $(echo "$IP_ADDRESS") ] || [ -z $(echo "$HOST_NAME") ]; then
   printf "Wrong arguments, you need to specify which ip address and host name to use. Try it again with flags '-ip <ip_address> -n <host_name>'.
     - ip address: $IP_ADDRESS
@@ -46,8 +61,7 @@ fi
 MATCHES_IN_HOSTS="$(grep -n $HOST_NAME /etc/hosts | cut -f1 -d:)"
 HOST_ENTRY="${IP_ADDRESS}  ${HOST_NAME}"
 
-printf "\n${red}Info.${no_color} Please enter your password if requested."
-
+# Update or add entry
 if [ ! -z "$MATCHES_IN_HOSTS" ]; then
   echo "Updating existing hosts entry."
   echo "$MATCHES_IN_HOSTS" | while read -r line ; do

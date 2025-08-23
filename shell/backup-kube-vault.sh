@@ -2,43 +2,81 @@
 
 set -e
 
-# Colorize terminal
-red='\e[0;31m'
-no_color='\033[0m'
+# Colors
+COLOR_OFF='\033[0m'
+COLOR_BLUE='\033[0;34m'
+COLOR_RED='\033[0;31m'
+COLOR_GREEN='\033[0;32m'
+COLOR_YELLOW='\033[0;33m'
 
-# Default
+# Defaults
 NAMESPACE="$(kubectl config view --minify -o jsonpath='{..namespace}')"
 EXPORT_DIR="./backups"
 DATE_TIME=$(date +"%Y%m%dT%H%M")
+DUMP_PATH=""
+PATHS=(
+  /vault/data
+  /bitnami/vault/data
+  /tmp
+)
 
-# Declare script helper
-TEXT_HELPER="\nThis script aims to perform a dump on a kubernetes vault pod and copy locally the dump file, or the opposite, restore a local dump file to a vault pod.
-Following flags are available:
+# Script helper
+TEXT_HELPER="
+This script aims to perform a dump on a kubernetes vault pod and copy locally the dump file, or the opposite, restore a local dump file to a vault pod.
 
+Available flags:
   -c    Name of the pod's container.
-
   -f    Local dump file to restore (only needed with restore mode).
-
-  -m    Mode tu run. Available modes are :
+  -m    Mode tu run. Available modes are:
           dump              - Dump the vault locally.
           dump_forward      - Dump the vault locally with port forward.
           restore           - Restore local dump into pod.
           restore_forward   - Restore local dump with port forward.
-
   -n    Kubernetes namespace target where the vault pod is running.
-        Default is current namespace : '$NAMESPACE'.
-
+        Default: current namespace '$NAMESPACE'.
   -o    Output directory where to export files.
-        Default is '$EXPORT_DIR'.
-
+        Default: '$EXPORT_DIR'.
   -p    Token used to connect to the vault server.
-
   -t    Target name of the pod or service to run the dump on.
+  -h    Print script help.
 
-  -h    Print script help.\n\n"
+Example:
+  ./backup-kube-vault.sh \\
+    -m 'dump' \\
+    -t 'my-vault-pod' \\
+    -p 'mytoken' \\
+    -o './backups'
 
+  ./backup-kube-vault.sh \\
+    -m 'restore' \\
+    -t 'my-vault-pod' \\
+    -f './backups/20240101T1200-vault.snap' \\
+    -p 'mytoken'
+"
+
+# Functions
 print_help() {
   printf "$TEXT_HELPER"
+}
+
+isRW () {
+  kubectl $NAMESPACE_ARG exec ${POD_NAME} -- sh -c "[ -w $1 ] && echo 'true' || echo 'false'"
+}
+
+getPodFromService () {
+  local SVC_NAME="$1"
+  SELECTOR=$(kubectl $NAMESPACE_ARG get svc "$SVC_NAME" -o jsonpath='{.spec.selector}' | jq -r 'to_entries | map("\(.key)=\(.value)") | join(",")')
+  if [[ -z "$SELECTOR" ]]; then
+    echo "No selector found for service $SVC_NAME"
+    exit 1
+  fi
+  POD_NAME=$(kubectl $NAMESPACE_ARG get pod -l "$SELECTOR" -o jsonpath='{.items[0].metadata.name}')
+  if [[ -z "$POD_NAME" ]]; then
+    echo "No pods found for selector '$SELECTOR' in namespace '$NAMESPACE'."
+    exit 1
+  else
+    echo "$POD_NAME"
+  fi
 }
 
 # Parse options
@@ -64,47 +102,9 @@ while getopts hc:f:m:n:o:p:t: flag; do
   esac
 done
 
-
-if [ -z "$MODE" ]; then
-  printf "\n${red}Error.${no_color} Argument missing: mode (flag -m)".
-  exit 1
-elif [ -z "$TARGET" ]; then
-  printf "\n${red}Error.${no_color} Argument missing: target pod or service (flag -t)".
-  exit 1
-elif [ -z "$VAULT_TOKEN" ]; then
-  printf "\n${red}Error.${no_color} Argument missing: vault token (flag -p)".
-  exit 1
-elif [ "$MODE" = "restore" ] || [ "$MODE" = "restore_forward" ] && [ -z "$DUMP_FILE" ]; then
-  printf "\n${red}Error.${no_color} Argument missing: dump file (flag -f)".
-  exit 1
-fi
-
-
-# Add namespace if provided
+# Init
 [[ ! -z "$NAMESPACE" ]] && NAMESPACE_ARG="--namespace=$NAMESPACE"
 [[ ! -z "$CONTAINER_NAME" ]] && CONTAINER_ARG="--container=$CONTAINER_NAME"
-
-
-isRW () {
-  kubectl $NAMESPACE_ARG exec ${POD_NAME} -- sh -c "[ -w $1 ] && echo 'true' || echo 'false'"
-}
-
-getPodFromService () {
-  local SVC_NAME="$1"
-  SELECTOR=$(kubectl $NAMESPACE_ARG get svc "$SVC_NAME" -o jsonpath='{.spec.selector}' | jq -r 'to_entries | map("\(.key)=\(.value)") | join(",")')
-  if [[ -z "$SELECTOR" ]]; then
-    echo "No selector found for service $SVC_NAME"
-    exit 1
-  fi
-  POD_NAME=$(kubectl $NAMESPACE_ARG get pod -l "$SELECTOR" -o jsonpath='{.items[0].metadata.name}')
-  if [[ -z "$POD_NAME" ]]; then
-    echo "No pods found for selector '$SELECTOR' in namespace '$NAMESPACE'."
-    exit 1
-  else
-    echo "$POD_NAME"
-  fi
-}
-
 
 if [[ "$TARGET" == svc/* || "$TARGET" == service/* ]]; then
   SERVICE_NAME="${TARGET#*/}"
@@ -117,8 +117,9 @@ else
   POD_NAME="$TARGET"
 fi
 
-
-printf "Settings:
+# Settings
+printf "
+Settings:
   > MODE: ${MODE}
   > EXPORT_DIR: ${EXPORT_DIR}
   > DUMP_FILE: ${DUMP_FILE}
@@ -126,16 +127,23 @@ printf "Settings:
   > NAMESPACE: ${NAMESPACE}
   > TARGET: ${TARGET}
   > POD_NAME: ${POD_NAME}
-  > CONTAINER_NAME: ${CONTAINER_NAME}\n"
+  > CONTAINER_NAME: ${CONTAINER_NAME}
+"
 
-DUMP_PATH=""
-PATHS=(
-  /vault/data
-  /bitnami/vault/data
-  /tmp
-)
-
-# Check container fs permissions to store the dump file
+# Options validation
+if [ -z "$MODE" ]; then
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: mode (flag -m)".
+  exit 1
+elif [ -z "$TARGET" ]; then
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: target pod or service (flag -t)".
+  exit 1
+elif [ -z "$VAULT_TOKEN" ]; then
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: vault token (flag -p)".
+  exit 1
+elif [ "$MODE" = "restore" ] || [ "$MODE" = "restore_forward" ] && [ -z "$DUMP_FILE" ]; then
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: dump file (flag -f)".
+  exit 1
+fi
 if [ ! "$MODE" = "dump_forward" ]; then
   for P in ${PATHS[*]}; do
     if [ "$(isRW $P)" = true ]; then
@@ -144,11 +152,10 @@ if [ ! "$MODE" = "dump_forward" ]; then
     fi
   done
   if [ -z $DUMP_PATH ]; then
-    printf "\n\n${red}[Dump wrapper].${no_color} Error: Container filesystem is read-only for paths $PATHS.\n\n"
+    printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Error: Container filesystem is read-only for paths $PATHS.\n\n"
     exit 1
   fi
 fi
-
 
 # Dump vault
 if [ "$MODE" = "dump" ]; then
@@ -160,11 +167,11 @@ if [ "$MODE" = "dump" ]; then
   DESTINATION_DUMP="${EXPORT_DIR}/${DUMP_FILENAME}"
 
   # Dump vault
-  printf "\n\n${red}[Dump wrapper].${no_color} Dump vault.\n\n"
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Dump vault.\n\n"
   kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- sh -c "echo ${VAULT_TOKEN} | vault login -non-interactive - && vault operator raft snapshot save ${DUMP_PATH}/${DUMP_FILENAME}"
 
   # Copy dump locally
-  printf "\n\n${red}[Dump wrapper].${no_color} Copy dump file locally (path: '${DESTINATION_DUMP}').\n\n"
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Copy dump file locally (path: '${DESTINATION_DUMP}').\n\n"
   kubectl ${NAMESPACE_ARG} cp ${POD_NAME}:${DUMP_PATH:1}/${DUMP_FILENAME} "${DESTINATION_DUMP}" ${CONTAINER_ARG}
 
 elif [ "$MODE" = "dump_forward" ]; then
@@ -176,7 +183,7 @@ elif [ "$MODE" = "dump_forward" ]; then
   DESTINATION_DUMP="${EXPORT_DIR}/${DUMP_FILENAME}"
 
   # Dump vault
-  printf "\n\n${red}[Dump wrapper].${no_color} Dump vault locally (path: '${DESTINATION_DUMP}').\n\n"
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Dump vault locally (path: '${DESTINATION_DUMP}').\n\n"
   set +e
   kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5555:8200 &
   sleep 1
@@ -189,16 +196,16 @@ elif [ "$MODE" = "dump_forward" ]; then
 elif [ "$MODE" = "restore" ]; then
   # Copy local dump into pod
   DUMP_FILE_BASENAME="$(basename ${DUMP_FILE})"
-  printf "\n\n${red}[Dump wrapper].${no_color} Copy local dump file into container (path: '$DUMP_PATH/$DUMP_FILE_BASENAME').\n\n"
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Copy local dump file into container (path: '$DUMP_PATH/$DUMP_FILE_BASENAME').\n\n"
   kubectl ${NAMESPACE_ARG} cp ${DUMP_FILE} ${POD_NAME}:${DUMP_PATH:1}/${DUMP_FILE_BASENAME} ${CONTAINER_ARG}
 
   # Restore vault
-  printf "\n\n${red}[Dump wrapper].${no_color} Restore vault.\n\n"
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Restore vault.\n\n"
   kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- sh -c "echo ${VAULT_TOKEN} | vault login -non-interactive - && vault operator raft snapshot restore ${DUMP_PATH}/${DUMP_FILE_BASENAME}"
 
 elif [ "$MODE" = "restore_forward" ]; then
   # Restore database
-  printf "\n\n${red}[Dump wrapper].${no_color} Restore database.\n\n"
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Restore database.\n\n"
   set +e
   kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5555:8200 &
   sleep 1

@@ -2,34 +2,43 @@
 
 set -e
 
-# Colorize terminal
-red='\e[0;31m'
-no_color='\033[0m'
+# Colors
+COLOR_OFF='\033[0m'
+COLOR_BLUE='\033[0;34m'
+COLOR_RED='\033[0;31m'
+COLOR_GREEN='\033[0;32m'
+COLOR_YELLOW='\033[0;33m'
 
-# Console step increment
-i=1
+# Script helper
+TEXT_HELPER="
+This script aims to build a markdown style vulnerability report for the trivy json scan results. It will read the files and then build a markdown summary (compatible with Github issue) summarising the vulnerabilities for each image and configuration file for the given input folder.
 
-# Declare script helper
-TEXT_HELPER="\nThis script aims to build a markdown style vulnerability report for the trivy json scan results. It will read the files and then build a markdown summary (compatible with Github issue) summarising the vulnerabilities for each image and configuration file for the given input folder.
-
-Following flags are available:
-
+Available flags:
   -i    Input folder that contain trivy json scan result files into subfolders 'images/' and 'configs/'.
         Please provide the path without last slash (i.e not like this 'path/to/folder/').
-
   -o    Output file for the generated markdown report.
         Please provide the path with the markdown file extension (i.e '.md').
-
   -p    Github project (format as '<owner>/<repo_name>').
         It can be set in GitHub Actions as '\${{ github.repository }}'.
-
   -r    Github actions run ID.
         It can be set in GitHub Actions as '\${{ github.run_id }}'.
+  -h    Print script help.
 
-  -h    Print script help.\n\n"
+Example:
+  ./trivy-report.sh \\
+    -i 'path/to/folder' \\
+    -o 'path/to/report.md' \\
+    -p 'this-is-tobi/my-repo' \\
+    -r '123456789'
+"
 
+# Functions
 print_help() {
   printf "$TEXT_HELPER"
+}
+
+_jq() {
+  echo ${1} | base64 --decode | jq -r ${2}
 }
 
 # Parse options
@@ -49,25 +58,29 @@ while getopts hi:o:p:r: flag; do
   esac
 done
 
+# Settings
+printf "
+Settings:
+  > INPUT: ${INPUT}
+  > OUTPUT: ${OUTPUT}
+  > REPO: ${REPO}
+  > RUN_ID: ${RUN_ID}
+  > ARTIFACT_DOWNLOAD_URL: ${ARTIFACT_DOWNLOAD_URL}
+"
 
-NOW="$(date +'%Y-%m-%d at %H:%M')"
-ARTIFACT_DOWNLOAD_URL="https://github.com/${REPO}/actions/runs/${RUN_ID}"
-
-
+# Options validation
 if [ -z "$INPUT" ] || [ -z "$OUTPUT" ] || [ -z "$REPO" ] || [ -z "$RUN_ID" ]; then
   echo "Argument(s) missing, you should set all paramters."
   print_help
   exit 0
 fi
 
+# Init
+NOW="$(date +'%Y-%m-%d at %H:%M')"
+ARTIFACT_DOWNLOAD_URL="https://github.com/${REPO}/actions/runs/${RUN_ID}"
 
-_jq() {
-  echo ${1} | base64 --decode | jq -r ${2}
-}
-
-
-printf "\n${red}${i}.${no_color} Build vulnerability report\n"
-i=$(($i + 1))
+# Build report
+printf "\n${COLOR_RED}[trivy report].${COLOR_OFF} Build vulnerability report\n"
 
 VULNERABILITY_REPORT_BODY="# Security report
 
@@ -225,7 +238,7 @@ $SCAN_SUMMARY"
 fi
 
 if [ "$SCAN_DEPENDENCIES" = true ] || [ "$SCAN_CONFIG" = true ] || [ "$SCAN_IMAGES" = true ]; then
-  printf "\n${red}${i}.${no_color} Add artifacts download url to the vulnerability report body\n"
+  printf "\n${COLOR_RED}[trivy report].${COLOR_OFF} Add artifacts download url to the vulnerability report body\n"
   i=$(($i + 1))
 
   VULNERABILITY_REPORT_BODY=$(cat <<EOF

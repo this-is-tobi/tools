@@ -2,22 +2,25 @@
 
 set -e
 
-# Colorize terminal
-red='\e[0;31m'
-no_color='\033[0m'
+# Colors
+COLOR_OFF='\033[0m'
+COLOR_BLUE='\033[0;34m'
+COLOR_RED='\033[0;31m'
+COLOR_GREEN='\033[0;32m'
+COLOR_YELLOW='\033[0;33m'
 
-# Console step increment
-i=1
-
-# Get project directories
+# Defaults
 PROJECT_DIR="$(git rev-parse --show-toplevel)"
 
-# Declare script helper
-TEXT_HELPER="\nThis script aims to copy .env-example files into .env files at project initialization.
-Following flags are available:
+# Script helper
+TEXT_HELPER="
+This script aims to copy .env-example files into .env files at project initialization.
 
-  -h    Print script help\n\n"
+Available flags:
+  -h    Print script help.
+"
 
+# Functions
 print_help() {
   printf "$TEXT_HELPER"
 }
@@ -31,9 +34,8 @@ while getopts h flag; do
   esac
 done
 
-
 find $PROJECT_DIR -type f -name ".env*-example" | while read f; do
-  printf "\n${red}Copy${no_color}: '$f' 
-  ${red}to${no_color}: '${f/-example/}'\n\n"
+  printf "\n${COLOR_RED}Copy${COLOR_OFF}: '$f' 
+  ${COLOR_RED}to${COLOR_OFF}: '${f/-example/}'\n\n"
   cp "$f" ${f/-example/}
 done

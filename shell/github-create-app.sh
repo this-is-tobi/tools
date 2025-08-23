@@ -2,34 +2,28 @@
 
 set -e
 
-# Colorize terminal
-red='\e[0;31m'
-no_color='\033[0m'
+# Colors
+COLOR_OFF='\033[0m'
+COLOR_BLUE='\033[0;34m'
+COLOR_RED='\033[0;31m'
+COLOR_GREEN='\033[0;32m'
+COLOR_YELLOW='\033[0;33m'
 
 # Helper text
-TEXT_HELPER="\nThis script creates a GitHub App using the GitHub REST API.
+TEXT_HELPER="
+This script creates a GitHub App using the GitHub REST API.
+
 Available flags:
-
   -n    Name of the GitHub App.
-
   -o    Owner (organization or user).
-
   -t    GitHub Personal Access Token.
-
   -d    Description of the app.
-
   -u    Homepage URL.
-
   -c    Callback URL.
-
   -p    Permissions (JSON string).
-
   -e    Events (comma-separated).
-
   -k    Create a private key for the app and include it in the final JSON output.
-
   -h    Print script help.
-
 
 Example:
   ./github-create-app.sh \\
@@ -41,13 +35,15 @@ Example:
     -c 'https://example.com/callback' \\
     -p '{\"contents\":\"read\",\"issues\":\"write\"}' \\
     -e 'push,pull_request' \\
-    -k\n\n"
+    -k
+"
 
+# Functions
 print_help() {
   printf "$TEXT_HELPER"
 }
 
-# Parse options, add -k flag
+# Parse options
 CREATE_KEY="false"
 while getopts hn:o:t:d:u:c:p:e:k flag; do
   case "${flag}" in
@@ -75,34 +71,34 @@ while getopts hn:o:t:d:u:c:p:e:k flag; do
   esac
 done
 
+# Settings
+printf "
+Settings:
+  > APP_NAME: $APP_NAME
+  > OWNER: $OWNER
+  > DESCRIPTION: $DESCRIPTION
+  > HOMEPAGE_URL: $HOMEPAGE_URL
+  > CALLBACK_URL: $CALLBACK_URL
+  > PERMISSIONS: $PERMISSIONS
+  > EVENTS: $EVENTS
+  > CREATE_KEY: $CREATE_KEY
+"
+
+# Options validation
 if [ -z "$APP_NAME" ]; then
-  printf "\n${red}Error.${no_color} Argument missing: app name (flag -n).\n"
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: app name (flag -n).\n"
   exit 1
 elif [ -z "$OWNER" ]; then
-  printf "\n${red}Error.${no_color} Argument missing: owner (flag -o).\n"
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: owner (flag -o).\n"
   exit 1
 elif [ -z "$TOKEN" ]; then
-  printf "\n${red}Error.${no_color} Argument missing: token (flag -t).\n"
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: token (flag -t).\n"
   exit 1
 fi
 
-# Default values
-DESCRIPTION=${DESCRIPTION:-"Created via bash script"}
-HOMEPAGE_URL=${HOMEPAGE_URL:-""}
-CALLBACK_URL=${CALLBACK_URL:-""}
-PERMISSIONS=${PERMISSIONS:-""}
-EVENTS=${EVENTS:-""}
 
+# Init
 CREATE_URL="https://api.github.com/orgs/$OWNER/apps"
-
-printf "Settings:
-  > Name: $APP_NAME
-  > Owner: $OWNER
-  > Description: $DESCRIPTION
-  > Homepage: $HOMEPAGE_URL
-  > Callback: $CALLBACK_URL
-  > Permissions: $PERMISSIONS
-  > Events: $EVENTS\n\n"
 
 
 # Create default JSON
@@ -122,6 +118,8 @@ if [ -n "$EVENTS" ]; then
   EVENTS_JSON=$(jq -n --arg events "$EVENTS" '($events | split(","))')
   PAYLOAD=$(echo "$PAYLOAD" | jq --argjson ev "$EVENTS_JSON" '.default_events = $ev')
 fi
+
+printf "Creating GitHub App '$APP_NAME'...\n"
 
 RESPONSE=$(curl -fsSL \
   -X POST "$CREATE_URL" \
@@ -143,9 +141,10 @@ if echo "$RESPONSE" | jq -e '.id' > /dev/null; then
   else
     FINAL_RESPONSE=$(echo "$RESPONSE")
   fi
-  echo "GitHub App created successfully."
+  printf "GitHub App created successfully.\n"
   echo "$FINAL_RESPONSE" | jq
 else
-  echo "Failed to create GitHub App."
+  printf "Failed to create GitHub App.\n"
+  echo "$FINAL_RESPONSE" | jq
   exit 1
 fi

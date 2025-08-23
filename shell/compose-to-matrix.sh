@@ -2,19 +2,19 @@
 
 set -e
 
-# Colorize terminal
-red='\e[0;31m'
-no_color='\033[0m'
+# Colors
+COLOR_OFF='\033[0m'
+COLOR_BLUE='\033[0;34m'
+COLOR_RED='\033[0;31m'
+COLOR_GREEN='\033[0;32m'
+COLOR_YELLOW='\033[0;33m'
 
-# Console step increment
-i=1
-
-# Get versions
+# Versions
 DOCKER_VERSION="$(docker --version)"
 
-# Default
+# Defaults
 REGISTRY="docker.io"
-# TAGS="latest"
+TAGS="latest"
 COMMIT_SHA="$(git rev-parse --short HEAD)"
 PLATFORMS="linux/amd64"
 CSV=false
@@ -24,29 +24,35 @@ unset MAJOR_VERSION
 unset MINOR_VERSION
 unset PATCH_VERSION
 
-# Declare script helper
-TEXT_HELPER="\nThis script aims to build matrix for Github CI/CD. It will parse the given docker-compose file and return a json object with images infos (name, tag, context, dockerfile and if it need to be build)
-Following flags are available:
+# Script helper
+TEXT_HELPER="
+This script aims to build matrix for Github CI/CD. It will parse the given docker-compose file and return a json object with images infos (name, tag, context, dockerfile and if it need to be build)
 
+Available flags:
   -a    Create recursive tags, if it match 'x.x.x' it will create 'x.x' and 'x'.
-
   -c    Use csv list formated output for tags instead of json array.
-
   -f    Docker-compose file used to build matrix.
-
   -n    Namespace used to tag images. e.g 'username/reponame'.
-
   -p    Target platforms used to build matrix (List/CSV format. ex: 'linux/amd64,linux/arm64').
-        Default is '$PLATFORMS'.
-
+        Default: '$PLATFORMS'.
   -r    Registry host used to build matrix.
-        Default is '$REGISTRY'.
-
+        Default: '$REGISTRY'.
   -t    Docker tag used to build matrix.
-        Default is '$TAGS'.
+        Default: '$TAGS'.
+  -h    Print script help.
 
-  -h    Print script help.\n\n"
+Example:
+  ./compose-to-matrix.sh \\
+    -f './path/to/docker-compose.yml' \\
+    -n 'this-is-tobi/tools' \\
+    -r 'docker.io' \\
+    -t '1.0.0,1.0,1,latest' \\
+    -p 'linux/amd64,linux/arm64' \\
+    -a \\
+    -c
+"
 
+# Functions
 print_help() {
   printf "$TEXT_HELPER"
 }
@@ -75,14 +81,14 @@ while getopts hacf:n:p:r:t: flag; do
 done
 
 
-# Script condition
+# Options validation
 if [ ! -f "$(readlink -f $COMPOSE_FILE)" ]; then
   echo "\nDocker compose file $COMPOSE_FILE does not exist."
   print_help
   exit 1
 fi
 
-
+# Init
 if [ "$REGISTRY" ] && [[ "$REGISTRY" != */ ]]; then
   REGISTRY="$REGISTRY/"
 fi
@@ -91,6 +97,18 @@ if [ "$NAMESPACE" ] && [[ "$NAMESPACE" != */ ]]; then
   NAMESPACE="$NAMESPACE/"
 fi
 
+# Settings
+printf "
+Settings:
+  > DOCKER_VERSION: ${DOCKER_VERSION}
+  > COMPOSE_FILE: ${COMPOSE_FILE}
+  > REGISTRY: ${REGISTRY}
+  > NAMESPACE: ${NAMESPACE}
+  > TAGS: ${TAGS}
+  > PLATFORMS: ${PLATFORMS}
+  > RECURSIVE: ${RECURSIVE}
+  > CSV: ${CSV}
+"
 
 # Build core matrix
 MATRIX=$(cat "$COMPOSE_FILE" \

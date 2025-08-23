@@ -2,7 +2,7 @@
 # Common utilities for platform configuration scripts
 
 # Colors for output
-RED='\033[0;31m'
+COLOR_RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
@@ -18,7 +18,7 @@ warn() {
 }
 
 error() {
-  echo -e "${RED}[ERROR]${NC} $1"
+  echo -e "${COLOR_RED}[ERROR]${NC} $1"
 }
 
 success() {

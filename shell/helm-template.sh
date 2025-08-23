@@ -2,34 +2,42 @@
 
 set -e
 
-# Colorize terminal
-red='\e[0;31m'
-no_color='\033[0m'
-
+# Colors
+COLOR_OFF='\033[0m'
+COLOR_BLUE='\033[0;34m'
+COLOR_RED='\033[0;31m'
+COLOR_GREEN='\033[0;32m'
+COLOR_YELLOW='\033[0;33m'
 
 # Defaults
 CHART_NAME="my-awesome-chart"
 OUTPUT_DIR="$(pwd)/$CHART_NAME"
 ADDITIONAL_SERVICE_NAMES=()
 
-# Declare script helper
-TEXT_HELPER="\nThis script aims to create a generic Helm chart.
+# Script helper
+TEXT_HELPER="
+This script aims to create a generic Helm chart.
 
-Following flags are available:
-
+Available flags:
   -a  Helm additional service name. You can specify multiple additional services by using this flag multiple times.
-      Default is an empty list.
-
+      Default: empty list.
   -c  Helm chart name.
-      Default is '$CHART_NAME'.
-
+      Default: '$CHART_NAME'.
   -o  Output directory to generate Helm chart files.
-      Default is '$OUTPUT_DIR' ('\$(pwd)/<chart_name>').
-
+      Default: '$OUTPUT_DIR' ('\$(pwd)/<chart_name>').
   -s  Helm base service name.
+  -h  Print script help.
 
-  -h  Print script help.\n\n"
+Example:
+  ./helm-template.sh \\
+    -c 'my-awesome-chart' \\
+    -s 'api-1' \\
+    -a 'api-2' \\
+    -a 'client' \\
+    -o './my-awesome-chart'
+"
 
+# Functions
 print_help() {
   printf "$TEXT_HELPER"
 }
@@ -52,20 +60,27 @@ while getopts ha:c:o:s: flag; do
   esac
 done
 
+# Settings
+printf "
+Settings:
+  > CHART_NAME: ${CHART_NAME}
+  > OUTPUT_DIR: ${OUTPUT_DIR}
+  > SERVICE_NAME: ${SERVICE_NAME}
+  > ADDITIONAL_SERVICE_NAMES: ${ADDITIONAL_SERVICE_NAMES[@]}
+"
 
+# Options validation
 if [ ! -x "$(command -v curl)" ]; then
-  printf "\n${red}[helm template]${no_color} Error: 'curl' is required but not installed.\n"
+  printf "\n${COLOR_RED}[helm template]${COLOR_OFF} Error: 'curl' is required but not installed.\n"
   exit 1
 fi
-
 if [ ! -x "$(command -v yq)" ]; then
-  printf "\n${red}[helm template]${no_color} Error: 'yq' is required but not installed.\n"
+  printf "\n${COLOR_RED}[helm template]${COLOR_OFF} Error: 'yq' is required but not installed.\n"
   exit 1
 fi
-
 if [ "$(uname -s)" = "Darwin" ]; then
   if [ ! -x $(command -v gsed) ]; then
-    printf "\n${red}[helm template]${no_color} Error: 'gsed' is required but not installed.\n"
+    printf "\n${COLOR_RED}[helm template]${COLOR_OFF} Error: 'gsed' is required but not installed.\n"
     printf "Please install GNU sed with 'brew install gnu-sed' and try again.\n\n"
     exit 1
   fi
@@ -74,13 +89,13 @@ else
   SED_COMMAND="sed"
 fi
 
-
+# Handle base service
 if [ -n "$SERVICE_NAME" ]; then
   # Create tmp directory
   mkdir -p ${OUTPUT_DIR}/tmp
 
   # Clone the template chart
-  printf "\n\n${red}[helm template]${no_color} Clone the template chart\n\n"
+  printf "\n\n${COLOR_RED}[helm template]${COLOR_OFF} Clone the template chart\n\n"
   curl -fsSL https://raw.githubusercontent.com/this-is-tobi/tools/main/shell/clone-subdir.sh | bash -s -- \
     -u "https://github.com/this-is-tobi/helm-charts" \
     -s "template" \
@@ -90,26 +105,26 @@ if [ -n "$SERVICE_NAME" ]; then
   rm -rf ${OUTPUT_DIR}/template
 
   # Rename the chart
-  printf "\n\n${red}[helm template]${no_color} Rename chart in 'Chart.yaml' file\n\n"
+  printf "\n\n${COLOR_RED}[helm template]${COLOR_OFF} Rename chart in 'Chart.yaml' file\n\n"
   ${SED_COMMAND} -i "s/chartname/${CHART_NAME}/g" ${OUTPUT_DIR}/Chart.yaml
 
   # Rename templates directory
-  printf "\n\n${red}[helm template]${no_color} Rename templates directory\n\n"
+  printf "\n\n${COLOR_RED}[helm template]${COLOR_OFF} Rename templates directory\n\n"
   mv ${OUTPUT_DIR}/templates/servicename ${OUTPUT_DIR}/templates/${SERVICE_NAME}
 
   # Update service name in template files
-  printf "\n\n${red}[helm template]${no_color} Rename service in templates files\n\n"
+  printf "\n\n${COLOR_RED}[helm template]${COLOR_OFF} Rename service in templates files\n\n"
   find ${OUTPUT_DIR}/templates/${SERVICE_NAME} -type f -exec ${SED_COMMAND} -i "s/servicename/${SERVICE_NAME}/g" ${OUTPUT_DIR}/values.yaml {} \;
 
   # Update service name in values file
-  printf "\n\n${red}[helm template]${no_color} Rename service in 'values.yaml' file\n\n"
+  printf "\n\n${COLOR_RED}[helm template]${COLOR_OFF} Rename service in 'values.yaml' file\n\n"
   SERVICE_NAME_CAPITALIZED="$(echo "$SERVICE_NAME" | cut -c1 | tr '[:lower:]' '[:upper:]')$(echo "$SERVICE_NAME" | cut -c2-)"
   yq eval ".${SERVICE_NAME} = .servicename | del(.servicename)" -i ${OUTPUT_DIR}/values.yaml
   ${SED_COMMAND} -i "s/servicename/${SERVICE_NAME}/g" ${OUTPUT_DIR}/values.yaml
   ${SED_COMMAND} -i "s/Servicename/${SERVICE_NAME_CAPITALIZED}/g" ${OUTPUT_DIR}/values.yaml
 
   # Update chart name in values
-  printf "\n\n${red}[helm template]${no_color} Rename chart in 'values.yaml' file\n\n"
+  printf "\n\n${COLOR_RED}[helm template]${COLOR_OFF} Rename chart in 'values.yaml' file\n\n"
   ${SED_COMMAND} -i "s/chartname/${CHART_NAME}/g" ${OUTPUT_DIR}/values.yaml
 
   # Delete tmp directory
@@ -123,7 +138,7 @@ for ADDITIONAL_SERVICE_NAME in "${ADDITIONAL_SERVICE_NAMES[@]}"; do
   mkdir -p ${OUTPUT_DIR}/tmp
 
   # Clone additional service
-  printf "\n\n${red}[helm template]${no_color} Clone additional service\n\n"
+  printf "\n\n${COLOR_RED}[helm template]${COLOR_OFF} Clone additional service\n\n"
   curl -fsSL https://raw.githubusercontent.com/this-is-tobi/tools/main/shell/clone-subdir.sh | bash -s -- \
     -u "https://github.com/this-is-tobi/helm-charts" \
     -s "template/templates/servicename" \
@@ -134,11 +149,11 @@ for ADDITIONAL_SERVICE_NAME in "${ADDITIONAL_SERVICE_NAMES[@]}"; do
   rm -rf ${OUTPUT_DIR}/templates/${ADDITIONAL_SERVICE_NAME}/servicename
 
   # Update service name in template files
-  printf "\n\n${red}[helm template]${no_color} Rename service in templates files\n\n"
+  printf "\n\n${COLOR_RED}[helm template]${COLOR_OFF} Rename service in templates files\n\n"
   find ${OUTPUT_DIR}/templates/${ADDITIONAL_SERVICE_NAME} -type f -exec ${SED_COMMAND} -i "s/servicename/${ADDITIONAL_SERVICE_NAME}/g" ${OUTPUT_DIR}/values.yaml {} \;
 
   # Update service name in values file
-  printf "\n\n${red}[helm template]${no_color} Rename service in 'values.yaml' file\n\n"
+  printf "\n\n${COLOR_RED}[helm template]${COLOR_OFF} Rename service in 'values.yaml' file\n\n"
   ADDITIONAL_SERVICE_NAME_CAPITALIZED="$(echo "$ADDITIONAL_SERVICE_NAME" | cut -c1 | tr '[:lower:]' '[:upper:]')$(echo "$ADDITIONAL_SERVICE_NAME" | cut -c2-)"
   curl -fsSL https://raw.githubusercontent.com/this-is-tobi/tools/main/shell/clone-subdir.sh | bash -s -- \
     -u "https://github.com/this-is-tobi/helm-charts" \
@@ -150,19 +165,19 @@ for ADDITIONAL_SERVICE_NAME in "${ADDITIONAL_SERVICE_NAMES[@]}"; do
   ${SED_COMMAND} -i "s/Servicename/${ADDITIONAL_SERVICE_NAME_CAPITALIZED}/g" ${OUTPUT_DIR}/values.yaml
 
   # Update chart name in values
-  printf "\n\n${red}[helm template]${no_color} Rename chart in 'values.yaml' file\n\n"
+  printf "\n\n${COLOR_RED}[helm template]${COLOR_OFF} Rename chart in 'values.yaml' file\n\n"
   ${SED_COMMAND} -i "s/chartname/${CHART_NAME}/g" ${OUTPUT_DIR}/values.yaml
 
   # Delete tmp directory
   rm -rf ${OUTPUT_DIR}/tmp
 done
 
+# Update chart readme file
 if [ -n "$SERVICE_NAME" ] || [ ${#ADDITIONAL_SERVICE_NAMES[@]} -gt 0 ]; then
   if [ -x "$(command -v helm-docs)" ]; then
-    # Update chart readme file
-    printf "\n\n${red}[helm template]${no_color} Update 'readme.md' file\n\n"
+    printf "\n\n${COLOR_RED}[helm template]${COLOR_OFF} Update 'readme.md' file\n\n"
     helm-docs -u ${OUTPUT_DIR}
   else
-    printf "\n${red}[helm template]${no_color} Warning: 'helm-docs' is not installed. Skipping readme update.\n"
+    printf "\n${COLOR_RED}[helm template]${COLOR_OFF} Warning: 'helm-docs' is not installed. Skipping readme update.\n"
   fi
 fi

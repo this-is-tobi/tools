@@ -2,20 +2,25 @@
 
 set -e
 
-# Colorize terminal
-red='\e[0;31m'
-no_color='\033[0m'
+# Colors
+COLOR_OFF='\033[0m'
+COLOR_BLUE='\033[0;34m'
+COLOR_RED='\033[0;31m'
+COLOR_GREEN='\033[0;32m'
+COLOR_YELLOW='\033[0;33m'
 
-# Get project directories
-# PROJECT_DIR="$(git rev-parse --show-toplevel)"
+# Defaults
+PROJECT_DIR="$(git rev-parse --show-toplevel)"
 
+# Script helper
+TEXT_HELPER="
+This script aims to copy '.env*-example' files into '.env*' and '*-example.yaml' files into '*.yaml' at project initialization.
 
-# Declare script helper
-TEXT_HELPER="\nThis script aims to copy '.env*-example' files into '.env*' and '*-example.yaml' files into '*.yaml' at project initialization.
-Following flags are available:
+Available flags:
+  -h    Print script help.
+"
 
-  -h    Print script help\n\n"
-
+# Functions
 print_help() {
   printf "$TEXT_HELPER"
 }
@@ -30,13 +35,12 @@ do
   esac
 done
 
-
 find ${PROJECT_DIR:-.} -type f -name ".env*-example" -or -name "*-example.yaml" | while read f; do
   if [ ! -f "${f/-example/}" ]; then
-    printf "\n${red}Copy${no_color}: '$f'"
-    printf "\n${red}  to${no_color}: '${f/-example/}'\n"
+    printf "\n${COLOR_RED}Copy${COLOR_OFF}: '$f'"
+    printf "\n${COLOR_RED}  to${COLOR_OFF}: '${f/-example/}'\n"
     cp "$f" "${f/-example/}"
   else
-    printf "\n${red}File${no_color}: '${f/-example/}' ${red}already exists${no_color}\n"
+    printf "\n${COLOR_RED}File${COLOR_OFF}: '${f/-example/}' ${COLOR_RED}already exists${COLOR_OFF}\n"
   fi
 done

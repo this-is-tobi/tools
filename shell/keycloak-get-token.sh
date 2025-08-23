@@ -1,33 +1,47 @@
 #!/bin/bash
 
-# Colorize terminal
-red='\e[0;31m'
-no_color='\033[0m'
+set -e
 
-# Default
+# Colors
+COLOR_OFF='\033[0m'
+COLOR_BLUE='\033[0;34m'
+COLOR_RED='\033[0;31m'
+COLOR_GREEN='\033[0;32m'
+COLOR_YELLOW='\033[0;33m'
+
+# Defaults
 KC_USERNAME="admin"
 
+# Script helper
+TEXT_HELPER="The purpose of this script is to display the keycloak user's token based on appropriate information.
 
-# Declare script helper
-TEXT_HELPER="\nThe purpose of this script is to display the keycloak user's token based on appropriate information.
-Following flags are available:
-
+Available flags:
   -i    Keycloak client id.
-
   -k    Keycloak host.
-
   -p    User password.
-
   -r    Keycloak realm.
-
   -s    Keycloak client secret.
+  -u    Keycloak username.
+        Default: '$KC_USERNAME'.
+  -h    Print script help.
 
-  -u    Keycloak username (Default is '$KC_USERNAME').
+Example:
+  ./keycloak-get-token.sh \\
+    -k 'http://localhost:8080' \\
+    -p 'admin' \\
+    -r 'my-realm' \\
+    -i 'my-client' \\
+    -s 'client-secret' \\
+    -u 'admin'
+"
 
-  -h    Print script help.\n\n"
-
+# Functions
 print_help() {
   printf "$TEXT_HELPER"
+}
+
+jwt_decode(){
+  jq -R 'split(".") | .[1] | @base64d | fromjson' <<< "$1"
 }
 
 # Parse options
@@ -51,32 +65,38 @@ while getopts hi:k:p:r:s:u: flag; do
   esac
 done
 
+# Settings
+printf "
+Settings:
+  > KC_HOST: ${KC_HOST}
+  > KC_REALM: ${KC_REALM}
+  > KC_USERNAME: ${KC_USERNAME}
+  > CLIENT_ID: ${CLIENT_ID}
+  > CLIENT_SECRET: $(printf "%*s" $(( ${#CLIENT_SECRET} - 3 )) "" | tr " " "*"; echo ${CLIENT_SECRET: -3};)
+"
 
-function jwt_decode(){
-  jq -R 'split(".") | .[1] | @base64d | fromjson' <<< "$1"
-}
-
+# Options validation
 if [ -z "$CLIENT_ID" ]; then
-  printf "\n${red}Error.${no_color} Argument missing: client id (flag -i)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: client id (flag -i)".
   exit 1
 elif [ -z "$KC_HOST" ]; then
-  printf "\n${red}Error.${no_color} Argument missing: keycloak host (flag -k)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak host (flag -k)".
   exit 1
 elif [ -z "$KC_PASSWORD" ]; then
-  printf "\n${red}Error.${no_color} Argument missing: user password (flag -p)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: user password (flag -p)".
   exit 1
 elif [ -z "$KC_REALM" ]; then
-  printf "\n${red}Error.${no_color} Argument missing: keycloak realm (flag -r)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak realm (flag -r)".
   exit 1
 elif [ -z "$CLIENT_SECRET" ]; then
-  printf "\n${red}Error.${no_color} Argument missing: client secret (flag -s)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: client secret (flag -s)".
   exit 1
 elif [ -z "$KC_USERNAME" ]; then
-  printf "\n${red}Error.${no_color} Argument missing: username (flag -u)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: username (flag -u)".
   exit 1
 fi
 
-
+# Init
 ACCESS_TOKEN=$(curl -fsSL \
   -X GET "$KC_HOST/realms/$KC_REALM/protocol/openid-connect/token" \
   -d "client_id=$CLIENT_ID" \
@@ -85,4 +105,5 @@ ACCESS_TOKEN=$(curl -fsSL \
   -d "password=$KC_PASSWORD" \
   -d "grant_type=password" | jq -r '.access_token')
 
+# Display token
 jwt_decode "$ACCESS_TOKEN"

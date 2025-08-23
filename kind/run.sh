@@ -3,20 +3,20 @@
 set -e
 set -o pipefail
 
-# Colorize terminal
-red='\e[0;31m'
-no_color='\033[0m'
+# Colors
+COLOR_RED='\e[0;31m'
+COLOR_OFF='\033[0m'
 
-# Get versions
+# Versions
 DOCKER_VERSION="$(docker --version)"
 
-# Default
+# Defaults
 PROJECT_DIR="$(git rev-parse --show-toplevel)"
 SCRIPT_PATH="$(cd -- "$(dirname "$0")" >/dev/null 2>&1; pwd -P)"
 INGRESS_CONTROLLER="nginx"
 COMPOSE_FILE="$SCRIPT_PATH/docker-compose.yml"
 
-# Declare script helper
+# Script helper
 TEXT_HELPER="\nThis script aims to manage a local kubernetes cluster using Kind also known as Kubernetes in Docker.
 Following flags are available:
 
@@ -69,7 +69,7 @@ done
 
 # Functions
 install_kind() {
-  printf "\n\n${red}[kind wrapper].${no_color} Install kind...\n\n"
+  printf "\n\n${COLOR_RED}[kind wrapper].${COLOR_OFF} Install kind...\n\n"
   if [ "$(uname)" = "Linux" ]; then
     OS="linux"
   elif [ "$(uname)" = "Darwin" ]; then
@@ -95,10 +95,10 @@ install_kind() {
 
 create () {
   if [ -z "$(kind get clusters | grep 'kind')" ]; then
-    printf "\n\n${red}[kind wrapper].${no_color} Create Kind cluster\n\n"
+    printf "\n\n${COLOR_RED}[kind wrapper].${COLOR_OFF} Create Kind cluster\n\n"
     kind create cluster --config $SCRIPT_PATH/configs/kind-config.yml
     if [ "$INGRESS_CONTROLLER" = "nginx" ]; then
-      printf "\n\n${red}[kind wrapper].${no_color} Install Nginx ingress controller\n\n"
+      printf "\n\n${COLOR_RED}[kind wrapper].${COLOR_OFF} Install Nginx ingress controller\n\n"
       kubectl --context kind-kind apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
       sleep 20
       kubectl --context kind-kind wait --namespace ingress-nginx \
@@ -106,7 +106,7 @@ create () {
         --selector=app.kubernetes.io/component=controller \
         --timeout=90s
     elif [ "$INGRESS_CONTROLLER" = "traefik" ]; then
-      printf "\n\n${red}[kind wrapper].${no_color} Install traefik ingress controller\n\n"
+      printf "\n\n${COLOR_RED}[kind wrapper].${COLOR_OFF} Install traefik ingress controller\n\n"
       helm --kube-context kind-kind repo add traefik https://traefik.github.io/charts && helm repo update
       helm --kube-context kind-kind upgrade \
         --install \
@@ -120,27 +120,27 @@ create () {
 }
 
 build () {
-  printf "\n\n${red}[kind wrapper].${no_color} Build images into cluster node\n\n"
+  printf "\n\n${COLOR_RED}[kind wrapper].${COLOR_OFF} Build images into cluster node\n\n"
   cd $(dirname "$COMPOSE_FILE") && docker buildx bake --file $(basename "$COMPOSE_FILE") --load && cd -
 }
 
 load () {
-  printf "\n\n${red}[kind wrapper].${no_color} Load images into cluster node\n\n"
+  printf "\n\n${COLOR_RED}[kind wrapper].${COLOR_OFF} Load images into cluster node\n\n"
   kind load docker-image $(cat "$COMPOSE_FILE" | docker run -i --rm mikefarah/yq -o t '.services | map(select(.build) | .image)')
 }
 
 deploy () {
-  printf "\n\n${red}[kind wrapper].${no_color} Deploy application in development mode\n\n"
+  printf "\n\n${COLOR_RED}[kind wrapper].${COLOR_OFF} Deploy application in development mode\n\n"
   # Insert the commands to install your application here !
 }
 
 clean () {
-  printf "\n\n${red}[kind wrapper].${no_color} Clean Kind cluster\n\n"
+  printf "\n\n${COLOR_RED}[kind wrapper].${COLOR_OFF} Clean Kind cluster\n\n"
   # Insert the commands to uninstall your application here !
 }
 
 delete () {
-  printf "\n\n${red}[kind wrapper].${no_color} Delete Kind cluster\n\n"
+  printf "\n\n${COLOR_RED}[kind wrapper].${COLOR_OFF} Delete Kind cluster\n\n"
   kind delete cluster
 }
 
@@ -169,13 +169,13 @@ fi
 
 # Add local services to /etc/hosts
 if [ ! -z "$DOMAINS" ]; then
-  printf "\n\n${red}[kind wrapper].${no_color} Add services local domains to /etc/hosts\n\n"
+  printf "\n\n${COLOR_RED}[kind wrapper].${COLOR_OFF} Add services local domains to /etc/hosts\n\n"
   FORMATED_DOMAINS="$(echo "$DOMAINS" | sed 's/,/\ /g')"
   if [ "$(grep -c "$FORMATED_DOMAINS" /etc/hosts)" -ge 1 ]; then
-    printf "\n\n${red}[kind wrapper].${no_color} Services local domains already added to /etc/hosts\n\n"
+    printf "\n\n${COLOR_RED}[kind wrapper].${COLOR_OFF} Services local domains already added to /etc/hosts\n\n"
   else
     sudo sh -c "echo $'\n\n# Kind\n127.0.0.1  $FORMATED_DOMAINS' >> /etc/hosts"
-    printf "\n\n${red}[kind wrapper].${no_color} Services local domains successfully added to /etc/hosts\n\n"
+    printf "\n\n${COLOR_RED}[kind wrapper].${COLOR_OFF} Services local domains successfully added to /etc/hosts\n\n"
   fi
 fi
 

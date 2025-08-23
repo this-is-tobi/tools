@@ -2,20 +2,25 @@
 
 set -e
 
-# Colorize terminal
-red='\e[0;31m'
-no_color='\033[0m'
+# Colors
+COLOR_OFF='\033[0m'
+COLOR_BLUE='\033[0;34m'
+COLOR_RED='\033[0;31m'
+COLOR_GREEN='\033[0;32m'
+COLOR_YELLOW='\033[0;33m'
 
 # Defaults
 ZSH_COMPLETIONS_DIR="${ZSH_CUSTOM:-${ZSH:-~/.oh-my-zsh}/custom}/plugins/zsh-completions"
 
+# Script helper
+TEXT_HELPER="
+This script aims to update zsh-completions sources (See. https://github.com/zsh-users/zsh-completions).
 
-# Declare script helper
-TEXT_HELPER="\nThis script aims to update zsh-completions sources (See. https://github.com/zsh-users/zsh-completions).
-Following flags are available:
+Available flags:
+  -h    Print script help.
+"
 
-  -h    Print script help\n\n"
-
+# Functions
 print_help() {
   printf "$TEXT_HELPER"
 }
@@ -29,6 +34,7 @@ while getopts h flag; do
   esac
 done
 
+# Update zsh-completions
 if [ ! -d "$ZSH_COMPLETIONS_DIR" ]; then
   printf "\nzsh-completion directory does not exists, cloning repository.\n\n"
   git clone https://github.com/zsh-users/zsh-completions $ZSH_COMPLETIONS_DIR
