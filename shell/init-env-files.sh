@@ -44,3 +44,13 @@ find ${PROJECT_DIR:-.} -type f -name ".env*-example" -or -name "*-example.yaml" 
     printf "\n${COLOR_RED}File${COLOR_OFF}: '${f/-example/}' ${COLOR_RED}already exists${COLOR_OFF}\n"
   fi
 done
+
+find ${PROJECT_DIR:-.} -type f -name ".env*.example" -or -name "*.example.yaml" | while read f; do
+  if [ ! -f "${f/.example/}" ]; then
+    printf "\n${COLOR_RED}Copy${COLOR_OFF}: '$f'"
+    printf "\n${COLOR_RED}  to${COLOR_OFF}: '${f/.example/}'\n"
+    cp "$f" "${f/.example/}"
+  else
+    printf "\n${COLOR_RED}File${COLOR_OFF}: '${f/.example/}' ${COLOR_RED}already exists${COLOR_OFF}\n"
+  fi
+done
