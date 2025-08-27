@@ -2,25 +2,41 @@ import crypto from 'node:crypto'
 
 // encryptionKey should have an exact length of 32 characters
 const encryptionKey = 'a-key-with-exactly-32-characters' // process.env.ENCRYPTION_KEY
-// for AES use 16 as ivLength
 const ivLength = 16
 
 /**
- * Hash a given password.
+ * Hash a given password using scrypt with configurable security parameters.
  * @function generateHash
  * @param {string} password - Password to hash.
- * @returns {promise} Hash of input password.
+ * @param {Object} options - Security options for scrypt.
+ * @param {number} options.N - Memory cost (default: 16384)
+ * @param {number} options.r - Block size (default: 8)
+ * @param {number} options.p - Parallelization (default: 1)
+ * @returns {Promise<string>} Hash of input password.
  */
-export async function generateHash(password) {
-  return new Promise((resolve, reject) => {
-    const salt = crypto.randomBytes(8).toString('hex')
-    crypto.scrypt(password, salt, 64, (err, derivedKey) => {
-      if (err) {
-        reject(err)
+export async function generateHash(password, options = {}) {
+  const { N = 16384, r = 8, p = 1 } = options
+  
+  try {
+    // Generate a random salt of 16 bytes
+    const salt = crypto.randomBytes(16).toString('hex')
+    
+    // Use scrypt with configurable security parameters via crypto.promises
+    const key = await crypto.promises.scrypt(
+      password, 
+      salt, 
+      64, 
+      { 
+        N, // Memory cost (must be a power of 2)
+        r, // Block size
+        p  // Parallelization
       }
-      resolve(`${salt}:${derivedKey.toString('hex')}`)
-    })
-  })
+    )
+    
+    return `${salt}:${key.toString('hex')}`
+  } catch (error) {
+    throw new Error(`Error during password hashing: ${error.message}`)
+  }
 }
 
 /**
@@ -28,19 +44,42 @@ export async function generateHash(password) {
  * @function compareToHash
  * @param {string} password - Password to compare with hash.
  * @param {string} hash - Hash to compare with password.
- * @returns {promise} Equality of password and hash.
+ * @param {Object} options - Security options for scrypt.
+ * @param {number} options.N - Memory cost (default: 16384)
+ * @param {number} options.r - Block size (default: 8)
+ * @param {number} options.p - Parallelization (default: 1)
+ * @returns {Promise<boolean>} Equality of password and hash.
  */
-export async function compareToHash(password, hash) {
-  return new Promise((resolve, reject) => {
-    const [salt, key] = hash.split(':')
-    const keyBuffer = Buffer.from(key, 'hex')
-    crypto.scrypt(password, salt, 64, (err, derivedKey) => {
-      if (err) {
-        reject(err)
+export async function compareToHash(password, hash, options = {}) {
+  const { N = 16384, r = 8, p = 1 } = options
+  
+  try {
+    const [salt, storedKeyHex] = hash.split(':')
+    
+    if (!salt || !storedKeyHex) {
+      throw new Error('Invalid hash format')
+    }
+    
+    const storedKeyBuffer = Buffer.from(storedKeyHex, 'hex')
+    
+    // Generate the key from password with configurable security parameters
+    const derivedKey = await crypto.promises.scrypt(
+      password, 
+      salt, 
+      64, 
+      { 
+        N,
+        r,
+        p
       }
-      resolve(crypto.timingSafeEqual(keyBuffer, derivedKey))
-    })
-  })
+    )
+    
+    // Secure comparison
+    return crypto.timingSafeEqual(storedKeyBuffer, derivedKey)
+  } catch (error) {
+    // Do not reveal internal error information
+    return false
+  }
 }
 
 /**
