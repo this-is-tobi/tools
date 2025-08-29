@@ -80,7 +80,7 @@ get_volume_usage() {
       echo "$usage|$mount_path"
     else
       # Try alternative mount paths
-      for alt_path in "/bitnami/redis/data" "/var/lib/redis" "/redis-data"; do
+      for alt_path in "/bitnami/redis/data" "/var/lib/redis" "/redis-data" "/usr/local/etc/redis"; do
         usage=$(kubectl exec $NAMESPACE_ARG "$pod_name" -- df -h "$alt_path" 2>/dev/null | tail -1 | awk '{print $3 "/" $2 " (" $5 " used)"}' 2>/dev/null)
         if [ -n "$usage" ] && [[ "$usage" != *"N/A"* ]]; then
           echo "$usage|$alt_path"
@@ -209,7 +209,7 @@ printf "%-35s %-10s %-10s %-15s %-12s %-15s %s\n" "--------" "-----" "----" "---
 # Extract master pod before the while loop to avoid subshell variable loss
 MASTER_POD=$(echo "$REDIS_PODS" | jq -r '.items[] | select(.metadata.labels["app.kubernetes.io/component"] == "master" or .metadata.labels["role"] == "master" or (.metadata.name | contains("master"))) | .metadata.name')
 
-echo "$REDIS_PODS" | jq -r '.items[] | "\(.metadata.name)|\(.metadata.labels["app.kubernetes.io/component"] // "unknown")|\(.metadata.labels["role"] // "unknown")|\(.status.containerStatuses[]? | select(.name=="redis" or .name=="redis-server").ready // false)|\(.status.containerStatuses[]? | select(.name=="redis" or .name=="redis-server").restartCount // 0)"' | while IFS='|' read -r pod_name component role ready_status restarts; do
+echo "$REDIS_PODS" | jq -r '.items[] | "\(.metadata.name)|\(.metadata.labels["app.kubernetes.io/component"] // "unknown")|\(.metadata.labels["role"] // "unknown")|\(.status.containerStatuses[]? | select(.name=="redis" or .name=="redis-server" or .name=="bitnami-redis").ready // false)|\(.status.containerStatuses[]? | select(.name=="redis" or .name=="redis-server" or .name=="bitnami-redis").restartCount // 0)"' | while IFS='|' read -r pod_name component role ready_status restarts; do
   
   # Determine Redis role
   redis_role="unknown"
@@ -227,7 +227,7 @@ echo "$REDIS_PODS" | jq -r '.items[] | "\(.metadata.name)|\(.metadata.labels["ap
   # Try to execute redis-cli commands
   if [ "$ready_status" = "true" ]; then
     # Try with different redis-cli paths and authentication
-    for cli_cmd in "redis-cli" "/opt/bitnami/redis/bin/redis-cli" "/usr/local/bin/redis-cli"; do
+    for cli_cmd in "redis-cli" "/usr/local/bin/redis-cli" "/usr/bin/redis-cli" "/opt/bitnami/redis/bin/redis-cli"; do
       # Get replication info
       repl_result=$(kubectl exec $NAMESPACE_ARG "$pod_name" -- $cli_cmd --no-auth-warning info replication 2>/dev/null | grep "role:" | cut -d: -f2 | tr -d '\r' 2>/dev/null || echo "")
       if [ -n "$repl_result" ]; then
@@ -261,7 +261,7 @@ echo
 
 # Pod Details
 echo -e "${COLOR_BOLD}Pod Details${COLOR_OFF}"
-echo "$REDIS_PODS" | jq -r '.items[] | "\(.metadata.name)|\(.status.phase)|\(.status.podIP // "N/A")|\(.spec.nodeName // "N/A")|\(.status.containerStatuses[]? | select(.name=="redis" or .name=="redis-server").restartCount // 0)"' | while IFS='|' read -r pod_name phase ip node restarts; do
+echo "$REDIS_PODS" | jq -r '.items[] | "\(.metadata.name)|\(.status.phase)|\(.status.podIP // "N/A")|\(.spec.nodeName // "N/A")|\(.status.containerStatuses[]? | select(.name=="redis" or .name=="redis-server" or .name=="bitnami-redis").restartCount // 0)"' | while IFS='|' read -r pod_name phase ip node restarts; do
   phase_color="${COLOR_GREEN}"
   [ "$phase" != "Running" ] && phase_color="${COLOR_RED}"
   

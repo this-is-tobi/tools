@@ -181,7 +181,7 @@ get_volume_usage() {
       echo "$usage|$mount_path"
     else
       # Try alternative mount paths
-      for alt_path in "/vault/file" "/opt/vault/data" "/data"; do
+      for alt_path in "/vault/file" "/opt/vault/data" "/opt/bitnami/vault/data" "/bitnami/vault/data" "/data"; do
         usage=$(kubectl exec $NAMESPACE_ARG "$pod_name" -- df -h "$alt_path" 2>/dev/null | tail -1 | awk '{print $2 "/" $1 " (" $4 " used)"}' 2>/dev/null)
         if [ -n "$usage" ] && [[ "$usage" != *"N/A"* ]]; then
           echo "$usage|$alt_path"
@@ -240,6 +240,7 @@ fi
 echo -e "${COLOR_BOLD}Vault Services${COLOR_OFF}"
 kubectl get svc $NAMESPACE_ARG -l app.kubernetes.io/name=vault -o custom-columns="NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.status.loadBalancer.ingress[0].ip,PORT(S):.spec.ports[*].port" 2>/dev/null || \
 kubectl get svc $NAMESPACE_ARG -l app=vault -o custom-columns="NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.status.loadBalancer.ingress[0].ip,PORT(S):.spec.ports[*].port" 2>/dev/null || \
+kubectl get svc $NAMESPACE_ARG -l app.kubernetes.io/component=vault -o custom-columns="NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.status.loadBalancer.ingress[0].ip,PORT(S):.spec.ports[*].port" 2>/dev/null || \
 echo "No Vault services found"
 echo
 
@@ -254,9 +255,9 @@ SEALED_COUNT=0
 ACTIVE_COUNT=0
 
 # Extract leader pod before the while loop to avoid subshell variable loss
-LEADER_POD=$(echo "$VAULT_PODS" | jq -r '.items[] | select(.metadata.labels["vault-active"] == "true") | .metadata.name')
+LEADER_POD=$(echo "$VAULT_PODS" | jq -r '.items[] | select(.metadata.labels["vault-active"] == "true" or .metadata.labels["app.kubernetes.io/component"] == "server" and .metadata.labels["vault-active"] == "true") | .metadata.name')
 
-echo "$VAULT_PODS" | jq -r '.items[] | "\(.metadata.name)|\(.metadata.labels["vault-active"] // "unknown")|\(.metadata.labels["vault-sealed"] // "unknown")|\(.metadata.labels["vault-initialized"] // "unknown")|\(.metadata.labels["vault-perf-standby"] // "unknown")|\(.metadata.labels["vault-version"] // "N/A")|\(.status.containerStatuses[]? | select(.name=="vault").ready // false)|\(.status.containerStatuses[]? | select(.name=="vault").restartCount // 0)"' | while IFS='|' read -r pod_name is_active sealed initialized standby version ready_status restarts; do
+echo "$VAULT_PODS" | jq -r '.items[] | "\(.metadata.name)|\(.metadata.labels["vault-active"] // "unknown")|\(.metadata.labels["vault-sealed"] // "unknown")|\(.metadata.labels["vault-initialized"] // "unknown")|\(.metadata.labels["vault-perf-standby"] // "unknown")|\(.metadata.labels["vault-version"] // "N/A")|\(.status.containerStatuses[]? | select(.name=="vault" or .name=="vault-server" or .name=="bitnami-vault").ready // false)|\(.status.containerStatuses[]? | select(.name=="vault" or .name=="vault-server" or .name=="bitnami-vault").restartCount // 0)"' | while IFS='|' read -r pod_name is_active sealed initialized standby version ready_status restarts; do
   
   # Color coding
   ready_color="${COLOR_GREEN}"
@@ -288,7 +289,7 @@ echo
 
 # Pod Details
 echo -e "${COLOR_BOLD}Pod Details${COLOR_OFF}"
-echo "$VAULT_PODS" | jq -r '.items[] | "\(.metadata.name)|\(.status.phase)|\(.status.podIP // "N/A")|\(.spec.nodeName // "N/A")|\(.status.containerStatuses[]? | select(.name=="vault").restartCount // 0)"' | while IFS='|' read -r pod_name phase ip node restarts; do
+echo "$VAULT_PODS" | jq -r '.items[] | "\(.metadata.name)|\(.status.phase)|\(.status.podIP // "N/A")|\(.spec.nodeName // "N/A")|\(.status.containerStatuses[]? | select(.name=="vault" or .name=="vault-server" or .name=="bitnami-vault").restartCount // 0)"' | while IFS='|' read -r pod_name phase ip node restarts; do
   phase_color="${COLOR_GREEN}"
   [ "$phase" != "Running" ] && phase_color="${COLOR_RED}"
   
