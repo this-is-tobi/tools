@@ -91,7 +91,7 @@ else
 fi
 
 echo -e "${COLOR_BOLD}Cluster Summary${COLOR_OFF}"
-echo -e "Name                 ${COLOR_GREEN}$CLUSTER_NAME${COLOR_OFF}"
+echo -e "Name                 $CLUSTER_NAME"
 echo -e "Namespace            ${COLOR_BLUE}$NAMESPACE${COLOR_OFF}"
 echo -e "PostgreSQL Image:    $PG_IMAGE"
 echo -e "Primary instance:    ${COLOR_YELLOW}$PRIMARY_INSTANCE${COLOR_OFF}"

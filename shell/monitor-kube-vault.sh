@@ -140,7 +140,7 @@ READY_PODS=$(echo "$VAULT_PODS" | jq -r '[.items[] | select(.status.conditions[]
 RUNNING_PODS=$(echo "$VAULT_PODS" | jq -r '[.items[] | select(.status.phase=="Running")] | length')
 
 echo -e "${COLOR_BOLD}Vault Cluster Summary${COLOR_OFF}"
-echo -e "Deployment Name:     ${COLOR_GREEN}$VAULT_NAME${COLOR_OFF}"
+echo -e "Deployment Name:     $VAULT_NAME"
 echo -e "Namespace:           ${COLOR_BLUE}$NAMESPACE${COLOR_OFF}"
 echo -e "Total Pods:          $TOTAL_PODS"
 
@@ -235,7 +235,6 @@ else
   echo "No persistent storage found (using emptyDir or no storage)"
   echo
 fi
-echo
 
 # Vault Services
 echo -e "${COLOR_BOLD}Vault Services${COLOR_OFF}"
@@ -246,8 +245,8 @@ echo
 
 # Vault Status Analysis using pod labels
 echo -e "${COLOR_BOLD}Vault Status Analysis${COLOR_OFF}"
-printf "%-25s %-10s %-10s %-12s %-12s %-10s %-15s %s\n" "Pod Name" "Ready" "Active" "Sealed" "Initialized" "Standby" "Version" "Restarts"
-printf "%-25s %-10s %-10s %-12s %-12s %-10s %-15s %s\n" "---------" "-----" "------" "------" "-----------" "-------" "-------" "--------"
+printf "%-35s %-10s %-10s %-12s %-12s %-10s %-15s %s\n" "Pod Name" "Ready" "Active" "Sealed" "Initialized" "Standby" "Version" "Restarts"
+printf "%-35s %-10s %-10s %-12s %-12s %-10s %-15s %s\n" "---------" "-----" "------" "------" "-----------" "-------" "-------" "--------"
 
 LEADER_POD=""
 INITIALIZED_COUNT=0
@@ -281,7 +280,7 @@ echo "$VAULT_PODS" | jq -r '.items[] | "\(.metadata.name)|\(.metadata.labels["va
     [ "$restarts" -gt 5 ] && restart_color="${COLOR_RED}"
   fi
   
-  printf "%-25s %-10s %-10s %-12s %-12s %-10s %-15s %s\n" \
+  printf "%-35s ${ready_color}%-10s${COLOR_OFF} %-10s %-12s %-12s %-10s %-15s ${restart_color}%s${COLOR_OFF}\n" \
     "$pod_name" "$ready_status" "$is_active" "$sealed" "$initialized" "$standby" "$version" "$restarts"
 done || true
 
