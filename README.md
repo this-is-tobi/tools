@@ -177,6 +177,7 @@ A collection of utility scripts for common development and operations tasks, org
 | Name                             | Description                |
 | -------------------------------- | -------------------------- |
 | [crypto](./node/crypto/main.mjs) | *set of crypto functions.* |
+| [worker](./node/worker/main.mjs) | *set of worker functions.* |
 
 ### Shell Scripts
 
