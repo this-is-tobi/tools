@@ -174,10 +174,10 @@ A collection of utility scripts for common development and operations tasks, org
 
 ### Node.js Utilities
 
-| Name                             | Description                |
-| -------------------------------- | -------------------------- |
-| [crypto](./node/crypto/main.mjs) | *set of crypto functions.* |
-| [worker](./node/worker/main.mjs) | *set of worker functions.* |
+| Name                                     | Description                |
+| ---------------------------------------- | -------------------------- |
+| [crypto](./node/packages/crypto/main.ts) | *set of crypto functions.* |
+| [worker](./node/packages/worker/main.ts) | *set of worker functions.* |
 
 ### Shell Scripts
 

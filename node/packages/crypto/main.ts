@@ -1,10 +1,10 @@
-import { generateRandomPassword, generateHash, compareToHash, encrypt, decrypt } from './functions.mjs'
+import { generateRandomPassword, generateHash, compareToHash, encrypt, decrypt } from './functions.ts'
 
 // encryptionKey should have an exact length of 32 characters
-const encryptionKey = 'a-key-with-exactly-32-characters' // process.env.ENCRYPTION_KEY
+const encryptionKey = 'a-key-with-exactly-32-characters'; // process.env.ENCRYPTION_KEY
 
 // Test function
-async function test() {
+async function test(): Promise<void> {
   const password = generateRandomPassword()
   const hash = await generateHash(password)
   const isHashEqual = await compareToHash(password, hash)

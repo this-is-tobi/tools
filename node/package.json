@@ -1,0 +1,14 @@
+{
+  "description": "TypeScript versions of crypto and worker modules",
+  "devDependencies": {
+    "@types/node": "^24.3.0"
+  },
+  "name": "typescript-modules",
+  "scripts": {
+    "crypto": "bun run ./packages/crypto/main.ts",
+    "crypto:bench": "bun run ./packages/crypto/utils/scrypt-benchmark.ts",
+    "crypto:opts": "bun run ./packages/crypto/utils/scrypt-options.ts",
+    "worker": "bun run ./packages/worker/main.ts"
+  },
+  "version": "1.0.0"
+}

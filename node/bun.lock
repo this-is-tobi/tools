@@ -1,0 +1,16 @@
+{
+  "lockfileVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "typescript-modules",
+      "devDependencies": {
+        "@types/node": "^24.3.0",
+      },
+    },
+  },
+  "packages": {
+    "@types/node": ["@types/node@24.3.0", "", { "dependencies": { "undici-types": "~7.10.0" } }, "sha512-aPTXCrfwnDLj4VvXrm+UUCQjNEvJgNA8s5F1cvwQU+3KNltTOkBm1j30uNLyqqPNe7gE3KFzImYoZEfLhp4Yow=="],
+
+    "undici-types": ["undici-types@7.10.0", "", {}, "sha512-t5Fy/nfn+14LuOc2KNYg75vZqClpAiqscVvMygNnlsHBFpSXdJaYtXMcdNLpl/Qvc3P2cB3s6lOV51nqsFq4ag=="],
+  }
+}

@@ -3,17 +3,102 @@ import { promisify } from 'node:util'
 
 // Promisify crypto functions that don't have promise versions
 const randomBytes = promisify(crypto.randomBytes)
-const scrypt = promisify(crypto.scrypt)
+
+/**
+ * Promisified scrypt function that properly handles options
+ */
+function scryptAsync(password: string, salt: string, keylen: number, options: { N: number; r: number; p: number }): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    crypto.scrypt(password, salt, keylen, options, (err, derivedKey) => {
+      if (err) {
+        reject(err)
+      } else {
+        resolve(derivedKey)
+      }
+    })
+  })
+}
+
+/**
+ * Security options for scrypt hashing
+ * 
+ * scrypt is a password-based key derivation function designed to be computationally 
+ * intensive and memory-hard to make it costly for attackers to crack passwords.
+ * 
+ * @see https://nodejs.org/api/crypto.html#cryptoscryptpassword-salt-keylen-options-callback
+ * @see https://tools.ietf.org/rfc/rfc7914.txt (RFC 7914 - The scrypt specification)
+ */
+export interface ScryptOptions {
+  /** 
+   * Number of bytes for salt (default: 16)
+   * Larger salts provide better security against rainbow table attacks.
+   */
+  b?: number
+  
+  /** 
+   * CPU/Memory cost parameter, must be power of 2 (default: 16384)
+   * 
+   * Higher values exponentially increase memory usage and computation time.
+   * This is the primary parameter that makes scrypt "memory-hard".
+   * 
+   * Common values:
+   * - 16384 (2^14) - Default, good for most applications
+   * - 32768 (2^15) - Higher security
+   * - 65536 (2^16) - Very high security (may cause memory issues)
+   * 
+   * Memory usage ≈ 128 * N * r bytes
+   */
+  N?: number
+  
+  /** 
+   * Block size parameter (default: 8)
+   * 
+   * Controls the block size for the underlying hash function.
+   * Higher values increase memory usage and can improve security
+   * but also increase computation time.
+   * 
+   * Memory usage ≈ 128 * N * r bytes
+   * 
+   * Common values: 8, 16, 32
+   */
+  r?: number
+  
+  /** 
+   * Parallelization parameter (default: 1)
+   * 
+   * Number of independent mixing functions that can run in parallel.
+   * Higher values can utilize multiple CPU cores but also increase memory usage.
+   * 
+   * Memory usage = p * 128 * N * r bytes
+   * 
+   * Common values: 1, 2, 4
+   */
+  p?: number
+}
+
+/**
+ * Encryption options for AES encryption
+ */
+export interface EncryptionOptions {
+  /** Algorithm (default: 'aes-256-cbc') */
+  a?: string
+  /** Initialization vector length in bytes (default: 16) */
+  b?: number
+}
+
+/**
+ * Decryption options for AES decryption
+ */
+export interface DecryptionOptions {
+  /** Algorithm (default: 'aes-256-cbc') */
+  a?: string
+}
 
 /**
  * Hash a given password using scrypt with configurable security parameters.
- * @param {string} password - Password to hash.
- * @param {Object} [options={}] - Security options for scrypt.
- * @param {number} [options.b=16] - Number of bytes for salt.
- * @param {number} [options.n=16384] - Memory cost, must be power of 2.
- * @param {number} [options.r=8] - Block size.
- * @param {number} [options.p=1] - Parallelization.
- * @returns {Promise<string>} Hash of input password.
+ * @param password - Password to hash.
+ * @param options - Security options for scrypt.
+ * @returns Hash of input password.
  * 
  * @example
  * // Basic usage with default options
@@ -23,7 +108,7 @@ const scrypt = promisify(crypto.scrypt)
  * @example
  * // Custom security parameters for higher security
  * const strongHash = await generateHash('myPassword123', {
- *   n: 32768,  // Higher memory cost
+ *   N: 32768,  // Higher memory cost
  *   r: 16,     // Larger block size
  *   p: 2       // More parallelization
  * })
@@ -34,26 +119,24 @@ const scrypt = promisify(crypto.scrypt)
  *   b: 32  // 32-byte salt instead of default 16
  * })
  */
-export async function generateHash(password, options = {}) {
-  const { b = 16, n = 16384, r = 8, p = 1 } = options
+export async function generateHash(password: string, options: ScryptOptions = {}): Promise<string> {
+  const { b = 16, N = 16384, r = 8, p = 1 } = options
   try {
     const salt = (await randomBytes(b)).toString('hex')
-    const key = await scrypt(password, salt, 64, { n, r, p })
+    // Use full scrypt with security parameters
+    const key = await scryptAsync(password, salt, 64, { N, r, p })
     return `${salt}:${key.toString('hex')}`
   } catch (error) {
-    throw new Error(`Error during password hashing: ${error.message}`)
+    throw new Error(`Error during password hashing: ${(error as Error).message}`)
   }
 }
 
 /**
  * Compare given password and hash to test if it match.
- * @param {string} password - Password to compare with hash.
- * @param {string} hash - Hash to compare with password.
- * @param {Object} [options={}] - Security options for scrypt.
- * @param {number} [options.n=16384] - Memory cost, must be power of 2.
- * @param {number} [options.r=8] - Block size.
- * @param {number} [options.p=1] - Parallelization.
- * @returns {Promise<boolean>} Equality of password and hash.
+ * @param password - Password to compare with hash.
+ * @param hash - Hash to compare with password.
+ * @param options - Security options for scrypt.
+ * @returns Equality of password and hash.
  * 
  * @example
  * // Basic password verification
@@ -70,19 +153,20 @@ export async function generateHash(password, options = {}) {
  * 
  * @example
  * // Verification with custom scrypt parameters (must match generateHash options)
- * const customHash = await generateHash('myPassword123', { n: 32768, r: 16 })
- * const isValid = await compareToHash('myPassword123', customHash, { n: 32768, r: 16 })
+ * const customHash = await generateHash('myPassword123', { N: 32768, r: 16 })
+ * const isValid = await compareToHash('myPassword123', customHash, { N: 32768, r: 16 })
  * console.log(isValid) // true
  */
-export async function compareToHash(password, hash, options = {}) {
-  const { n = 16384, r = 8, p = 1 } = options
+export async function compareToHash(password: string, hash: string, options: ScryptOptions = {}): Promise<boolean> {
+  const { N = 16384, r = 8, p = 1 } = options
   try {
     const [salt, storedKeyHex] = hash.split(':')
     if (!salt || !storedKeyHex) {
       throw new Error('Invalid hash format')
     }
     const storedKeyBuffer = Buffer.from(storedKeyHex, 'hex')
-    const derivedKey = await scrypt(password, salt, 64, { n, r, p })
+    // Use full scrypt with security parameters (must match generateHash)
+    const derivedKey = await scryptAsync(password, salt, 64, { N, r, p })
     return crypto.timingSafeEqual(storedKeyBuffer, derivedKey)
   } catch (error) {
     return false
@@ -91,12 +175,10 @@ export async function compareToHash(password, hash, options = {}) {
 
 /**
  * Encrypt a given value with an encryption key.
- * @param {string} text - Text to encrypt.
- * @param {string} key - Encryption key.
- * @param {Object} [options={}] - Encryption options.
- * @param {string} [options.a='aes-256-cbc'] - Algorithm.
- * @param {number} [options.b=16] - Initialization vector length in bytes.
- * @returns {promise} Encrypted text.
+ * @param text - Text to encrypt.
+ * @param key - Encryption key.
+ * @param options - Encryption options.
+ * @returns Encrypted text.
  * 
  * @example
  * // Basic encryption with default AES-256-CBC
@@ -123,7 +205,7 @@ export async function compareToHash(password, hash, options = {}) {
  *   b: 16              // 16-byte IV
  * })
  */
-export async function encrypt(text, key, options = {}) {
+export async function encrypt(text: string, key: string, options: EncryptionOptions = {}): Promise<string> {
   const { a = 'aes-256-cbc', b = 16 } = options
   try {
     const iv = await randomBytes(b)
@@ -132,17 +214,16 @@ export async function encrypt(text, key, options = {}) {
     encrypted += cipher.final('hex')
     return iv.toString('hex') + ':' + encrypted
   } catch (error) {
-    throw new Error(`Encryption failed: ${error.message}`)
+    throw new Error(`Encryption failed: ${(error as Error).message}`)
   }
 }
 
 /**
  * Decrypt a given value with an encryption key.
- * @param {string} text - Encrypted text to decrypt.
- * @param {string} key - Encryption key.
- * @param {Object} [options={}] - Encryption options.
- * @param {string} [options.a='aes-256-cbc'] - Algorithm.
- * @returns {promise} Decrypted text.
+ * @param encryptedData - Encrypted text to decrypt.
+ * @param key - Encryption key.
+ * @param options - Encryption options.
+ * @returns Decrypted text.
  * 
  * @example
  * // Basic decryption with default AES-256-CBC
@@ -164,7 +245,7 @@ export async function encrypt(text, key, options = {}) {
  * const decrypted = await decrypt(encrypted, key)
  * console.log(decrypted === originalText) // true
  */
-export async function decrypt(encryptedData, key, options = {}) {
+export async function decrypt(encryptedData: string, key: string, options: DecryptionOptions = {}): Promise<string> {
   const { a = 'aes-256-cbc' } = options
   try {
     const [ivHex, encrypted] = encryptedData.split(':')
@@ -177,14 +258,14 @@ export async function decrypt(encryptedData, key, options = {}) {
     decrypted += decipher.final('utf8')
     return decrypted
   } catch (error) {
-    throw new Error(`Decryption failed: ${error.message}`)
+    throw new Error(`Decryption failed: ${(error as Error).message}`)
   }
 }
 
 /**
  * Generate a random password
- * @param {number} [length=24] - Length of the generated password.
- * @returns {string} Generated password.
+ * @param length - Length of the generated password.
+ * @returns Generated password.
  * 
  * @example
  * // Generate a password with default length (24 characters)
@@ -207,9 +288,8 @@ export async function decrypt(encryptedData, key, options = {}) {
  * const pwd = generateRandomPassword(12)
  * // Possible output: "X3m@9Zt!K4pQ"
  */
-export function generateRandomPassword(length = 24) {
+export function generateRandomPassword(length: number = 24): string {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789?!@-_#*'
-  return Array.from(crypto.getRandomValues(new Uint32Array(length)))
-    .map(x => chars[x % chars.length])
-    .join('')
+  const randomValues = crypto.getRandomValues(new Uint32Array(length))
+  return Array.from(randomValues, (x: number) => chars[x % chars.length]).join('')
 }
