@@ -174,9 +174,9 @@ A collection of utility scripts for common development and operations tasks, org
 
 ### Node.js Utilities
 
-| Name                            | Description                |
-| ------------------------------- | -------------------------- |
-| [crypto.mjs](./node/crypto.mjs) | *set of crypto functions.* |
+| Name                             | Description                |
+| -------------------------------- | -------------------------- |
+| [crypto](./node/crypto/main.mjs) | *set of crypto functions.* |
 
 ### Shell Scripts
 

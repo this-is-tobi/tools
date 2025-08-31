@@ -5,9 +5,6 @@ import { promisify } from 'node:util'
 const randomBytes = promisify(crypto.randomBytes)
 const scrypt = promisify(crypto.scrypt)
 
-// encryptionKey should have an exact length of 32 characters
-const encryptionKey = 'a-key-with-exactly-32-characters' // process.env.ENCRYPTION_KEY
-
 /**
  * Hash a given password using scrypt with configurable security parameters.
  * @param {string} password - Password to hash.
@@ -216,23 +213,3 @@ export function generateRandomPassword(length = 24) {
     .map(x => chars[x % chars.length])
     .join('')
 }
-
-// Test function
-async function test() {
-  const password = generateRandomPassword()
-  const hash = await generateHash(password)
-  const isHashEqual = await compareToHash(password, hash)
-  const encrypted = await encrypt(password, encryptionKey)
-  const decrypted = await decrypt(encrypted, encryptionKey)
-
-  console.log({
-    password,
-    encryptionKey,
-    hash,
-    isHashEqual,
-    encrypted,
-    decrypted,
-  })
-}
-
-test().catch(console.error)
