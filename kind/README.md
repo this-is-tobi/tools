@@ -28,7 +28,7 @@ sh ./run.sh -c dev
 ```
 
 > [!TIP]
-> See script helper by running `sh ./run.hs -h`
+> See script helper by running `sh ./run.sh -h`
 
 ## Cluster
 

@@ -28,26 +28,7 @@ For more details, see `./registry/docker-compose.registry.yml`.
 
 ## Runner
 
-Runner docker image can be customized in `./runners/Dockerfile`, by default it provides :
-- docker
-- nodejs
-- act
-- github-cli
-- golang-go
-- helm
-- helm-docs
-- k9s
-- kind
-- krew
-- kubectl
-- kubectx
-- kubens
-- kustomize
-- minio-client
-- rclone
-- scw
-- terraform
-- trivy
-- vault
-- yq
-- tools for cypress
+The default runner uses [dotfiles](https://github.com/this-is-tobi/dotfiles) to install and configure all the standard tools needed for development and CI/CD.
+
+> [!TIP]
+> See all tools installed in the default runner by checking `./runners/Dockerfile`.
