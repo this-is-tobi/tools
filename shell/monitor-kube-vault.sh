@@ -12,11 +12,12 @@ COLOR_WHITE='\033[1;37m'
 COLOR_BOLD='\033[1m'
 
 # Defaults
-NAMESPACE="$(kubectl config view --minify -o jsonpath='{..namespace}')"
+NAMESPACE="$(kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}')"
 VAULT_NAME=""
 
 # Script helper
-TEXT_HELPER="This script aims to monitor HashiCorp Vault HA deployment status and cluster health.
+TEXT_HELPER="
+This script aims to monitor HashiCorp Vault HA deployment status and cluster health.
 
 Available flags:
   -v    Vault deployment name (StatefulSet or Deployment).

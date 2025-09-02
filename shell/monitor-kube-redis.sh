@@ -12,11 +12,12 @@ COLOR_WHITE='\033[1;37m'
 COLOR_BOLD='\033[1m'
 
 # Defaults
-NAMESPACE="$(kubectl config view --minify -o jsonpath='{..namespace}')"
+NAMESPACE="$(kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}')"
 REDIS_NAME=""
 
 # Script helper
-TEXT_HELPER="This script aims to monitor Redis cluster deployment status and health.
+TEXT_HELPER="
+This script aims to monitor Redis cluster deployment status and health.
 
 Available flags:
   -r    Redis deployment name (StatefulSet or Deployment).

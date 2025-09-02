@@ -13,7 +13,8 @@ COLOR_YELLOW='\033[0;33m'
 KC_USERNAME="admin"
 
 # Script helper
-TEXT_HELPER="The purpose of this script is to create multiple clients in a Keycloak realm.
+TEXT_HELPER="
+The purpose of this script is to create multiple clients in a Keycloak realm.
 
 Available flags:
   -c    JSON array of client configurations.

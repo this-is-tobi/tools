@@ -12,11 +12,12 @@ COLOR_WHITE='\033[1;37m'
 COLOR_BOLD='\033[1m'
 
 # Defaults
-NAMESPACE="$(kubectl config view --minify -o jsonpath='{..namespace}')"
+NAMESPACE="$(kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}')"
 CLUSTER_NAME=""
 
 # Script helper
-TEXT_HELPER="This script aims to monitor CloudNativePG cluster status and replication.
+TEXT_HELPER="
+This script aims to monitor CloudNativePG cluster status and replication.
 
 Available flags:
   -c    CloudNativePG cluster name.

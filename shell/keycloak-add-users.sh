@@ -13,7 +13,8 @@ COLOR_YELLOW='\033[0;33m'
 KC_USERNAME="admin"
 
 # Script helper
-TEXT_HELPER="The purpose of this script is to create users in a keycloak realm.
+TEXT_HELPER="
+The purpose of this script is to create users in a keycloak realm.
 
 Available flags:
   -d    JSON array of users to add.

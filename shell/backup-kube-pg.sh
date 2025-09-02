@@ -10,7 +10,7 @@ COLOR_GREEN='\033[0;32m'
 COLOR_YELLOW='\033[0;33m'
 
 # Defaults
-NAMESPACE="$(kubectl config view --minify -o jsonpath='{..namespace}')"
+NAMESPACE="$(kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}')"
 DB_USER="postgres"
 DB_OWNER="postgres"
 EXPORT_DIR="./backups"

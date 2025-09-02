@@ -13,7 +13,8 @@ COLOR_YELLOW='\033[0;33m'
 KC_USERNAME="admin"
 
 # Script helper
-TEXT_HELPER="The purpose of this script is to display the keycloak user's token based on appropriate information.
+TEXT_HELPER="
+The purpose of this script is to display the keycloak user's token based on appropriate information.
 
 Available flags:
   -i    Keycloak client id.
