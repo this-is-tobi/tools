@@ -1,5 +1,5 @@
 # Prod stage
-FROM docker.io/nginxinc/nginx-unprivileged:1.28.0-alpine AS prod
+FROM docker.io/nginxinc/nginx-unprivileged:1.29.1-alpine AS prod
 
 USER 0
 COPY --chown=1001:0 --chmod=770 --from=build ./dist /usr/share/nginx/html/

@@ -41,6 +41,6 @@ This section provides a collection of pre-built Docker images and templates desi
 
 Pre-configured Docker image templates that can be customized for specific use cases.
 
-| Name                                          | Description                                                |
-| --------------------------------------------- | ---------------------------------------------------------- |
-| [nginx](../docker/templates/nginx/Dockerfile) | *bitnami/nignx rootless conf with variables substitution.* |
+| Name                                          | Description                                        |
+| --------------------------------------------- | -------------------------------------------------- |
+| [nginx](../docker/templates/nginx/Dockerfile) | *nignx rootless conf with variables substitution.* |
