@@ -8,7 +8,6 @@ Bash/shell scripts for automation, backup operations, and system administration 
 | [backup-kube-vault.sh](../shell/backup-kube-vault.sh)             | *backup / restore vault raft cluster from / to a kubernetes pod.*               |
 | [clone-subdir.sh](../shell/clone-subdir.sh)                       | *clone a subdirectory from a git repository.*                                   |
 | [compose-to-matrix.sh](../shell/compose-to-matrix.sh)             | *parse docker-compose file to create github matrix.*                            |
-| [copy-env-examples.sh](../shell/copy-env-examples.sh)             | *copy all git project env\*-examples files to env files.*                       |
 | [delete-ghcr-image.sh](../shell/delete-ghcr-image.sh)             | *delete image and subsequent manifests from ghcr.*                              |
 | [eol-infos.sh](../shell/eol-infos.sh)                             | *get package end of life infos.*                                                |
 | [export-argocd-resources.sh](../shell/export-argocd-resources.sh) | *export ready-to-apply argocd resources.*                                       |
@@ -16,7 +15,7 @@ Bash/shell scripts for automation, backup operations, and system administration 
 | [github-create-app.sh](../shell/github-create-app.sh)             | *create a github application.*                                                  |
 | [github-create-ruleset.sh](../shell/github-create-ruleset.sh)     | *create a github rulesets for a given repository.*                              |
 | [helm-template.sh](../shell/helm-template.sh)                     | *generate helm template.*                                                       |
-| [init-env-files.sh](../shell/init-env-files.sh)                   | *init '.env' and '.yaml' example files by copying them without '-example'.*     |
+| [init-env-files.sh](../shell/init-env-files.sh)                   | *init '.env' and '.yaml' example files by copying them without 'example'.*      |
 | [keycloak-add-clients.sh](../shell/keycloak-add-clients.sh)       | *add keycloak clients for a given keycloak realm.*                              |
 | [keycloak-add-users.sh](../shell/keycloak-add-users.sh)           | *add keycloak users for a given keycloak realm.*                                |
 | [keycloak-get-token.sh](../shell/keycloak-get-token.sh)           | *display keycloak token for the given infos.*                                   |
