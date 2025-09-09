@@ -25,6 +25,7 @@ Bash/shell scripts for automation, backup operations, and system administration 
 | [kube-generate-token.sh](../shell/kube-generate-token.sh)         | *generate a kubernetes token / kubeconfig with a given service account / RBAC.* |
 | [manage-etc-hosts.sh](../shell/manage-etc-hosts.sh)               | *add or update host ip adress in /etc/hosts.*                                   |
 | [monitor-kube-cnpg.sh](../shell/monitor-kube-cnpg.sh)             | *generate and print cnpg monitoring report.*                                    |
+| [monitor-kube-qdrant.sh](../shell/monitor-kube-qdrant.sh)         | *generate and print qdrant monitoring report.*                                  |
 | [monitor-kube-redis.sh](../shell/monitor-kube-redis.sh)           | *generate and print redis monitoring report.*                                   |
 | [monitor-kube-vault.sh](../shell/monitor-kube-vault.sh)           | *generate and print vault monitoring report.*                                   |
 | [purge-ghcr-tags.sh](../shell/purge-ghcr-tags.sh)                 | *purge ghcr tags older than a given date.*                                      |
