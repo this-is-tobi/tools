@@ -2,14 +2,17 @@
 
 ## Available instructions
 
-- [Consolidated Instructions](../copilot/copilot-instructions.md) - All technologies in one file
-- [JavaScript/TypeScript](../copilot/instructions/javascript.instructions.md) - Scoped to JS/TS files
-- [Go](../copilot/instructions/go.instructions.md) - Scoped to Go files
-- [Kubernetes/Helm](../copilot/instructions/kubernetes.instructions.md) - Scoped to K8s YAML files
-- [GitHub Actions](../copilot/instructions/github-actions.instructions.md) - Scoped to workflow files
-- [Docker](../copilot/instructions/docker.instructions.md) - Scoped to Dockerfiles
-- [Bash/Shell](../copilot/instructions/shell.instructions.md) - Scoped to shell scripts
-- [General Development](../copilot/instructions/general.instructions.md) - Universal practices
+| Name                                                                        | Description                        | Instructions Name |
+| --------------------------------------------------------------------------- | ---------------------------------- | ----------------- |
+| [Consolidated Instructions](../copilot/copilot-instructions.md)             | General best practices in one file | -                 |
+| [JavaScript/TypeScript](../copilot/instructions/javascript.instructions.md) | Scoped to JS/TS files              | `javascript`      |
+| [Go](../copilot/instructions/go.instructions.md)                            | Scoped to Go files                 | `go`              |
+| [Kubernetes/Helm](../copilot/instructions/kubernetes.instructions.md)       | Scoped to K8s YAML files           | `kubernetes`      |
+| [GitHub Actions](../copilot/instructions/github-actions.instructions.md)    | Scoped to workflow files           | `github-actions`  |
+| [Docker](../copilot/instructions/docker.instructions.md)                    | Scoped to Dockerfiles              | `docker`          |
+| [Bash/Shell](../copilot/instructions/shell.instructions.md)                 | Scoped to shell scripts            | `shell`           |
+| [TypeScript Monorepo](../copilot/instructions/ts-monorepo.instructions.md)  | Scoped to TS monorepos             | `ts-monorepo`     |
+| [General Development](../copilot/instructions/general.instructions.md)      | Universal practices                | `general`         |
 
 ## Usage
 
@@ -27,9 +30,9 @@ curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/co
 mkdir -p .github/instructions
 
 # Copy specific technology instructions
-TECHNOLOGY="javascript"  # or "go", "docker", "kubernetes", etc.
-curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/instructions/$TECHNOLOGY.instructions.md" \
-  -o ".github/instructions/$TECHNOLOGY.instructions.md"
+INSTRUCTION_NAME="javascript"  # or "go", "docker", "kubernetes", etc.
+curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/instructions/$INSTRUCTION_NAME.instructions.md" \
+  -o ".github/instructions/$INSTRUCTION_NAME.instructions.md"
 ```
 
 ## Features
