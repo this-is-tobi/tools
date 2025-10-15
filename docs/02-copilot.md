@@ -4,29 +4,88 @@
 
 ### Available instructions
 
-| Name                                                                        | Description                        | Instruction Name |
-| --------------------------------------------------------------------------- | ---------------------------------- | ---------------- |
-| [Consolidated Instructions](../copilot/copilot-instructions.md)             | General best practices in one file | -                |
-| [JavaScript/TypeScript](../copilot/instructions/javascript.instructions.md) | Scoped to JS/TS files              | `javascript`     |
-| [Go](../copilot/instructions/go.instructions.md)                            | Scoped to Go files                 | `go`             |
-| [Kubernetes/Helm](../copilot/instructions/kubernetes.instructions.md)       | Scoped to K8s YAML files           | `kubernetes`     |
-| [GitHub Actions](../copilot/instructions/github-actions.instructions.md)    | Scoped to workflow files           | `github-actions` |
-| [Docker](../copilot/instructions/docker.instructions.md)                    | Scoped to Dockerfiles              | `docker`         |
-| [Bash/Shell](../copilot/instructions/shell.instructions.md)                 | Scoped to shell scripts            | `shell`          |
-| [TypeScript Monorepo](../copilot/instructions/ts-monorepo.instructions.md)  | Scoped to TS monorepos             | `ts-monorepo`    |
-| [General Development](../copilot/instructions/general.instructions.md)      | Universal practices                | `general`        |
+| Name                                                                        | Description                     | Instruction Name | Type         |
+| --------------------------------------------------------------------------- | ------------------------------- | ---------------- | ------------ |
+| [Consolidated Instructions](../copilot/copilot-instructions.md)             | All best practices in one file  | -                | General      |
+| [Code Review](../copilot/instructions/code-review.md)                       | Expert code review guidelines   | `code-review`    | Review       |
+| [Commit Message](../copilot/instructions/commit-message.md)                 | Conventional Commits format     | `commit-message` | Git          |
+| [Pull Request](../copilot/instructions/pull-request.md)                     | PR description best practices   | `pull-request`   | Git          |
+| [General Development](../copilot/instructions/general.instructions.md)      | Universal development practices | `general`        | General      |
+| [JavaScript/TypeScript](../copilot/instructions/javascript.instructions.md) | Scoped to JS/TS files           | `javascript`     | Language     |
+| [Go](../copilot/instructions/go.instructions.md)                            | Scoped to Go files              | `go`             | Language     |
+| [Bash/Shell](../copilot/instructions/shell.instructions.md)                 | Scoped to shell scripts         | `shell`          | Language     |
+| [TypeScript Monorepo](../copilot/instructions/ts-monorepo.instructions.md)  | Complete TS monorepo setup      | `ts-monorepo`    | Architecture |
+| [Docker](../copilot/instructions/docker.instructions.md)                    | Scoped to Dockerfiles           | `docker`         | Platform     |
+| [Kubernetes/Helm](../copilot/instructions/kubernetes.instructions.md)       | Scoped to K8s YAML files        | `kubernetes`     | Platform     |
+| [GitHub Actions](../copilot/instructions/github-actions.instructions.md)    | Scoped to workflow files        | `github-actions` | CI/CD        |
 
 #### Usage
 
-This collection follows GitHub's official Copilot instructions format with two approaches:
+This collection follows GitHub's official Copilot instructions format with multiple approaches:
 
-**Option 1: Single File** (Recommended for most projects)
+**Option 1: Clone All Instructions** (Recommended for personal machine setup)
+```sh
+# Clone instructions to ~/.config/copilot
+curl -fsSL https://raw.githubusercontent.com/this-is-tobi/tools/main/shell/clone-subdir.sh | bash -s -- \
+  -u "https://github.com/this-is-tobi/tools" \
+  -b "main" \
+  -s "copilot/instructions" \
+  -o "$HOME/.config/copilot" \
+  -d
+```
+
+This will clone all instruction files to `~/.config/copilot/instructions/`. Then configure VS Code with absolute paths:
+```json
+{
+  "github.copilot.chat.codeGeneration.instructions": [
+    { "file": "/Users/<username>/.config/copilot/instructions/code-review.md" }
+  ],
+  "github.copilot.chat.commitMessageGeneration.instructions": [
+    { "file": "/Users/<username>/.config/copilot/instructions/commit-message.md" }
+  ],
+  "github.copilot.chat.pullRequestDescriptionGeneration.instructions": [
+    { "file": "/Users/<username>/.config/copilot/instructions/pull-request.md" }
+  ]
+}
+```
+
+**Option 2: Single File** (For project-specific setup)
 ```sh
 curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/copilot-instructions.md" \
   -o ".github/copilot-instructions.md"
 ```
 
-**Option 2: Scoped Instructions** (For complex multi-technology projects)
+**Option 3: Git Workflow Instructions** (For commit messages and PR descriptions)
+```sh
+# For commit message generation
+curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/instructions/commit-message.md" \
+  -o ".github/instructions/commit-message.md"
+
+# For PR description generation
+curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/instructions/pull-request.md" \
+  -o ".github/instructions/pull-request.md"
+
+# For code review
+curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/instructions/code-review.md" \
+  -o ".github/instructions/code-review.md"
+```
+
+Then configure VS Code settings with relative paths:
+```json
+{
+  "github.copilot.chat.codeGeneration.instructions": [
+    { "file": ".github/instructions/code-review.md" }
+  ],
+  "github.copilot.chat.commitMessageGeneration.instructions": [
+    { "file": ".github/instructions/commit-message.md" }
+  ],
+  "github.copilot.chat.pullRequestDescriptionGeneration.instructions": [
+    { "file": ".github/instructions/pull-request.md" }
+  ]
+}
+```
+
+**Option 4: Scoped Instructions** (For complex multi-technology projects)
 ```sh
 # Create instructions directory
 mkdir -p .github/instructions
@@ -40,10 +99,12 @@ curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/in
 #### Features
 
 - **GitHub Official Format**: Uses `.github/copilot-instructions.md` and `.github/instructions/*.instructions.md`
+- **Specialized Instructions**: Separate files for code review, commits, and PR descriptions
 - **Scoped Instructions**: Technology-specific instructions with `applyTo` frontmatter
 - **File Targeting**: Instructions only apply to relevant file types
 - **Modular Design**: Mix and match technologies as needed
-- **VS Code Compatible**: Full support for advanced scoped instructions
+- **VS Code Integration**: Configure specific instructions for different Copilot features
+- **Template Checking**: Automatically detects and uses existing repository templates
 
 ### Prompts
 
