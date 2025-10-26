@@ -2,7 +2,26 @@
 
 Bash/shell scripts for automation, backup operations, and system administration tasks.
 
-| Name                                                              | Description                                                                     |
+## Prerequisites
+
+- Bash 4.0+ or Zsh
+- `curl` for downloading scripts
+- `kubectl` (for Kubernetes scripts)
+- `jq` (optional, for JSON processing)
+
+## Quick Start
+
+```sh
+# Run directly (one-time use)
+curl -s https://raw.githubusercontent.com/this-is-tobi/tools/main/shell/<script_name> | bash -s -- --help
+
+# Download and run (repeated use)
+curl -fsSL https://raw.githubusercontent.com/this-is-tobi/tools/main/shell/<script_name> -o script.sh
+chmod +x script.sh
+./script.sh --help
+```
+
+## Available Scripts
 | ----------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | [backup-kube-pg.sh](../shell/backup-kube-pg.sh)                   | *backup / restore postgres database from / to a kubernetes pod.*                |
 | [backup-kube-qdrant.sh](../shell/backup-kube-qdrant.sh)           | *backup / restore qdrant raft cluster from / to a kubernetes pod.*              |
@@ -33,8 +52,113 @@ Bash/shell scripts for automation, backup operations, and system administration 
 | [update-zsh-completions.sh](../shell/update-zsh-completions.sh)   | *update zsh-completions sources.*                                               |
 
 > [!TIP]
-> Using a script directly from a curl command :
+> Using a script directly from a curl command:
 > ```sh
 > curl -s https://raw.githubusercontent.com/this-is-tobi/tools/main/shell/<script_name> | bash -s -- -h
 > ```
-> Replace `<script_name>` by the name of the script you want to run (eg. `manage-etc-hosts.sh`).
+
+## Usage Examples
+
+### Backup Operations
+
+**PostgreSQL:**
+```sh
+./backup-kube-pg.sh backup -n namespace -p pod-name -d database -o backup.sql
+./backup-kube-pg.sh restore -n namespace -p pod-name -d database -i backup.sql
+```
+
+**Vault:**
+```sh
+./backup-kube-vault.sh backup -n vault -p vault-0
+./backup-kube-vault.sh restore -n vault -p vault-0 -i vault-backup.snap
+```
+
+### Monitoring
+
+```sh
+# PostgreSQL cluster report
+./monitor-kube-cnpg.sh -n database-namespace -o report.md
+
+# Vault health check
+./monitor-kube-vault.sh -n vault
+
+# Redis cluster status
+./monitor-kube-redis.sh -n redis-namespace
+```
+
+### Resource Management
+
+```sh
+# Export Kubernetes resources
+./export-kube-resources.sh -n my-namespace -o ./exported
+
+# Export ArgoCD applications
+./export-argocd-resources.sh -n argocd -o ./argocd-backup
+
+# Generate service account token
+./kube-generate-token.sh -n default -s my-service-account --kubeconfig
+```
+
+### GitHub Container Registry
+
+```sh
+# Delete image
+GITHUB_TOKEN=<token> ./delete-ghcr-image.sh -o owner -r repo -i image-name -t tag
+
+# Purge old tags (dry run)
+./purge-ghcr-tags.sh -o owner -r repo -i image-name -d 30 --dry-run
+```
+
+### Development Tools
+
+```sh
+# Clone subdirectory
+./clone-subdir.sh -u https://github.com/owner/repo -b main -s path/to/dir -o ./output
+
+# Generate GitHub Actions matrix
+./compose-to-matrix.sh -f docker-compose.yml -o matrix.json
+
+# Manage /etc/hosts
+sudo ./manage-etc-hosts.sh add example.local 192.168.1.100
+sudo ./manage-etc-hosts.sh remove example.local
+```
+
+## Troubleshooting
+
+### Permission Errors
+
+```sh
+# Make script executable
+chmod +x script.sh
+
+# Some scripts need sudo
+sudo ./script.sh
+```
+
+### Kubernetes Connection
+
+```sh
+# Verify kubectl config
+kubectl config current-context
+kubectl cluster-info
+
+# Check permissions
+kubectl auth can-i get pods --all-namespaces
+```
+
+### GitHub Token Issues
+
+```sh
+# Set token as environment variable
+export GITHUB_TOKEN=ghp_your_token_here
+
+# Required scopes: repo, write:packages, admin:org (depending on script)
+```
+
+## Best Practices
+
+- Always test with `--help` first
+- Log output for audit trails: `./script.sh 2>&1 | tee log.txt`
+- Use absolute paths in cron jobs
+- Never hardcode credentials
+- Store tokens securely

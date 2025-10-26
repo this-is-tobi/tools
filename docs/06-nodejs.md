@@ -2,6 +2,13 @@
 
 This section provides a collection of Node.js utilities for various tasks, including cryptography and worker management.
 
+## Prerequisites
+
+- **[Bun](https://bun.sh/)** - Fast JavaScript runtime (recommended)
+  - Install: `curl -fsSL https://bun.sh/install | bash`
+- **Alternative**: Node.js 18+ with npm
+- **TypeScript knowledge** - All modules are written in TypeScript
+
 ## Available Packages
 
 | Name                              | Description                |
@@ -239,3 +246,123 @@ console.log(results) // Array of TaskResult objects
 // Clean up worker pool when done
 await cleanup()
 ```
+
+## Getting Started
+
+```sh
+# Clone repository
+git clone https://github.com/this-is-tobi/tools.git
+cd tools/node
+
+# Run examples
+bun run crypto    # Crypto module example
+bun run worker    # Worker module example
+bun run crypto:bench  # Scrypt benchmarking
+```
+
+## Integration
+
+### Copy to Your Project
+
+**Crypto Module:**
+```sh
+mkdir -p lib/crypto
+curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/node/packages/crypto/functions.ts" \
+  -o "lib/crypto/functions.ts"
+```
+
+**Worker Module:**
+```sh
+mkdir -p lib/worker
+for file in manager worker tasks; do
+  curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/node/packages/worker/$file.ts" \
+    -o "lib/worker/$file.ts"
+done
+```
+
+### Use as Submodule
+
+```sh
+git submodule add https://github.com/this-is-tobi/tools.git vendor/tools
+```
+
+## Usage Examples
+
+### Crypto Module
+
+**Password Management:**
+```typescript
+import { generateHash, compareToHash, generateRandomPassword } from './packages/crypto/functions.ts'
+
+const password = generateRandomPassword(16)
+const hash = await generateHash(password, { N: 32768 })
+const isValid = await compareToHash(password, hash, { N: 32768 })
+```
+
+**Data Encryption:**
+```typescript
+import { encrypt, decrypt } from './packages/crypto/functions.ts'
+
+const key = 'your-32-character-secret-key!'  // Must be 32 chars
+const encrypted = await encrypt('sensitive data', key)
+const decrypted = await decrypt(encrypted, key)
+```
+
+### Worker Module
+
+**Parallel Processing:**
+```typescript
+import { callWorker, cleanup } from './packages/worker/manager.ts'
+
+const tasks = [
+  { task: 'fibonacci', data: { n: 30 } },
+  { task: 'fibonacci', data: { n: 35 } }
+]
+
+const results = await callWorker(tasks)
+await cleanup()
+```
+
+## Troubleshooting
+
+### Crypto Module
+
+**Hash generation slow:**
+- Reduce `N` parameter (trade-off with security)
+- Memory usage = `128 * N * r * p` bytes
+
+**Encryption key error:**
+```typescript
+const key = 'a'.repeat(32)  // Must be exactly 32 characters
+```
+
+**compareToHash fails:**
+- Use same parameters for hash and compare
+- Verify hash string is unmodified
+
+### Worker Module
+
+**Workers not starting:**
+- Check worker.ts file path
+- Verify Bun/Node.js supports worker threads
+
+**Performance not improved:**
+- Verify tasks are CPU-bound (not I/O-bound)
+- Ensure tasks are independent
+- Call `cleanup()` when done
+
+## Best Practices
+
+### Crypto
+
+- Use minimum `N=16384` for production
+- Never hardcode encryption keys
+- Store keys in environment variables or vaults
+- Use `aes-256-gcm` for authenticated encryption
+
+### Worker
+
+- Keep tasks CPU-intensive
+- Make tasks independent (no shared state)
+- Cleanup pool when application exits
+- Batch process multiple tasks at once

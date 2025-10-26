@@ -2,6 +2,14 @@
 
 This section contains templates and configurations for modern DevOps practices, focusing on Kubernetes orchestration and CI/CD automation.
 
+## Prerequisites
+
+- **Kubernetes cluster** (for ArgoCD and runners)
+- **kubectl** CLI tool configured
+- **Helm** 3.x or higher (for runner installation)
+- **ArgoCD** installed (for preview environments)
+- **GitHub** account with appropriate permissions (for runners and ArgoCD integration)
+
 ## ArgoCD App Previews
 
 Templates to configure preview environments with ArgoCD by using the Pull Request Generator. The Pull Request generator uses the API of an SCMaaS provider (GitHub, GitLab, Gitea, Bitbucket, ...) to automatically discover open pull requests within a repository, this fits well with the style of building a test environment when you create a pull request.
@@ -36,3 +44,50 @@ Using **github** install:
 > For further information, see :
 > - [Legacy ARC documentation](https://github.com/actions/actions-runner-controller).
 > - [Github ARC documentation](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners-with-actions-runner-controller/about-actions-runner-controller).
+
+## Use Cases
+
+### ArgoCD Preview Environments
+
+Automatically create and destroy preview environments for pull requests:
+- Testing features in isolated environments
+- Review apps for frontend applications
+- Integration testing before merging
+- Automatic cleanup when PR closes
+
+### Self-Hosted GitHub Runners
+
+Run GitHub Actions on your own infrastructure:
+- Access to specific hardware (GPU, high memory)
+- Private network resource access
+- Cost optimization for high CI/CD usage
+- Custom software pre-installed
+
+## Troubleshooting
+
+### ArgoCD Preview Environments
+
+**ApplicationSet not creating apps:**
+- Verify GitHub token has `repo` scope
+- Check ApplicationSet controller logs
+- Ensure PR matches label filters
+- Verify webhook configuration
+
+**Apps not cleaning up:**
+- Check preserveResourcesOnDeletion setting
+- Verify ArgoCD has deletion permissions
+- Check for blocking finalizers
+
+### GitHub Self-Hosted Runners
+
+**Runners not connecting:**
+- Verify GitHub token/PAT validity and permissions
+- Check runner pod logs
+- Ensure network connectivity to github.com
+- Verify registration token hasn't expired
+
+**Jobs not using runners:**
+- Check workflow `runs-on` labels match runner labels
+- Verify runners are in "Idle" state
+- Check runner group assignment
+- Ensure repository has access to runner pool

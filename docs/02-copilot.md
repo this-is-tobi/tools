@@ -106,6 +106,65 @@ curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/in
 - **VS Code Integration**: Configure specific instructions for different Copilot features
 - **Template Checking**: Automatically detects and uses existing repository templates
 
+## Best Practices
+
+### Recommended Setup by Project Type
+
+**JavaScript/TypeScript Project:**
+```sh
+mkdir -p .github/instructions
+curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/instructions/javascript.instructions.md" \
+  -o ".github/instructions/javascript.instructions.md"
+```
+
+**Kubernetes/DevOps Project:**
+```sh
+mkdir -p .github/instructions
+for file in kubernetes docker github-actions; do
+  curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/instructions/$file.instructions.md" \
+    -o ".github/instructions/$file.instructions.md"
+done
+```
+
+**Go Project:**
+```sh
+mkdir -p .github/instructions
+curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/instructions/go.instructions.md" \
+  -o ".github/instructions/go.instructions.md"
+```
+
+## Troubleshooting
+
+### Instructions Not Working
+
+**Verify file location:**
+- Instructions must be in `.github/` directory
+- Use naming convention: `*.instructions.md` for scoped instructions
+
+**Check VS Code settings:**
+```json
+{
+  "github.copilot.chat.codeGeneration.instructions": [
+    { "file": ".github/instructions/code-review.md" }
+  ]
+}
+```
+
+**Reload VS Code** after adding new instructions or changing settings.
+
+### Scoped Instructions Not Applying
+
+Check frontmatter syntax:
+```yaml
+---
+applyTo:
+  - "**/*.js"
+  - "**/*.ts"
+---
+```
+
+Patterns are glob-style and case-sensitive.
+
 ### Prompts
 
 | Name                                              | Description                                                        | Prompt Name |
