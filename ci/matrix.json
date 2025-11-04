@@ -123,11 +123,11 @@
   {
     "name": "vault-backup",
     "build": {
-      "base": "docker.io/hashicorp/vault:1.20.2",
+      "base": "docker.io/hashicorp/vault:1.21.0",
       "context": "./docker/utils/vault-backup",
       "dockerfile": "./docker/utils/vault-backup/Dockerfile",
       "target": "build",
-      "tag": "1.6.2",
+      "tag": "1.7.0",
       "latest": true
     }
   }
