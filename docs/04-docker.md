@@ -30,8 +30,8 @@ This section provides a collection of pre-built Docker images and templates desi
 | act-runner    | 2.0.3         | `docker.io/ubuntu:24.04`                 |
 | debug         | 2.1.1         | `docker.io/debian:12`                    |
 | dev           | 2.0.3         | `docker.io/debian:12`                    |
-| gh-runner     | 1.4.1         | `ghcr.io/actions/actions-runner:2.328.0` |
-| gh-runner-gpu | 1.2.1         | `ghcr.io/actions/actions-runner:2.328.0` |
+| gh-runner     | 1.5.0         | `ghcr.io/actions/actions-runner:2.329.0` |
+| gh-runner-gpu | 1.3.0         | `ghcr.io/actions/actions-runner:2.329.0` |
 | homelab-utils | 0.0.1         | `docker.io/alpine:3.22.2`                |
 | mc            | 1.1.3         | `docker.io/alpine:3.22.2`                |
 | pg-backup     | 3.5.0         | `docker.io/postgres:17.6`                |
