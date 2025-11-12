@@ -13,6 +13,7 @@ This section provides a collection of pre-built Docker images and templates desi
 | Image                                      | Description                                                                       | Dockerfiles                                            |
 | ------------------------------------------ | --------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | `ghcr.io/this-is-tobi/tools/act-runner`    | *act runner image for local CI tests (ubuntu based).*                             | [Dockerfile](../docker/utils/act-runner/Dockerfile)    |
+| `ghcr.io/this-is-tobi/tools/backup`        | *helper image to backup from pg, vault, qdrant or s3 to s3 (alpine based).*       | [Dockerfile](../docker/utils/backup/Dockerfile)        |
 | `ghcr.io/this-is-tobi/tools/debug`         | *debug image with all convenients tools (debian based).*                          | [Dockerfile](../docker/utils/debug/Dockerfile)         |
 | `ghcr.io/this-is-tobi/tools/dev`           | *development image with all convenients tools (debian based).*                    | [Dockerfile](../docker/utils/dev/Dockerfile)           |
 | `ghcr.io/this-is-tobi/tools/gh-runner`     | *github self hosted runner with common packages (ubuntu based).*                  | [Dockerfile](../docker/utils/gh-runner/Dockerfile)     |
@@ -28,6 +29,7 @@ This section provides a collection of pre-built Docker images and templates desi
 | Name          | Image version | Base image                               |
 | ------------- | ------------- | ---------------------------------------- |
 | act-runner    | 2.0.3         | `docker.io/ubuntu:24.04`                 |
+| backup        | 0.1.0         | `docker.io/alpine:3.22.2`                |
 | debug         | 2.1.1         | `docker.io/debian:12`                    |
 | dev           | 2.0.3         | `docker.io/debian:12`                    |
 | gh-runner     | 1.5.0         | `ghcr.io/actions/actions-runner:2.329.0` |

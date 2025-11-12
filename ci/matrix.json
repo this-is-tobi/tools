@@ -11,6 +11,17 @@
     }
   },
   {
+    "name": "backup",
+    "build": {
+      "base": "docker.io/alpine:3.22.2",
+      "context": "./docker/utils/backup",
+      "dockerfile": "./docker/utils/backup/Dockerfile",
+      "target": "build",
+      "tag": "0.1.0",
+      "latest": true
+    }
+  },
+  {
     "name": "debug",
     "build": {
       "base": "docker.io/debian:12",
