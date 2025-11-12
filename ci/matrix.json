@@ -79,39 +79,6 @@
   {
     "name": "pg-backup",
     "build": {
-      "base": "docker.io/postgres:15.14",
-      "context": "./docker/utils/pg-backup",
-      "dockerfile": "./docker/utils/pg-backup/Dockerfile",
-      "target": "build",
-      "tag": "1.9.0",
-      "latest": false
-    }
-  },
-  {
-    "name": "pg-backup",
-    "build": {
-      "base": "docker.io/postgres:16.10",
-      "context": "./docker/utils/pg-backup",
-      "dockerfile": "./docker/utils/pg-backup/Dockerfile",
-      "target": "build",
-      "tag": "2.5.0",
-      "latest": false
-    }
-  },
-  {
-    "name": "pg-backup",
-    "build": {
-      "base": "docker.io/postgres:17.6",
-      "context": "./docker/utils/pg-backup",
-      "dockerfile": "./docker/utils/pg-backup/Dockerfile",
-      "target": "build",
-      "tag": "3.5.0",
-      "latest": false
-    }
-  },
-  {
-    "name": "pg-backup",
-    "build": {
       "base": "docker.io/postgres:18.0",
       "context": "./docker/utils/pg-backup",
       "dockerfile": "./docker/utils/pg-backup/Dockerfile",
