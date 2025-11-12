@@ -106,6 +106,17 @@
       "dockerfile": "./docker/utils/pg-backup/Dockerfile",
       "target": "build",
       "tag": "3.5.0",
+      "latest": false
+    }
+  },
+  {
+    "name": "pg-backup",
+    "build": {
+      "base": "docker.io/postgres:18.0",
+      "context": "./docker/utils/pg-backup",
+      "dockerfile": "./docker/utils/pg-backup/Dockerfile",
+      "target": "build",
+      "tag": "4.0.0",
       "latest": true
     }
   },

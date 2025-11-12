@@ -34,6 +34,7 @@ This section provides a collection of pre-built Docker images and templates desi
 | gh-runner-gpu | 1.3.0         | `ghcr.io/actions/actions-runner:2.329.0` |
 | homelab-utils | 0.0.1         | `docker.io/alpine:3.22.2`                |
 | mc            | 1.1.3         | `docker.io/alpine:3.22.2`                |
+| pg-backup     | 4.0.0         | `docker.io/postgres:18.0`                |
 | pg-backup     | 3.5.0         | `docker.io/postgres:17.6`                |
 | pg-backup     | 2.5.0         | `docker.io/postgres:16.10`               |
 | pg-backup     | 1.9.0         | `docker.io/postgres:15.14`               |
