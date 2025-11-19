@@ -90,11 +90,11 @@
   {
     "name": "pg-backup",
     "build": {
-      "base": "docker.io/postgres:18.0",
+      "base": "docker.io/postgres:18.1",
       "context": "./docker/utils/pg-backup",
       "dockerfile": "./docker/utils/pg-backup/Dockerfile",
       "target": "build",
-      "tag": "4.0.0",
+      "tag": "4.1.0",
       "latest": true
     }
   },
