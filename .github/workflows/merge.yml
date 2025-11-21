@@ -1,33 +1,36 @@
-name: Build and push images
+name: Merge multi-arch manifests
 
 on:
   workflow_call:
     inputs:
       REGISTRY:
+        description: Target registry to push images
         required: true
         type: string
       NAMESPACE:
+        description: Target namespace to the given registry
         required: true
         type: string
       IMAGES:
+        description: Comma separated list of image to build (leave empty to build all)
         required: false
         type: string
       BUILD_AMD64:
+        description: Build for amd64
         required: true
         type: boolean
       BUILD_ARM64:
-        required: true
-        type: boolean
-      USE_QEMU:
+        description: Build for arm64
         required: true
         type: boolean
 
 permissions:
+  contents: read
   packages: write
 
 jobs:
   infos:
-    name: Generate matrix for build
+    name: Generate matrix for merge
     runs-on: ubuntu-24.04
     outputs:
       build-matrix: ${{ steps.build-matrix.outputs.BUILD_MATRIX }}
@@ -35,7 +38,7 @@ jobs:
     - name: Checks-out repository
       uses: actions/checkout@v4
 
-    - name: Generate matrix for build
+    - name: Generate matrix for merge
       id: build-matrix
       run: |
         if [ ! -z "${{ inputs.IMAGES }}" ]; then
@@ -45,17 +48,13 @@ jobs:
           echo "BUILD_MATRIX=$(jq -c '.' < ./ci/matrix.json)" >> $GITHUB_OUTPUT
         fi
 
-  build:
-    name: Build images
-    runs-on: ${{ matrix.runners }}
-    permissions:
-      contents: read
-      packages: write
+  merge:
+    name: Merge digest
+    runs-on: ubuntu-24.04
     needs:
     - infos
     strategy:
       matrix:
-        runners: ${{ (inputs.BUILD_AMD64 && inputs.BUILD_ARM64 && !inputs.USE_QEMU && fromJson('["ubuntu-24.04", "ubuntu-24.04-arm"]')) || (inputs.BUILD_ARM64 && !inputs.USE_QEMU && fromJson('["ubuntu-24.04-arm"]')) || fromJson('["ubuntu-24.04"]') }}
         images: ${{ fromJSON(needs.infos.outputs.build-matrix) }}
     steps:
     - name: Login to GitHub Container Registry
@@ -103,44 +102,54 @@ jobs:
 
         echo "NEEDS_BUILD=$NEEDS_BUILD" >> $GITHUB_OUTPUT
 
-    - name: Checks-out repository
+    - name: Get image tags
       if: ${{ steps.image-status.outputs.NEEDS_BUILD == 'true' }}
-      uses: actions/checkout@v4
+      id: image-tags
+      run: |
+        MAJOR_TAG="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 1)"
+        MINOR_TAG="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 2)"
+        PATCH_TAG="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 3)"
 
-    - name: Set up Docker buildx
+        echo "MAJOR_TAG: $MAJOR_TAG"
+        echo "MINOR_TAG: $MINOR_TAG"
+        echo "PATCH_TAG: $PATCH_TAG"
+
+        echo "MAJOR_TAG=$MAJOR_TAG" >> $GITHUB_OUTPUT
+        echo "MINOR_TAG=$MINOR_TAG" >> $GITHUB_OUTPUT
+        echo "PATCH_TAG=$PATCH_TAG" >> $GITHUB_OUTPUT
+
+    - name: Download digests
+      if: ${{ steps.image-status.outputs.NEEDS_BUILD == 'true' }}
+      uses: actions/download-artifact@v4
+      with:
+        pattern: digests-${{ matrix.images.name }}-v${{ matrix.images.build.tag }}-*
+        path: /tmp/digests/${{ matrix.images.name }}-v${{ matrix.images.build.tag }}
+        merge-multiple: true
+
+    - name: Set up Docker Buildx
       if: ${{ steps.image-status.outputs.NEEDS_BUILD == 'true' }}
       uses: docker/setup-buildx-action@v3
 
-    - name: Set up QEMU (for multi platform build)
-      if: ${{ steps.image-status.outputs.NEEDS_BUILD == 'true' && inputs.USE_QEMU }}
-      uses: docker/setup-qemu-action@v3
-
-    - name: Build docker image
-      id: build
-      uses: docker/build-push-action@v6
+    - name: Docker meta
       if: ${{ steps.image-status.outputs.NEEDS_BUILD == 'true' }}
+      id: meta
+      uses: docker/metadata-action@v5
       with:
-        context: ${{ matrix.images.build.context }}
-        file: ${{ matrix.images.build.dockerfile }}
-        target: ${{ matrix.images.build.target }}
-        platforms: ${{ (inputs.BUILD_AMD64 && inputs.BUILD_ARM64 && inputs.USE_QEMU && 'linux/amd64,linux/arm64') || (inputs.BUILD_ARM64 && !inputs.USE_QEMU && 'linux/arm64') || 'linux/amd64' }}
-        outputs: type=image,name=${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }},push-by-digest=true,name-canonical=true,push=true
-        provenance: false
-        build-args: |
-          BASE_IMAGE=${{ matrix.images.build.base }}
+        images: ${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}
+        tags: |
+          type=raw,value=${{ steps.image-tags.outputs.MAJOR_TAG }}.${{ steps.image-tags.outputs.MINOR_TAG }}.${{ steps.image-tags.outputs.PATCH_TAG }},enable=true
+          type=raw,value=${{ steps.image-tags.outputs.MAJOR_TAG }}.${{ steps.image-tags.outputs.MINOR_TAG }},enable=true
+          type=raw,value=${{ steps.image-tags.outputs.MAJOR_TAG }},enable=true
+          type=raw,value=latest,enable=${{ matrix.images.build.latest && true || false }}
 
-    - name: Export digest
+    - name: Create manifest list and push
+      if: ${{ steps.image-status.outputs.NEEDS_BUILD == 'true' }}
+      working-directory: /tmp/digests/${{ matrix.images.name }}-v${{ matrix.images.build.tag }}
+      run: |
+        docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+          $(printf '${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}@sha256:%s ' *)
+
+    - name: Inspect image
       if: ${{ steps.image-status.outputs.NEEDS_BUILD == 'true' }}
       run: |
-        mkdir -p /tmp/digests/${{ matrix.images.name }}-v${{ matrix.images.build.tag }}
-        digest="${{ steps.build.outputs.digest }}"
-        touch "/tmp/digests/${{ matrix.images.name }}-v${{ matrix.images.build.tag }}/${digest#sha256:}"
-
-    - name: Upload digest
-      if: ${{ steps.image-status.outputs.NEEDS_BUILD == 'true' }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: digests-${{ matrix.images.name }}-v${{ matrix.images.build.tag }}-${{ (inputs.BUILD_AMD64 && inputs.BUILD_ARM64 && inputs.USE_QEMU && 'multiarch') || (contains(matrix.runners, 'ARM') && 'linux-arm64') || 'linux-amd64' }}
-        path: /tmp/digests/${{ matrix.images.name }}-v${{ matrix.images.build.tag }}/*
-        if-no-files-found: error
-        retention-days: 1
+        docker buildx imagetools inspect ${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}:${{ steps.meta.outputs.version }}

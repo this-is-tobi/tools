@@ -55,3 +55,16 @@ jobs:
       BUILD_AMD64: false
       BUILD_ARM64: ${{ inputs.BUILD_ARM64 == true }}
       USE_QEMU: ${{ inputs.USE_QEMU == true }}
+
+  merge:
+    needs:
+      - build-amd64
+      - build-arm64
+    uses: ./.github/workflows/merge.yml
+    if: ${{ always() && (inputs.BUILD_AMD64 || inputs.BUILD_ARM64) }}
+    with:
+      REGISTRY: ${{ inputs.REGISTRY }}
+      NAMESPACE: ${{ inputs.NAMESPACE }}
+      IMAGES: ${{ inputs.IMAGES }}
+      BUILD_AMD64: ${{ inputs.BUILD_AMD64 == true }}
+      BUILD_ARM64: ${{ inputs.BUILD_ARM64 == true }}
