@@ -1,0 +1,199 @@
+name: Attest images
+
+on:
+  workflow_call:
+    inputs:
+      REGISTRY:
+        description: Target registry to push images
+        required: true
+        type: string
+      NAMESPACE:
+        description: Target namespace to the given registry
+        required: true
+        type: string
+      IMAGES:
+        description: Comma separated list of image to build (leave empty to build all)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write  # Required for keyless signing
+
+jobs:
+  infos:
+    name: Generate matrix for attestation
+    runs-on: ubuntu-24.04
+    outputs:
+      build-matrix: ${{ steps.build-matrix.outputs.BUILD_MATRIX }}
+    steps:
+    - name: Checks-out repository
+      uses: actions/checkout@v4
+
+    - name: Generate matrix for attestation
+      id: build-matrix
+      run: |
+        if [ ! -z "${{ inputs.IMAGES }}" ]; then
+          JQ_FILTER=$(echo "${{ inputs.IMAGES }}" | jq -R 'split(",")')
+          echo "BUILD_MATRIX=$(jq -c --argjson images "$JQ_FILTER" '[.[] | select(.name | IN($images[]))]' < ./ci/matrix.json)" >> $GITHUB_OUTPUT
+        else
+          echo "BUILD_MATRIX=$(jq -c '.' < ./ci/matrix.json)" >> $GITHUB_OUTPUT
+        fi
+
+  attest:
+    name: Generate attestations
+    runs-on: ubuntu-24.04
+    needs:
+    - infos
+    strategy:
+      matrix:
+        images: ${{ fromJSON(needs.infos.outputs.build-matrix) }}
+    steps:
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ inputs.REGISTRY }}
+        username: ${{ inputs.REGISTRY == 'ghcr.io' && github.actor || secrets.REGISTRY_USERNAME }}
+        password: ${{ inputs.REGISTRY == 'ghcr.io' && secrets.GITHUB_TOKEN || secrets.REGISTRY_PASSWORD }}
+        logout: true
+
+    - name: Check if image exists
+      id: image-check
+      run: |
+        IMAGE_STATUS=$(curl \
+          --head \
+          --silent \
+          --write-out '%{http_code}' \
+          --output /dev/null \
+          -H "Authorization: Bearer $(echo -n '${{ secrets.GITHUB_TOKEN }}' | base64)" \
+          https://${{ inputs.REGISTRY }}/v2/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}/manifests/${{ matrix.images.build.tag }})
+        
+        if [ "$IMAGE_STATUS" == "200" ]; then
+          echo "IMAGE_EXISTS=true" >> $GITHUB_OUTPUT
+        else
+          echo "IMAGE_EXISTS=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Install Cosign
+      if: ${{ steps.image-check.outputs.IMAGE_EXISTS == 'true' }}
+      uses: sigstore/cosign-installer@v3
+
+    - name: Install Trivy
+      if: ${{ steps.image-check.outputs.IMAGE_EXISTS == 'true' }}
+      uses: aquasecurity/setup-trivy@v0.2.0
+
+    - name: Generate SBOM
+      if: ${{ steps.image-check.outputs.IMAGE_EXISTS == 'true' }}
+      run: |
+        trivy image \
+          --format spdx-json \
+          --output sbom-${{ matrix.images.name }}-${{ matrix.images.build.tag }}.spdx.json \
+          ${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}:${{ matrix.images.build.tag }}
+
+    - name: Get image tags for attestation
+      if: ${{ steps.image-check.outputs.IMAGE_EXISTS == 'true' }}
+      id: image-tags
+      run: |
+        MAJOR_TAG="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 1)"
+        MINOR_TAG="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 2)"
+        PATCH_TAG="$(echo '${{ matrix.images.build.tag }}' | cut -d '.' -f 3)"
+
+        # Build tag list
+        TAGS="${MAJOR_TAG}.${MINOR_TAG}.${PATCH_TAG}"
+        TAGS="$TAGS ${MAJOR_TAG}.${MINOR_TAG}"
+        TAGS="$TAGS ${MAJOR_TAG}"
+        
+        if [ "${{ matrix.images.build.latest }}" == "true" ]; then
+          TAGS="$TAGS latest"
+        fi
+
+        echo "TAGS=$TAGS" >> $GITHUB_OUTPUT
+
+    - name: Attest SBOM to image tags
+      if: ${{ steps.image-check.outputs.IMAGE_EXISTS == 'true' }}
+      run: |
+        for TAG in ${{ steps.image-tags.outputs.TAGS }}; do
+          echo "Attesting SBOM to ${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}:${TAG}"
+          cosign attest --yes \
+            --type spdxjson \
+            --predicate sbom-${{ matrix.images.name }}-${{ matrix.images.build.tag }}.spdx.json \
+            ${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}:${TAG}
+        done
+
+    - name: Sign image tags
+      if: ${{ steps.image-check.outputs.IMAGE_EXISTS == 'true' }}
+      run: |
+        for TAG in ${{ steps.image-tags.outputs.TAGS }}; do
+          echo "Signing ${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}:${TAG}"
+          cosign sign --yes \
+            ${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}:${TAG}
+        done
+
+    - name: Generate SLSA provenance
+      if: ${{ steps.image-check.outputs.IMAGE_EXISTS == 'true' }}
+      run: |
+        cat > provenance-${{ matrix.images.name }}-${{ matrix.images.build.tag }}.json << EOF
+        {
+          "buildType": "https://github.com/${{ github.repository }}/actions/workflows/${{ github.workflow }}@${{ github.ref }}",
+          "builder": {
+            "id": "https://github.com/Attestations/GitHubActionsWorkflow@v1"
+          },
+          "invocation": {
+            "configSource": {
+              "uri": "git+https://github.com/${{ github.repository }}@${{ github.ref }}",
+              "digest": {
+                "sha1": "${{ github.sha }}"
+              },
+              "entryPoint": "${{ github.workflow }}"
+            },
+            "parameters": {
+              "registry": "${{ inputs.REGISTRY }}",
+              "namespace": "${{ inputs.NAMESPACE }}",
+              "image": "${{ matrix.images.name }}",
+              "tag": "${{ matrix.images.build.tag }}"
+            },
+            "environment": {
+              "github_run_id": "${{ github.run_id }}",
+              "github_run_number": "${{ github.run_number }}",
+              "github_run_attempt": "${{ github.run_attempt }}"
+            }
+          },
+          "metadata": {
+            "buildInvocationId": "${{ github.run_id }}-${{ github.run_attempt }}",
+            "buildStartedOn": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "completeness": {
+              "parameters": true,
+              "environment": true,
+              "materials": false
+            }
+          },
+          "materials": [
+            {
+              "uri": "git+https://github.com/${{ github.repository }}@${{ github.ref }}",
+              "digest": {
+                "sha1": "${{ github.sha }}"
+              }
+            }
+          ]
+        }
+        EOF
+
+    - name: Attest provenance to image tags
+      if: ${{ steps.image-check.outputs.IMAGE_EXISTS == 'true' }}
+      run: |
+        for TAG in ${{ steps.image-tags.outputs.TAGS }}; do
+          echo "Attesting provenance to ${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}:${TAG}"
+          cosign attest --yes \
+            --type slsaprovenance \
+            --predicate provenance-${{ matrix.images.name }}-${{ matrix.images.build.tag }}.json \
+            ${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}:${TAG}
+        done
+
+    - name: Upload SBOM artifact
+      if: ${{ steps.image-check.outputs.IMAGE_EXISTS == 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: sbom-${{ matrix.images.name }}-${{ matrix.images.build.tag }}
+        path: sbom-${{ matrix.images.name }}-${{ matrix.images.build.tag }}.spdx.json
+        retention-days: 90

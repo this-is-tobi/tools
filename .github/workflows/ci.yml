@@ -72,3 +72,15 @@ jobs:
       IMAGES: ${{ inputs.IMAGES }}
       BUILD_AMD64: ${{ inputs.BUILD_AMD64 == true }}
       BUILD_ARM64: ${{ inputs.BUILD_ARM64 == true }}
+
+  attest:
+    needs:
+      - merge
+    uses: ./.github/workflows/attest.yml
+    if: |
+      always() &&
+      needs.merge.result == 'success'
+    with:
+      REGISTRY: ${{ inputs.REGISTRY }}
+      NAMESPACE: ${{ inputs.NAMESPACE }}
+      IMAGES: ${{ inputs.IMAGES }}
