@@ -61,7 +61,11 @@ jobs:
       - build-amd64
       - build-arm64
     uses: ./.github/workflows/merge.yml
-    if: ${{ always() && (inputs.BUILD_AMD64 || inputs.BUILD_ARM64) }}
+    if: |
+      always() && 
+      (inputs.BUILD_AMD64 || inputs.BUILD_ARM64) &&
+      !contains(needs.*.result, 'failure') &&
+      !contains(needs.*.result, 'cancelled')
     with:
       REGISTRY: ${{ inputs.REGISTRY }}
       NAMESPACE: ${{ inputs.NAMESPACE }}

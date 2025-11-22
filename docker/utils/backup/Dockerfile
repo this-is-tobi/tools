@@ -1,6 +1,6 @@
 ARG BASE_IMAGE=docker.io/alpine:3.22.2
 
-FROM ${BASE_IMAGE}
+FROM ${BASE_IMAGE} AS build
 
 ARG TARGETARCH
 ARG USERNAME=alpine
@@ -21,7 +21,6 @@ RUN apk add --no-cache \
   postgresql${PG_VERSION}-client \
   rclone \
   unzip \
-  xy \
   yq \
   zip \
   && rm -rf /var/cache/apk/*

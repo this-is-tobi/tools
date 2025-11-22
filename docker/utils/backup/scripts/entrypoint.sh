@@ -44,26 +44,34 @@ Environment variables required (varies by script):
   PostgreSQL backup:
     - DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS
     - S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET_NAME
-    - S3_BUCKET_PREFIX (optional), S3_PATH_STYLE (true/false)
+    - S3_BUCKET_PREFIX (optional), S3_PATH_STYLE (optional, true/false)
     - RETENTION (optional, e.g., 30d)
+    - RCLONE_EXTRA_ARGS (optional)
 
   Vault backup:
     - VAULT_ADDR, VAULT_TOKEN
     - S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET_NAME
-    - S3_BUCKET_PREFIX (optional), RETENTION (optional)
+    - S3_BUCKET_PREFIX (optional), S3_PATH_STYLE (optional, true/false)
+    - RETENTION (optional, e.g., 30d)
+    - VAULT_EXTRA_ARGS (optional)
+    - RCLONE_EXTRA_ARGS (optional)
 
   Qdrant backup:
-    - QDRANT_URL, QDRANT_COLLECTION (or "all")
-    - QDRANT_API_KEY (optional)
+    - QDRANT_URL, QDRANT_COLLECTION (or "all" for full cluster)
     - S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET_NAME
-    - S3_BUCKET_PREFIX (optional), RETENTION (optional)
+    - QDRANT_API_KEY (optional)
+    - S3_BUCKET_PREFIX (optional), S3_PATH_STYLE (optional, true/false)
+    - RETENTION (optional, e.g., 30d)
+    - RCLONE_EXTRA_ARGS (optional)
 
   S3 sync:
     - SOURCE_S3_ENDPOINT, SOURCE_S3_ACCESS_KEY, SOURCE_S3_SECRET_KEY
-    - SOURCE_S3_BUCKET_NAME, SOURCE_S3_BUCKET_PREFIX (optional)
-    - TARGET_S3_ENDPOINT, TARGET_S3_ACCESS_KEY, TARGET_S3_SECRET_KEY
-    - TARGET_S3_BUCKET_NAME, TARGET_S3_BUCKET_PREFIX (optional)
-    - S3_PATH_STYLE (true/false)
+    - SOURCE_S3_BUCKET_NAME
+    - S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET_NAME
+    - SOURCE_S3_BUCKET_PREFIX (optional)
+    - S3_BUCKET_PREFIX (optional)
+    - S3_PATH_STYLE (optional, true/false)
+    - RCLONE_EXTRA_ARGS (optional)
 
 For more information, check the scripts in ${HOME}/scripts/
 

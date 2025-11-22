@@ -10,7 +10,6 @@ command -v curl >/dev/null 2>&1 || { echo "ERROR: curl not found"; exit 1; }
 command -v jq >/dev/null 2>&1 || { echo "ERROR: jq not found"; exit 1; }
 command -v yq >/dev/null 2>&1 || { echo "ERROR: yq not found"; exit 1; }
 command -v rclone >/dev/null 2>&1 || { echo "ERROR: rclone not found"; exit 1; }
-command -v mc >/dev/null 2>&1 || { echo "ERROR: mc not found"; exit 1; }
 command -v vault >/dev/null 2>&1 || { echo "ERROR: vault not found"; exit 1; }
 command -v pg_dump >/dev/null 2>&1 || { echo "ERROR: pg_dump not found"; exit 1; }
 command -v pg_restore >/dev/null 2>&1 || { echo "ERROR: pg_restore not found"; exit 1; }
@@ -23,7 +22,6 @@ echo "Testing tool execution..."
 rclone version >/dev/null 2>&1 || { echo "ERROR: rclone execution failed"; exit 1; }
 vault version >/dev/null 2>&1 || { echo "ERROR: vault execution failed"; exit 1; }
 pg_dump --version >/dev/null 2>&1 || { echo "ERROR: pg_dump execution failed"; exit 1; }
-mc --version >/dev/null 2>&1 || { echo "ERROR: mc execution failed"; exit 1; }
 
 echo "✓ All tools execute successfully"
 
