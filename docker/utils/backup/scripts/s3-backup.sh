@@ -1,5 +1,26 @@
 #!/bin/bash
 
+set -e
+
+# Source utility functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/utils.sh"
+
+# Trap errors
+trap 'error "Backup failed at line $LINENO"' ERR
+
+# Validate required environment variables
+validate_required_vars \
+  "SOURCE_S3_ENDPOINT" \
+  "SOURCE_S3_ACCESS_KEY" \
+  "SOURCE_S3_SECRET_KEY" \
+  "SOURCE_S3_BUCKET_NAME" \
+  "S3_ENDPOINT" \
+  "S3_ACCESS_KEY" \
+  "S3_SECRET_KEY" \
+  "S3_BUCKET_NAME"
+
+log "Starting S3 bucket sync"
 printf "Settings:
   > SOURCE_S3_ENDPOINT: ${SOURCE_S3_ENDPOINT}
   > SOURCE_S3_ACCESS_KEY: ${SOURCE_S3_ACCESS_KEY}
@@ -14,38 +35,28 @@ printf "Settings:
 
 
 # Configure rclone for source and target S3
-printf "\n\nConfiguring rclone remotes\n\n"
+log "Configuring rclone remotes"
 
 # Source remote configuration
-rclone config delete source_host 2>/dev/null || true
-rclone config create source_host s3 \
-  provider AWS \
-  env_auth false \
-  access_key_id "${SOURCE_S3_ACCESS_KEY}" \
-  secret_access_key "${SOURCE_S3_SECRET_KEY}" \
-  endpoint "${SOURCE_S3_ENDPOINT}" \
-  $([ "${S3_PATH_STYLE}" = "true" ] && echo "force_path_style true")
+configure_rclone_remote "source_host" "$SOURCE_S3_ENDPOINT" "$SOURCE_S3_ACCESS_KEY" "$SOURCE_S3_SECRET_KEY" "$S3_PATH_STYLE"
 
 # Target remote configuration
-rclone config delete target_host 2>/dev/null || true
-rclone config create target_host s3 \
-  provider AWS \
-  env_auth false \
-  access_key_id "${S3_ACCESS_KEY}" \
-  secret_access_key "${S3_SECRET_KEY}" \
-  endpoint "${S3_ENDPOINT}" \
-  $([ "${S3_PATH_STYLE}" = "true" ] && echo "force_path_style true")
+configure_rclone_remote "target_host" "$S3_ENDPOINT" "$S3_ACCESS_KEY" "$S3_SECRET_KEY" "$S3_PATH_STYLE"
 
 
 # Start s3 bucket backup
-printf "\n\nStart backup\n\n"
+log "Starting S3 sync from ${SOURCE_S3_BUCKET_NAME} to ${S3_BUCKET_NAME}"
+
+SOURCE_PATH="source_host:${SOURCE_S3_BUCKET_NAME%/}${SOURCE_S3_BUCKET_PREFIX:+/}${SOURCE_S3_BUCKET_PREFIX%/}"
+TARGET_PATH="target_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX%/}"
 
 rclone sync ${RCLONE_EXTRA_ARGS} \
   --checksum \
   --transfers 4 \
   --checkers 8 \
   --progress \
-  source_host:${SOURCE_S3_BUCKET_NAME%/}${SOURCE_S3_BUCKET_PREFIX:+/}${SOURCE_S3_BUCKET_PREFIX%/} \
-  target_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX%/}
+  "$SOURCE_PATH" \
+  "$TARGET_PATH"
 
-printf "\n\nBackup finished\n\n"
+log "Backup completed: ${TARGET_PATH}"
+log "Backup process finished successfully"

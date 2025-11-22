@@ -1,7 +1,26 @@
 #!/bin/bash
 
+set -e
+
+# Source utility functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/utils.sh"
+
+# Trap errors
+trap 'error "Backup failed at line $LINENO"' ERR
+
+# Validate required environment variables
+validate_required_vars \
+  "QDRANT_URL" \
+  "QDRANT_COLLECTION" \
+  "S3_ENDPOINT" \
+  "S3_ACCESS_KEY" \
+  "S3_SECRET_KEY" \
+  "S3_BUCKET_NAME"
+
 DATE_TIME=$(date +"%Y%m%dT%H%M")
 
+log "Starting Qdrant backup"
 printf "Settings:
   > QDRANT_URL: ${QDRANT_URL}
   > QDRANT_COLLECTION: ${QDRANT_COLLECTION}
@@ -16,16 +35,7 @@ printf "Settings:
 
 
 # Configure rclone remote
-printf "\n\nConfiguring rclone remote\n\n"
-
-rclone config delete backup_host 2>/dev/null || true
-rclone config create backup_host s3 \
-  provider AWS \
-  env_auth false \
-  access_key_id "${S3_ACCESS_KEY}" \
-  secret_access_key "${S3_SECRET_KEY}" \
-  endpoint "${S3_ENDPOINT}" \
-  $([ "${S3_PATH_STYLE}" = "true" ] && echo "force_path_style true")
+configure_rclone_remote "backup_host" "$S3_ENDPOINT" "$S3_ACCESS_KEY" "$S3_SECRET_KEY" "$S3_PATH_STYLE"
 
 
 # Prepare auth header if API key is provided
@@ -40,51 +50,55 @@ printf "\n\nStart backup\n\n"
 
 if [ -z "${QDRANT_COLLECTION}" ] || [ "${QDRANT_COLLECTION}" = "all" ]; then
   # Full cluster snapshot
-  printf "Creating full cluster snapshot\n"
+  log "Creating full cluster snapshot"
   
   SNAPSHOT=$(curl -s -X POST ${AUTH_HEADER} "${QDRANT_URL}/snapshots" | jq -r '.result.name')
   
   if [ -z "${SNAPSHOT}" ] || [ "${SNAPSHOT}" = "null" ]; then
-    printf "ERROR: Failed to create snapshot\n"
+    error "Failed to create snapshot"
     exit 1
   fi
   
-  printf "Snapshot created: ${SNAPSHOT}\n"
-  printf "Uploading to S3...\n"
+  log "Snapshot created: ${SNAPSHOT}"
+  log "Uploading to S3..."
+  
+  BACKUP_PATH="backup_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX%/}/${DATE_TIME}-cluster.snapshot"
   
   curl -s ${AUTH_HEADER} "${QDRANT_URL}/snapshots/${SNAPSHOT}" \
-    | rclone rcat ${RCLONE_EXTRA_ARGS} backup_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX%/}/${DATE_TIME}-cluster.snapshot
+    | rclone rcat ${RCLONE_EXTRA_ARGS} "${BACKUP_PATH}"
   
   # Delete local snapshot from Qdrant
   curl -s -X DELETE ${AUTH_HEADER} "${QDRANT_URL}/snapshots/${SNAPSHOT}" > /dev/null
+  
+  log "Backup completed: ${BACKUP_PATH}"
 
 else
   # Collection snapshot
-  printf "Creating snapshot for collection: ${QDRANT_COLLECTION}\n"
+  log "Creating snapshot for collection: ${QDRANT_COLLECTION}"
   
   SNAPSHOT=$(curl -s -X POST ${AUTH_HEADER} "${QDRANT_URL}/collections/${QDRANT_COLLECTION}/snapshots" | jq -r '.result.name')
   
   if [ -z "${SNAPSHOT}" ] || [ "${SNAPSHOT}" = "null" ]; then
-    printf "ERROR: Failed to create collection snapshot\n"
+    error "Failed to create collection snapshot"
     exit 1
   fi
   
-  printf "Snapshot created: ${SNAPSHOT}\n"
-  printf "Uploading to S3...\n"
+  log "Snapshot created: ${SNAPSHOT}"
+  log "Uploading to S3..."
+  
+  BACKUP_PATH="backup_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX%/}/${DATE_TIME}-${QDRANT_COLLECTION}.snapshot"
   
   curl -s ${AUTH_HEADER} "${QDRANT_URL}/collections/${QDRANT_COLLECTION}/snapshots/${SNAPSHOT}" \
-    | rclone rcat ${RCLONE_EXTRA_ARGS} backup_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX%/}/${DATE_TIME}-${QDRANT_COLLECTION}.snapshot
+    | rclone rcat ${RCLONE_EXTRA_ARGS} "${BACKUP_PATH}"
   
   # Delete local snapshot from Qdrant
   curl -s -X DELETE ${AUTH_HEADER} "${QDRANT_URL}/collections/${QDRANT_COLLECTION}/snapshots/${SNAPSHOT}" > /dev/null
+  
+  log "Backup completed: ${BACKUP_PATH}"
 fi
 
-printf "\n\nBackup finished\n\n"
 
+# Delete backups older than retention period
+cleanup_old_backups "backup_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX}/" "$RETENTION" "$RCLONE_EXTRA_ARGS"
 
-# Delete backups older than
-if [ ! -z "${RETENTION}" ]; then
-  printf "\n\nDelete backups older than ${RETENTION} in '${S3_BUCKET_NAME}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX}'\n\n"
-
-  rclone delete ${RCLONE_EXTRA_ARGS} --min-age "${RETENTION}" backup_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX}/
-fi
+log "Backup process finished successfully"

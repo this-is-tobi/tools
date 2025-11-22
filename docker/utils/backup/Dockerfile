@@ -8,7 +8,8 @@ ARG USER_UID=1000
 ARG USER_GID=${USER_UID}
 ARG VAULT_VERSION=1.21.0
 ARG PG_VERSION=17
-ENV HOME=/home/${USERNAME}
+ARG HOME=/home/${USERNAME}
+ENV HOME=${HOME}
 
 WORKDIR ${HOME}
 
@@ -50,4 +51,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 USER ${USERNAME}
 
 # Default entrypoint
-ENTRYPOINT ["${HOME}/scripts/entrypoint.sh"]
+ENTRYPOINT ["/bin/sh", "-c", "${HOME}/scripts/entrypoint.sh"]
