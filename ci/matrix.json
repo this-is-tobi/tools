@@ -7,7 +7,7 @@
       "context": "./docker/utils/act-runner",
       "dockerfile": "./docker/utils/act-runner/Dockerfile",
       "target": "build",
-      "tag": "2.0.3",
+      "tag": "2.0.4",
       "latest": true
     }
   },
@@ -31,7 +31,7 @@
       "context": "./docker/utils/debug",
       "dockerfile": "./docker/utils/debug/Dockerfile",
       "target": "build",
-      "tag": "2.1.1",
+      "tag": "2.1.2",
       "latest": true
     }
   },
@@ -43,7 +43,7 @@
       "context": "./docker/utils/dev",
       "dockerfile": "./docker/utils/dev/Dockerfile",
       "target": "build",
-      "tag": "2.0.3",
+      "tag": "2.0.4",
       "latest": true
     }
   },
