@@ -16,11 +16,11 @@ This section provides a collection of pre-built Docker images and templates desi
 | `ghcr.io/this-is-tobi/tools/backup:1.0.0`       | *helper image to backup from pg, vault, qdrant or s3 to s3 (alpine based).*       | [Dockerfile](../docker/utils/backup/Dockerfile)        |
 | `ghcr.io/this-is-tobi/tools/debug:2.1.1`        | *debug image with all convenients tools (debian based).*                          | [Dockerfile](../docker/utils/debug/Dockerfile)         |
 | `ghcr.io/this-is-tobi/tools/dev:2.0.3`          | *development image with all convenients tools (debian based).*                    | [Dockerfile](../docker/utils/dev/Dockerfile)           |
-| `ghcr.io/this-is-tobi/tools/gh-runner:1.5.0`    | *github self hosted runner with common packages (ubuntu based).*                  | [Dockerfile](../docker/utils/gh-runner/Dockerfile)     |
-| `ghcr.io/this-is-tobi/tools/gh-runner-gp:1.3.0` | *github self hosted runner with common packages and GPU binaries (ubuntu based).* | [Dockerfile](../docker/utils/gh-runner-gpu/Dockerfile) |
+| `ghcr.io/this-is-tobi/tools/gh-runner:1.6.0`    | *github self hosted runner with common packages (ubuntu based).*                  | [Dockerfile](../docker/utils/gh-runner/Dockerfile)     |
+| `ghcr.io/this-is-tobi/tools/gh-runner-gp:1.4.0` | *github self hosted runner with common packages and GPU binaries (ubuntu based).* | [Dockerfile](../docker/utils/gh-runner-gpu/Dockerfile) |
 | `ghcr.io/this-is-tobi/tools/homelab-util:0.0.1` | *helper image used for homelab configuration (alpine based).*                     | [Dockerfile](../docker/utils/homelab-utils/Dockerfile) |
 | `ghcr.io/this-is-tobi/tools/mc:1.1.3`           | *ligthweight image with tools for s3 manipulations (alpine based).*               | [Dockerfile](../docker/utils/mc/Dockerfile)            |
-| `ghcr.io/this-is-tobi/tools/pg-backup:4.0.0`    | *helper image to backup postgresql to s3 (postgres based).*                       | [Dockerfile](../docker/utils/pg-backup/Dockerfile)     |
+| `ghcr.io/this-is-tobi/tools/pg-backup:4.1.0`    | *helper image to backup postgresql to s3 (postgres based).*                       | [Dockerfile](../docker/utils/pg-backup/Dockerfile)     |
 | `ghcr.io/this-is-tobi/tools/s3-backup:1.2.0`    | *helper image to backup s3 bucket to another s3 bucket (debian based).*           | [Dockerfile](../docker/utils/s3-backup/Dockerfile)     |
 | `ghcr.io/this-is-tobi/tools/vault-backup:1.7.0` | *helper image to backup vault raft cluster to s3 bucket (vault based).*           | [Dockerfile](../docker/utils/vault-backup/Dockerfile)  |
 
