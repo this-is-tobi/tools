@@ -1,6 +1,7 @@
 [
   {
     "name": "act-runner",
+    "description": "Act runner for running GitHub Actions workflows locally",
     "build": {
       "base": "docker.io/ubuntu:24.04",
       "context": "./docker/utils/act-runner",
@@ -12,6 +13,7 @@
   },
   {
     "name": "backup",
+    "description": "Unified backup utility for PostgreSQL, Vault, Qdrant and S3 using rclone streaming",
     "build": {
       "base": "docker.io/alpine:3.22.2",
       "context": "./docker/utils/backup",
@@ -23,6 +25,7 @@
   },
   {
     "name": "debug",
+    "description": "Debug container with networking and troubleshooting tools",
     "build": {
       "base": "docker.io/debian:12",
       "context": "./docker/utils/debug",
@@ -34,6 +37,7 @@
   },
   {
     "name": "dev",
+    "description": "Development container with common development tools",
     "build": {
       "base": "docker.io/debian:12",
       "context": "./docker/utils/dev",
@@ -45,6 +49,7 @@
   },
   {
     "name": "gh-runner",
+    "description": "Self-hosted GitHub Actions runner",
     "build": {
       "base": "ghcr.io/actions/actions-runner:2.330.0",
       "context": "./docker/utils/gh-runner",
@@ -56,6 +61,7 @@
   },
   {
     "name": "gh-runner-gpu",
+    "description": "Self-hosted GitHub Actions runner with GPU support",
     "build": {
       "base": "ghcr.io/actions/actions-runner:2.330.0",
       "context": "./docker/utils/gh-runner-gpu",
@@ -67,6 +73,7 @@
   },
   {
     "name": "homlelab-utils",
+    "description": "Homelab utility tools collection",
     "build": {
       "base": "docker.io/alpine:3.22.2",
       "context": "./docker/utils/homlelab-utils",
@@ -78,6 +85,7 @@
   },
   {
     "name": "mc",
+    "description": "MinIO Client for S3-compatible storage operations",
     "build": {
       "base": "docker.io/alpine:3.22.2",
       "context": "./docker/utils/mc",
@@ -89,6 +97,7 @@
   },
   {
     "name": "pg-backup",
+    "description": "PostgreSQL backup utility with S3 support",
     "build": {
       "base": "docker.io/postgres:18.1",
       "context": "./docker/utils/pg-backup",
@@ -100,6 +109,7 @@
   },
   {
     "name": "s3-backup",
+    "description": "S3 bucket sync and backup utility",
     "build": {
       "base": "docker.io/debian:12",
       "context": "./docker/utils/s3-backup",
@@ -111,6 +121,7 @@
   },
   {
     "name": "vault-backup",
+    "description": "HashiCorp Vault backup utility with S3 support",
     "build": {
       "base": "docker.io/hashicorp/vault:1.21.0",
       "context": "./docker/utils/vault-backup",

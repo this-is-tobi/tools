@@ -120,12 +120,19 @@ jobs:
           type=raw,value=${{ steps.image-tags.outputs.MAJOR_TAG }}.${{ steps.image-tags.outputs.MINOR_TAG }},enable=true
           type=raw,value=${{ steps.image-tags.outputs.MAJOR_TAG }},enable=true
           type=raw,value=latest,enable=${{ matrix.images.build.latest && true || false }}
+        labels: |
+          org.opencontainers.image.title=${{ matrix.images.name }}
+          org.opencontainers.image.description=${{ matrix.images.description }}
+          org.opencontainers.image.vendor=this-is-tobi
+          org.opencontainers.image.version=${{ matrix.images.build.tag }}
 
     - name: Create manifest list and push
       if: ${{ steps.image-status.outputs.NEEDS_BUILD == 'true' }}
       working-directory: /tmp/digests/${{ matrix.images.name }}-v${{ matrix.images.build.tag }}
       run: |
-        docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+        docker buildx imagetools create \
+          $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+          $(jq -cr '.labels | to_entries | map("--annotation \"index:" + .key + "=" + .value + "\"") | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
           $(printf '${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}@sha256:%s ' *)
 
     - name: Inspect image
