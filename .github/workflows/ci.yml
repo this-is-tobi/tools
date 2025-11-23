@@ -34,30 +34,52 @@ on:
         default: false
 
 jobs:
+  matrix:
+    name: Generate build matrix
+    runs-on: ubuntu-24.04
+    outputs:
+      build-matrix: ${{ steps.build-matrix.outputs.BUILD_MATRIX }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Generate matrix
+      id: build-matrix
+      run: |
+        if [ ! -z "${{ inputs.IMAGES }}" ]; then
+          JQ_FILTER=$(echo "${{ inputs.IMAGES }}" | jq -R 'split(",")')
+          echo "BUILD_MATRIX=$(jq -c --argjson images "$JQ_FILTER" '[.[] | select(.name | IN($images[]))]' < ./ci/matrix.json)" >> $GITHUB_OUTPUT
+        else
+          echo "BUILD_MATRIX=$(jq -c '.' < ./ci/matrix.json)" >> $GITHUB_OUTPUT
+        fi
+
   build-amd64:
+    needs: matrix
     uses: ./.github/workflows/build.yml
     if: ${{ inputs.BUILD_AMD64 }}
     with:
       REGISTRY: ${{ inputs.REGISTRY }}
       NAMESPACE: ${{ inputs.NAMESPACE }}
-      IMAGES: ${{ inputs.IMAGES }}
+      BUILD_MATRIX: ${{ needs.matrix.outputs.build-matrix }}
       BUILD_AMD64: ${{ inputs.BUILD_AMD64 == true }}
       BUILD_ARM64: false
       USE_QEMU: ${{ inputs.USE_QEMU == true }}
 
   build-arm64:
+    needs: matrix
     uses: ./.github/workflows/build.yml
     if: ${{ inputs.BUILD_ARM64 }}
     with:
       REGISTRY: ${{ inputs.REGISTRY }}
       NAMESPACE: ${{ inputs.NAMESPACE }}
-      IMAGES: ${{ inputs.IMAGES }}
+      BUILD_MATRIX: ${{ needs.matrix.outputs.build-matrix }}
       BUILD_AMD64: false
       BUILD_ARM64: ${{ inputs.BUILD_ARM64 == true }}
       USE_QEMU: ${{ inputs.USE_QEMU == true }}
 
   merge:
     needs:
+      - matrix
       - build-amd64
       - build-arm64
     uses: ./.github/workflows/merge.yml
@@ -69,12 +91,13 @@ jobs:
     with:
       REGISTRY: ${{ inputs.REGISTRY }}
       NAMESPACE: ${{ inputs.NAMESPACE }}
-      IMAGES: ${{ inputs.IMAGES }}
+      BUILD_MATRIX: ${{ needs.matrix.outputs.build-matrix }}
       BUILD_AMD64: ${{ inputs.BUILD_AMD64 == true }}
       BUILD_ARM64: ${{ inputs.BUILD_ARM64 == true }}
 
   attest:
     needs:
+      - matrix
       - merge
     uses: ./.github/workflows/attest.yml
     if: |
@@ -83,4 +106,4 @@ jobs:
     with:
       REGISTRY: ${{ inputs.REGISTRY }}
       NAMESPACE: ${{ inputs.NAMESPACE }}
-      IMAGES: ${{ inputs.IMAGES }}
+      BUILD_MATRIX: ${{ needs.matrix.outputs.build-matrix }}

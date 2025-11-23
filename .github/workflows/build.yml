@@ -9,8 +9,8 @@ on:
       NAMESPACE:
         required: true
         type: string
-      IMAGES:
-        required: false
+      BUILD_MATRIX:
+        required: true
         type: string
       BUILD_AMD64:
         required: true
@@ -26,37 +26,16 @@ permissions:
   packages: write
 
 jobs:
-  infos:
-    name: Generate matrix for build
-    runs-on: ubuntu-24.04
-    outputs:
-      build-matrix: ${{ steps.build-matrix.outputs.BUILD_MATRIX }}
-    steps:
-    - name: Checks-out repository
-      uses: actions/checkout@v4
-
-    - name: Generate matrix for build
-      id: build-matrix
-      run: |
-        if [ ! -z "${{ inputs.IMAGES }}" ]; then
-          JQ_FILTER=$(echo "${{ inputs.IMAGES }}" | jq -R 'split(",")')
-          echo "BUILD_MATRIX=$(jq -c --argjson images "$JQ_FILTER" '[.[] | select(.name | IN($images[]))]' < ./ci/matrix.json)" >> $GITHUB_OUTPUT
-        else
-          echo "BUILD_MATRIX=$(jq -c '.' < ./ci/matrix.json)" >> $GITHUB_OUTPUT
-        fi
-
   build:
     name: Build images
     runs-on: ${{ matrix.runners }}
     permissions:
       contents: read
       packages: write
-    needs:
-    - infos
     strategy:
       matrix:
         runners: ${{ (inputs.BUILD_AMD64 && inputs.BUILD_ARM64 && !inputs.USE_QEMU && fromJson('["ubuntu-24.04", "ubuntu-24.04-arm"]')) || (inputs.BUILD_ARM64 && !inputs.USE_QEMU && fromJson('["ubuntu-24.04-arm"]')) || fromJson('["ubuntu-24.04"]') }}
-        images: ${{ fromJSON(needs.infos.outputs.build-matrix) }}
+        images: ${{ fromJSON(inputs.BUILD_MATRIX) }}
     steps:
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v3
