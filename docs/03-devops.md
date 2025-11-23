@@ -12,34 +12,38 @@ This section contains templates and configurations for modern DevOps practices, 
 
 ## ArgoCD App Previews
 
-Templates to configure preview environments with ArgoCD by using the Pull Request Generator. The Pull Request generator uses the API of an SCMaaS provider (GitHub, GitLab, Gitea, Bitbucket, ...) to automatically discover open pull requests within a repository, this fits well with the style of building a test environment when you create a pull request.
+Templates to configure preview environments with ArgoCD using the Pull Request Generator. The Pull Request generator uses the API of an SCM provider (GitHub, GitLab, Gitea, Bitbucket, etc.) to automatically discover open pull requests within a repository, enabling automatic test environment creation when PRs are opened.
 
-- [github-appset.yaml](../devops/argo-cd-app-preview/github-appset.yaml)
+**Available Templates:**
+- [github-appset.yaml](../devops/argo-cd-app-preview/github-appset.yaml) - ApplicationSet for GitHub repositories
 
 > For further information, see [ArgoCD documentation](https://argo-cd.readthedocs.io/en/stable/operator-manual/applicationset/Generators-Pull-Request).
 
-## Github Self-Hosted Runners
+## GitHub Self-Hosted Runners
 
-Templates to deploy Github Actions Runners across a Kubernetes cluster.
+Templates to deploy GitHub Actions Runners across a Kubernetes cluster.
 
-Using **legacy** install:
-  1. Install [actions-runner-controller](https://github.com/actions/actions-runner-controller) helm chart.
-      ```sh
-      # Get chart informations
+### Installation Options
 
-      helm show chart actions-runner-controller --repo https://actions-runner-controller.github.io/actions-runner-controller
-      helm show values actions-runner-controller --repo https://actions-runner-controller.github.io/actions-runner-controller
-      ```
-  1. Deploy the [runner-deployment.yaml](../devops/github-selfhosted-runner/runner-deployment.yaml).
+**Legacy Install (actions-runner-controller):**
 
-Using **github** install:
-  1. Install [actions-runner-controller](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners-with-actions-runner-controller/quickstart-for-actions-runner-controller) helm chart.
-      ```sh
-      # Get chart informations
+1. Install [actions-runner-controller](https://github.com/actions/actions-runner-controller) Helm chart:
+   ```sh
+   # Get chart information
+   helm show chart actions-runner-controller --repo https://actions-runner-controller.github.io/actions-runner-controller
+   helm show values actions-runner-controller --repo https://actions-runner-controller.github.io/actions-runner-controller
+   ```
 
-      helm show chart oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller
-      helm show values oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller
-      ```
+2. Deploy the [runner-deployment.yaml](../devops/github-selfhosted-runner/runner-deployment.yaml)
+
+**GitHub Official Install (Recommended):**
+
+1. Install [actions-runner-controller](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners-with-actions-runner-controller/quickstart-for-actions-runner-controller) Helm chart:
+   ```sh
+   # Get chart information
+   helm show chart oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller
+   helm show values oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller
+   ```
 
 > For further information, see :
 > - [Legacy ARC documentation](https://github.com/actions/actions-runner-controller).

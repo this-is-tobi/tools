@@ -22,6 +22,8 @@ chmod +x script.sh
 ```
 
 ## Available Scripts
+
+| Script                                                            | Description                                                                     |
 | ----------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | [backup-kube-pg.sh](../shell/backup-kube-pg.sh)                   | *backup / restore postgres database from / to a kubernetes pod.*                |
 | [backup-kube-qdrant.sh](../shell/backup-kube-qdrant.sh)           | *backup / restore qdrant raft cluster from / to a kubernetes pod.*              |

@@ -86,6 +86,7 @@
   {
     "name": "mc",
     "description": "MinIO Client for S3-compatible storage operations",
+    "deprecated": true,
     "build": {
       "base": "docker.io/alpine:3.22.2",
       "context": "./docker/utils/mc",

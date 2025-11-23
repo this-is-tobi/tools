@@ -16,11 +16,6 @@ This section provides a collection of Node.js utilities for various tasks, inclu
 | [crypto](../node/packages/crypto) | *set of crypto functions.* |
 | [worker](../node/packages/worker) | *set of worker functions.* |
 
-## Prerequisites
-
-To test and run the modules, ensure you have:
-- [Bun](https://bun.sh/) installed on your system
-
 ## Project Structure
 
 ```
