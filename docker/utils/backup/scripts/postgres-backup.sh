@@ -27,18 +27,21 @@ validate_port "DB_PORT" "$DB_PORT"
 DATE_TIME=$(date +"%Y%m%dT%H%M")
 
 log "Starting PostgreSQL backup"
-printf "Settings:
-  > DB_HOST: ${DB_HOST}
-  > DB_PORT: ${DB_PORT}
-  > DB_NAME: ${DB_NAME}
-  > DB_USER: ${DB_USER}
-  > S3_ENDPOINT: ${S3_ENDPOINT}
-  > S3_ACCESS_KEY: ${S3_ACCESS_KEY}
-  > S3_BUCKET_NAME: ${S3_BUCKET_NAME}
-  > S3_BUCKET_PREFIX: ${S3_BUCKET_PREFIX}
-  > S3_PATH_STYLE: ${S3_PATH_STYLE}
-  > RETENTION: ${RETENTION}
-  > RCLONE_EXTRA_ARGS: ${RCLONE_EXTRA_ARGS}\n"
+log "Settings:"
+printf "  > DB_HOST: ${DB_HOST}\n"
+printf "  > DB_PORT: ${DB_PORT}\n"
+printf "  > DB_NAME: ${DB_NAME}\n"
+printf "  > DB_USER: ${DB_USER}\n"
+printf "  > DB_PASS: $(obfuscate "$DB_PASS")\n"
+printf "  > S3_ENDPOINT: ${S3_ENDPOINT}\n"
+printf "  > S3_ACCESS_KEY: $(obfuscate "$S3_ACCESS_KEY")\n"
+printf "  > S3_SECRET_KEY: $(obfuscate "$S3_SECRET_KEY")\n"
+printf "  > S3_BUCKET_NAME: ${S3_BUCKET_NAME}\n"
+printf "  > S3_BUCKET_PREFIX: ${S3_BUCKET_PREFIX}\n"
+printf "  > S3_PATH_STYLE: ${S3_PATH_STYLE}\n"
+printf "  > DB_DUMP_ARGS: ${DB_DUMP_ARGS}\n"
+printf "  > RETENTION: ${RETENTION}\n"
+printf "  > RCLONE_EXTRA_ARGS: ${RCLONE_EXTRA_ARGS}\n"
 
 
 # Configure rclone remote
@@ -51,7 +54,7 @@ log "Starting database dump and upload to S3"
 BACKUP_PATH="backup_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX%/}/${DATE_TIME}-${DB_NAME}.dump"
 
 PGPASSWORD="${DB_PASS}" pg_dump -Fc -U "${DB_USER}" -h "${DB_HOST}" -p "${DB_PORT}" "${DB_NAME}" \
-  | rclone rcat ${RCLONE_EXTRA_ARGS} "${BACKUP_PATH}"
+  | rclone rcat --stats-one-line-date ${RCLONE_EXTRA_ARGS} "${BACKUP_PATH}"
 
 log "Backup completed: ${BACKUP_PATH}"
 

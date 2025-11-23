@@ -21,17 +21,18 @@ validate_required_vars \
 DATE_TIME=$(date +"%Y%m%dT%H%M")
 
 log "Starting Qdrant backup"
-printf "Settings:
-  > QDRANT_URL: ${QDRANT_URL}
-  > QDRANT_COLLECTION: ${QDRANT_COLLECTION}
-  > QDRANT_API_KEY: ${QDRANT_API_KEY:+***}
-  > S3_ENDPOINT: ${S3_ENDPOINT}
-  > S3_ACCESS_KEY: ${S3_ACCESS_KEY}
-  > S3_BUCKET_NAME: ${S3_BUCKET_NAME}
-  > S3_BUCKET_PREFIX: ${S3_BUCKET_PREFIX}
-  > S3_PATH_STYLE: ${S3_PATH_STYLE}
-  > RETENTION: ${RETENTION}
-  > RCLONE_EXTRA_ARGS: ${RCLONE_EXTRA_ARGS}\n"
+log "Settings:"
+printf "  > QDRANT_URL: ${QDRANT_URL}\n"
+printf "  > QDRANT_COLLECTION: ${QDRANT_COLLECTION}\n"
+printf "  > QDRANT_API_KEY: $(obfuscate "$QDRANT_API_KEY")\n"
+printf "  > S3_ENDPOINT: ${S3_ENDPOINT}\n"
+printf "  > S3_ACCESS_KEY: $(obfuscate "$S3_ACCESS_KEY")\n"
+printf "  > S3_SECRET_KEY: $(obfuscate "$S3_SECRET_KEY")\n"
+printf "  > S3_BUCKET_NAME: ${S3_BUCKET_NAME}\n"
+printf "  > S3_BUCKET_PREFIX: ${S3_BUCKET_PREFIX}\n"
+printf "  > S3_PATH_STYLE: ${S3_PATH_STYLE}\n"
+printf "  > RETENTION: ${RETENTION}\n"
+printf "  > RCLONE_EXTRA_ARGS: ${RCLONE_EXTRA_ARGS}\n"
 
 
 # Configure rclone remote
@@ -65,7 +66,7 @@ if [ -z "${QDRANT_COLLECTION}" ] || [ "${QDRANT_COLLECTION}" = "all" ]; then
   BACKUP_PATH="backup_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX%/}/${DATE_TIME}-cluster.snapshot"
   
   curl -s ${AUTH_HEADER} "${QDRANT_URL}/snapshots/${SNAPSHOT}" \
-    | rclone rcat ${RCLONE_EXTRA_ARGS} "${BACKUP_PATH}"
+    | rclone rcat --stats-one-line-date ${RCLONE_EXTRA_ARGS} "${BACKUP_PATH}"
   
   # Delete local snapshot from Qdrant
   curl -s -X DELETE ${AUTH_HEADER} "${QDRANT_URL}/snapshots/${SNAPSHOT}" > /dev/null
@@ -84,14 +85,14 @@ else
   fi
   
   log "Snapshot created: ${SNAPSHOT}"
-  log "Uploading to S3..."
+  log "Streaming to S3..."
   
   BACKUP_PATH="backup_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX%/}/${DATE_TIME}-${QDRANT_COLLECTION}.snapshot"
   
   curl -s ${AUTH_HEADER} "${QDRANT_URL}/collections/${QDRANT_COLLECTION}/snapshots/${SNAPSHOT}" \
-    | rclone rcat ${RCLONE_EXTRA_ARGS} "${BACKUP_PATH}"
+    | rclone rcat --stats-one-line-date ${RCLONE_EXTRA_ARGS} "${BACKUP_PATH}"
   
-  # Delete local snapshot from Qdrant
+  # Delete snapshot from Qdrant server
   curl -s -X DELETE ${AUTH_HEADER} "${QDRANT_URL}/collections/${QDRANT_COLLECTION}/snapshots/${SNAPSHOT}" > /dev/null
   
   log "Backup completed: ${BACKUP_PATH}"

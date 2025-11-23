@@ -13,7 +13,7 @@ This section provides a collection of pre-built Docker images and templates desi
 | Image                                           | Description                                                                       | Dockerfiles                                            |
 | ----------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | `ghcr.io/this-is-tobi/tools/act-runner:2.0.3`   | *act runner image for local CI tests (ubuntu based).*                             | [Dockerfile](../docker/utils/act-runner/Dockerfile)    |
-| `ghcr.io/this-is-tobi/tools/backup:0.1.2`       | *helper image to backup from pg, vault, qdrant or s3 to s3 (alpine based).*       | [Dockerfile](../docker/utils/backup/Dockerfile)        |
+| `ghcr.io/this-is-tobi/tools/backup:1.0.0`       | *helper image to backup from pg, vault, qdrant or s3 to s3 (alpine based).*       | [Dockerfile](../docker/utils/backup/Dockerfile)        |
 | `ghcr.io/this-is-tobi/tools/debug:2.1.1`        | *debug image with all convenients tools (debian based).*                          | [Dockerfile](../docker/utils/debug/Dockerfile)         |
 | `ghcr.io/this-is-tobi/tools/dev:2.0.3`          | *development image with all convenients tools (debian based).*                    | [Dockerfile](../docker/utils/dev/Dockerfile)           |
 | `ghcr.io/this-is-tobi/tools/gh-runner:1.5.0`    | *github self hosted runner with common packages (ubuntu based).*                  | [Dockerfile](../docker/utils/gh-runner/Dockerfile)     |

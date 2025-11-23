@@ -41,6 +41,9 @@ spec:
           containers:
           - name: backup
             image: ghcr.io/this-is-tobi/tools/backup:latest
+            command:
+            - "/bin/bash"
+            - "./scripts/vault-backup.sh"
             imagePullPolicy: Always
             envFrom:
             - secretRef:

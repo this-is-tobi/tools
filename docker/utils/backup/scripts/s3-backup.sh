@@ -21,17 +21,19 @@ validate_required_vars \
   "S3_BUCKET_NAME"
 
 log "Starting S3 bucket sync"
-printf "Settings:
-  > SOURCE_S3_ENDPOINT: ${SOURCE_S3_ENDPOINT}
-  > SOURCE_S3_ACCESS_KEY: ${SOURCE_S3_ACCESS_KEY}
-  > SOURCE_S3_BUCKET_NAME: ${SOURCE_S3_BUCKET_NAME}
-  > SOURCE_S3_BUCKET_PREFIX: ${SOURCE_S3_BUCKET_PREFIX}
-  > S3_ENDPOINT: ${S3_ENDPOINT}
-  > S3_ACCESS_KEY: ${S3_ACCESS_KEY}
-  > S3_BUCKET_NAME: ${S3_BUCKET_NAME}
-  > S3_BUCKET_PREFIX: ${S3_BUCKET_PREFIX}
-  > S3_PATH_STYLE: ${S3_PATH_STYLE}
-  > RCLONE_EXTRA_ARGS: ${RCLONE_EXTRA_ARGS}\n"
+log "Settings:"
+printf "  > SOURCE_S3_ENDPOINT: ${SOURCE_S3_ENDPOINT}\n"
+printf "  > SOURCE_S3_ACCESS_KEY: $(obfuscate "$SOURCE_S3_ACCESS_KEY")\n"
+printf "  > SOURCE_S3_SECRET_KEY: $(obfuscate "$SOURCE_S3_SECRET_KEY")\n"
+printf "  > SOURCE_S3_BUCKET_NAME: ${SOURCE_S3_BUCKET_NAME}\n"
+printf "  > SOURCE_S3_BUCKET_PREFIX: ${SOURCE_S3_BUCKET_PREFIX}\n"
+printf "  > S3_ENDPOINT: ${S3_ENDPOINT}\n"
+printf "  > S3_ACCESS_KEY: $(obfuscate "$S3_ACCESS_KEY")\n"
+printf "  > S3_SECRET_KEY: $(obfuscate "$S3_SECRET_KEY")\n"
+printf "  > S3_BUCKET_NAME: ${S3_BUCKET_NAME}\n"
+printf "  > S3_BUCKET_PREFIX: ${S3_BUCKET_PREFIX}\n"
+printf "  > S3_PATH_STYLE: ${S3_PATH_STYLE}\n"
+printf "  > RCLONE_EXTRA_ARGS: ${RCLONE_EXTRA_ARGS}\n"
 
 
 # Configure rclone for source and target S3
@@ -50,11 +52,10 @@ log "Starting S3 sync from ${SOURCE_S3_BUCKET_NAME} to ${S3_BUCKET_NAME}"
 SOURCE_PATH="source_host:${SOURCE_S3_BUCKET_NAME%/}${SOURCE_S3_BUCKET_PREFIX:+/}${SOURCE_S3_BUCKET_PREFIX%/}"
 TARGET_PATH="target_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX%/}"
 
-rclone sync ${RCLONE_EXTRA_ARGS} \
+rclone sync --stats-one-line-date ${RCLONE_EXTRA_ARGS} \
   --checksum \
   --transfers 4 \
   --checkers 8 \
-  --progress \
   "$SOURCE_PATH" \
   "$TARGET_PATH"
 

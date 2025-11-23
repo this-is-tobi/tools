@@ -2,6 +2,19 @@
 
 # Common utility functions for backup scripts
 
+# Obfuscate sensitive values for logging
+# Usage: obfuscate "$VALUE"
+obfuscate() {
+  local value="$1"
+  if [ -z "$value" ]; then
+    echo ""
+  elif [ ${#value} -le 4 ]; then
+    echo "***"
+  else
+    echo "${value:0:2}***${value: -2}"
+  fi
+}
+
 # Logging functions
 log() {
   echo "[$(date +'%Y-%m-%d %H:%M:%S')] $*"
@@ -66,7 +79,7 @@ configure_rclone_remote() {
     access_key_id "$access_key" \
     secret_access_key "$secret_key" \
     endpoint "$endpoint" \
-    $([ "$path_style" = "true" ] && echo "force_path_style true")
+    $([ "$path_style" = "true" ] && echo "force_path_style true") >/dev/null 2>&1
   
   # Verify remote was created
   if ! rclone listremotes | grep -q "${remote_name}:"; then
