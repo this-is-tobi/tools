@@ -126,14 +126,28 @@ jobs:
           org.opencontainers.image.vendor=this-is-tobi
           org.opencontainers.image.version=${{ matrix.images.build.tag }}
 
-    - name: Create manifest list and push
+    - name: Create and push manifest
       if: ${{ steps.image-status.outputs.NEEDS_BUILD == 'true' }}
       working-directory: /tmp/digests/${{ matrix.images.name }}-v${{ matrix.images.build.tag }}
       run: |
-        docker buildx imagetools create \
-          $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-          $(jq -cr '.labels | to_entries | map("--annotation \"index:" + .key + "=" + .value + "\"") | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-          $(printf '${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}@sha256:%s ' *)
+        # Build command using array to preserve spaces in values
+        CMD=(docker buildx imagetools create)
+        
+        # Add tags
+        while IFS= read -r tag; do
+          CMD+=(-t "$tag")
+        done < <(jq -r '.tags[]' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+        
+        # Add annotations (preserve spaces in description values)
+        while IFS='=' read -r key value; do
+          CMD+=(--annotation "index:$key=$value")
+        done < <(jq -r '.labels | to_entries | .[] | .key + "=" + .value' <<< "$DOCKER_METADATA_OUTPUT_JSON")
+        
+        # Add digests
+        CMD+=($(printf '${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}@sha256:%s ' *))
+        
+        # Execute command with proper argument handling
+        "${CMD[@]}"
 
     - name: Inspect image
       if: ${{ steps.image-status.outputs.NEEDS_BUILD == 'true' }}
