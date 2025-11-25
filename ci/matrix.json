@@ -19,7 +19,7 @@
       "context": "./docker/utils/backup",
       "dockerfile": "./docker/utils/backup/Dockerfile",
       "target": "build",
-      "tag": "1.0.0",
+      "tag": "1.0.1",
       "latest": true
     }
   },

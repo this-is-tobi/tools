@@ -44,8 +44,7 @@ log "Creating Vault snapshot and uploading to S3"
 
 BACKUP_PATH="backup_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX%/}/${DATE_TIME}-vault.snap"
 
-echo "${VAULT_TOKEN}" | vault login -address=${VAULT_ADDR} -non-interactive ${VAULT_EXTRA_ARGS} - \
-  && vault operator raft snapshot save -address=${VAULT_ADDR} ${VAULT_EXTRA_ARGS} ./${DATE_TIME}-vault.snap \
+VAULT_TOKEN=${VAULT_TOKEN} vault operator raft snapshot save -address=${VAULT_ADDR} ${VAULT_EXTRA_ARGS} ./${DATE_TIME}-vault.snap \
   && rclone copyto --stats-one-line-date ${RCLONE_EXTRA_ARGS} ./${DATE_TIME}-vault.snap "${BACKUP_PATH}" \
   && rm ./${DATE_TIME}-vault.snap
 
