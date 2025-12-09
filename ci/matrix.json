@@ -15,11 +15,11 @@
     "name": "backup",
     "description": "Unified backup utility for PostgreSQL, Vault, Qdrant and S3 using rclone streaming",
     "build": {
-      "base": "docker.io/alpine:3.22.2",
+      "base": "docker.io/alpine:3.23.0",
       "context": "./docker/utils/backup",
       "dockerfile": "./docker/utils/backup/Dockerfile",
       "target": "build",
-      "tag": "1.1.0",
+      "tag": "1.1.1",
       "latest": true
     }
   },
