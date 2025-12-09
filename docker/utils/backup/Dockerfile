@@ -19,6 +19,7 @@ RUN apk add --no-cache \
   ca-certificates \
   curl \
   jq \
+  mariadb-client \
   postgresql${PG_VERSION}-client \
   rclone \
   unzip \
