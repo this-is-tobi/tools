@@ -25,6 +25,7 @@ chmod +x script.sh
 
 | Script                                                            | Description                                                                     |
 | ----------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| [backup-kube-mariadb.sh](../shell/backup-kube-mariadb.sh)         | *backup / restore mariadb database from / to a kubernetes pod.*                 |
 | [backup-kube-pg.sh](../shell/backup-kube-pg.sh)                   | *backup / restore postgres database from / to a kubernetes pod.*                |
 | [backup-kube-qdrant.sh](../shell/backup-kube-qdrant.sh)           | *backup / restore qdrant raft cluster from / to a kubernetes pod.*              |
 | [backup-kube-vault.sh](../shell/backup-kube-vault.sh)             | *backup / restore vault raft cluster from / to a kubernetes pod.*               |
