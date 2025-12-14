@@ -72,12 +72,12 @@
     }
   },
   {
-    "name": "homlelab-utils",
+    "name": "homelab-utils",
     "description": "Homelab utility tools collection",
     "build": {
-      "base": "docker.io/alpine:3.22.2",
-      "context": "./docker/utils/homlelab-utils",
-      "dockerfile": "./docker/utils/homlelab-utils/Dockerfile",
+      "base": "docker.io/alpine:3.23.0",
+      "context": "./docker/utils/homelab-utils",
+      "dockerfile": "./docker/utils/homelab-utils/Dockerfile",
       "target": "build",
       "tag": "0.0.1",
       "latest": true
