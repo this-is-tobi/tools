@@ -91,6 +91,30 @@ getPodFromService () {
   fi
 }
 
+checkDiskSpace () {
+  local PATH_TO_CHECK="$1"
+  local MIN_SPACE_MB=1024  # 1GB minimum for database dumps
+  
+  # Get available space in MB
+  AVAILABLE_SPACE=$(kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- df -BM "$PATH_TO_CHECK" | tail -1 | awk '{print $4}' | sed 's/M//')
+  
+  if [ "$AVAILABLE_SPACE" -lt "$MIN_SPACE_MB" ]; then
+    printf "\n${COLOR_YELLOW}Warning.${COLOR_OFF} Low disk space on ${PATH_TO_CHECK}: ${AVAILABLE_SPACE}MB available (minimum recommended: ${MIN_SPACE_MB}MB).\n"
+    printf "The dump might fail if the database is too large.\n\n"
+    printf "${COLOR_BLUE}Tip:${COLOR_OFF} Consider using 'dump_forward' mode instead, which dumps directly to your local machine\n"
+    printf "without requiring space in the container. Example:\n"
+    printf "  $0 -m dump_forward -t ${TARGET} -d ${DB_NAME} -u ${DB_USER} -p '***' -o ${EXPORT_DIR}\n\n"
+    read -p "Do you want to continue with 'dump' mode anyway? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      printf "\n${COLOR_RED}Abort.${COLOR_OFF} Operation cancelled by user.\n"
+      exit 1
+    fi
+  else
+    printf "\n${COLOR_GREEN}Disk space check:${COLOR_OFF} ${AVAILABLE_SPACE}MB available on ${PATH_TO_CHECK}.\n"
+  fi
+}
+
 # Parse options
 while getopts hc:d:f:m:n:o:p:t:u:z flag; do
   case "${flag}" in
@@ -185,6 +209,9 @@ fi
 
 # Dump database
 if [ "$MODE" = "dump" ]; then
+  # Check available disk space in container
+  checkDiskSpace "$DUMP_PATH"
+
   # Create output directory
   [ ! -d "$EXPORT_DIR" ] && mkdir -p $EXPORT_DIR
 
@@ -199,6 +226,11 @@ if [ "$MODE" = "dump" ]; then
   # Copy dump locally
   printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Copy dump file locally (path: '${DESTINATION_DUMP}').\n\n"
   kubectl ${NAMESPACE_ARG} cp ${POD_NAME}:${DUMP_PATH:1}/${DUMP_FILENAME} "${DESTINATION_DUMP}" ${CONTAINER_ARG}
+
+  # Clean up dump file from container
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Cleaning up dump file from container.\n\n"
+  kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "rm -f ${DUMP_PATH}/${DUMP_FILENAME}"
+  printf "${COLOR_GREEN}Done.${COLOR_OFF} Dump file removed from container.\n"
 
 elif [ "$MODE" = "dump_forward" ]; then
   # Create output directory

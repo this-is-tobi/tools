@@ -172,6 +172,30 @@ hasQdrantCli() {
   kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- test -x /qdrant/qdrant
 }
 
+checkDiskSpace () {
+  local PATH_TO_CHECK="$1"
+  local MIN_SPACE_MB=1024  # 1GB minimum for snapshots
+  
+  # Get available space in MB
+  AVAILABLE_SPACE=$(kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- df -BM "$PATH_TO_CHECK" | tail -1 | awk '{print $4}' | sed 's/M//')
+  
+  if [ "$AVAILABLE_SPACE" -lt "$MIN_SPACE_MB" ]; then
+    printf "\n${COLOR_YELLOW}Warning.${COLOR_OFF} Low disk space on ${PATH_TO_CHECK}: ${AVAILABLE_SPACE}MB available (minimum recommended: ${MIN_SPACE_MB}MB).\n"
+    printf "The snapshot might fail if the data is too large.\n\n"
+    printf "${COLOR_BLUE}Tip:${COLOR_OFF} Consider using 'dump_forward' mode instead, which dumps directly to your local machine\n"
+    printf "without requiring space in the container. Example:\n"
+    printf "  $0 -m dump_forward -t ${TARGET} -o ${EXPORT_DIR}\n\n"
+    read -p "Do you want to continue with 'dump' mode anyway? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      printf "\n${COLOR_RED}Abort.${COLOR_OFF} Operation cancelled by user.\n"
+      exit 1
+    fi
+  else
+    printf "\n${COLOR_GREEN}Disk space check:${COLOR_OFF} ${AVAILABLE_SPACE}MB available on ${PATH_TO_CHECK}.\n"
+  fi
+}
+
 # Parse options
 while getopts ha:c:r:f:m:n:o:p:t: flag; do
   case "${flag}" in
@@ -300,6 +324,9 @@ if [ "$MODE" = "list" ]; then
 
 # Create snapshots using Qdrant CLI and copy locally
 elif [ "$MODE" = "dump" ]; then
+  # Check available disk space in container
+  checkDiskSpace "$DUMP_PATH"
+
   # Create output directory
   [ ! -d "$EXPORT_DIR" ] && mkdir -p $EXPORT_DIR
 
@@ -319,7 +346,9 @@ elif [ "$MODE" = "dump" ]; then
   kubectl ${NAMESPACE_ARG} cp ${POD_NAME}:${DUMP_PATH}/${SNAPSHOT_FILE} "${DESTINATION_DUMP}" ${CONTAINER_ARG}
 
   # Clean up snapshot from pod
+  printf "\n\n${COLOR_BLUE}[Backup wrapper].${COLOR_OFF} Cleaning up snapshot file from container.\n\n"
   kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- rm -f "${DUMP_PATH}/${SNAPSHOT_FILE}"
+  printf "${COLOR_GREEN}Done.${COLOR_OFF} Snapshot file removed from container.\n"
 
 elif [ "$MODE" = "dump_forward" ]; then
   # Create output directory
