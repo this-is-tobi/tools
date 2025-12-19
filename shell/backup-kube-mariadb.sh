@@ -244,7 +244,7 @@ elif [ "$MODE" = "dump_forward" ]; then
   printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Dump database locally (path: '${DESTINATION_DUMP}').\n\n"
   set +e
   kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 3306:3306 &
-  sleep 1
+  sleep 2
   mariadb-dump -h 127.0.0.1 -u ${DB_USER} ${DB_PASS_ARG} --single-transaction --routines --triggers ${DB_NAME} > ${DESTINATION_DUMP}
 
   kill %1
@@ -269,7 +269,7 @@ elif [ "$MODE" = "restore_forward" ]; then
   printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Restore database.\n\n"
   set +e
   kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 3306:3306 &
-  sleep 1
+  sleep 2
   if [ "$CLEAN_RESTORE" = "true" ]; then
     mariadb -h 127.0.0.1 -u ${DB_USER} ${DB_PASS_ARG} -e "DROP DATABASE IF EXISTS \`${DB_NAME}\`;"
     mariadb -h 127.0.0.1 -u ${DB_USER} ${DB_PASS_ARG} -e "CREATE DATABASE \`${DB_NAME}\`;"

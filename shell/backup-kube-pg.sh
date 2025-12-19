@@ -262,8 +262,8 @@ elif [ "$MODE" = "dump_forward" ]; then
   printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Dump database locally (path: '${DESTINATION_DUMP}').\n\n"
   set +e
   kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5432:5432 &
-  sleep 1
-  pg_dump -Fc -d $(getPgUri \"${DB_NAME}\") ${DB_NAME_ARG} > ${DESTINATION_DUMP}
+  sleep 2
+  pg_dump -Fc -d $(getPgUri "${DB_NAME}") > ${DESTINATION_DUMP}
 
   kill %1
 
@@ -289,13 +289,13 @@ elif [ "$MODE" = "restore_forward" ]; then
   printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Restore database.\n\n"
   set +e
   kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5432:5432 &
-  sleep 1
+  sleep 2
   if [ "$CLEAN_RESTORE" = "true" ]; then
     psql -d $(getPgUri 'postgres') -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = '${DB_NAME}';"
     psql -d $(getPgUri 'postgres') -c "DROP DATABASE IF EXISTS \"${DB_NAME}\";"
     psql -d $(getPgUri 'postgres') -c "CREATE DATABASE \"${DB_NAME}\";"
   fi
-  pg_restore -Fc -d $(getPgUri \"${DB_NAME}\") ${DUMP_FILE}
+  pg_restore -Fc -d $(getPgUri "${DB_NAME}") ${DUMP_FILE}
   psql -d $(getPgUri 'postgres') -c "ALTER DATABASE \"${DB_NAME}\" OWNER TO \"${DB_OWNER}\";"
 
   kill %1

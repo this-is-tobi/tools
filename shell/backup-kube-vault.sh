@@ -218,7 +218,7 @@ elif [ "$MODE" = "dump_forward" ]; then
   printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Dump vault locally (path: '${DESTINATION_DUMP}').\n\n"
   set +e
   kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5555:8200 &
-  sleep 1
+  sleep 2
   echo ${VAULT_TOKEN} | vault login -address=https://127.0.0.1:8200 -non-interactive - \
     && vault operator raft snapshot save -address=https://127.0.0.1:8200 ${DESTINATION_DUMP}
 
@@ -240,7 +240,7 @@ elif [ "$MODE" = "restore_forward" ]; then
   printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Restore database.\n\n"
   set +e
   kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5555:8200 &
-  sleep 1
+  sleep 2
   echo ${VAULT_TOKEN} | vault login -address 127.0.0.1:5555 -non-interactive - \
     && vault operator raft snapshot restore -address=https://127.0.0.1:8200 ${DUMP_FILE}
 
