@@ -15,11 +15,11 @@
     "name": "backup",
     "description": "Unified backup utility for PostgreSQL, Vault, Qdrant and S3 using rclone streaming",
     "build": {
-      "base": "docker.io/alpine:3.23.0",
+      "base": "docker.io/alpine:3.23.2",
       "context": "./docker/utils/backup",
       "dockerfile": "./docker/utils/backup/Dockerfile",
       "target": "build",
-      "tag": "1.1.1",
+      "tag": "1.1.2",
       "latest": true
     }
   },
@@ -75,11 +75,11 @@
     "name": "homelab-utils",
     "description": "Homelab utility tools collection",
     "build": {
-      "base": "docker.io/alpine:3.23.0",
+      "base": "docker.io/alpine:3.23.2",
       "context": "./docker/utils/homelab-utils",
       "dockerfile": "./docker/utils/homelab-utils/Dockerfile",
       "target": "build",
-      "tag": "0.0.1",
+      "tag": "0.0.2",
       "latest": true
     }
   },
