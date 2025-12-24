@@ -41,6 +41,7 @@ chmod +x script.sh
 | [init-env-files.sh](../shell/init-env-files.sh)                   | *init '.env' and '.yaml' example files by copying them without 'example'.*      |
 | [keycloak-add-clients.sh](../shell/keycloak-add-clients.sh)       | *add keycloak clients for a given keycloak realm.*                              |
 | [keycloak-add-users.sh](../shell/keycloak-add-users.sh)           | *add keycloak users for a given keycloak realm.*                                |
+| [keycloak-check-tac.sh](../shell/keycloak-check-tac.sh)           | *check how many users have accepted terms and conditions in a keycloak realm.*  |
 | [keycloak-get-token.sh](../shell/keycloak-get-token.sh)           | *display keycloak token for the given infos.*                                   |
 | [keycloak-list-users.sh](../shell/keycloak-list-users.sh)         | *list keycloak users for a given keycloak realm.*                               |
 | [keycloak-required-tac.sh](../shell/keycloak-required-tac.sh)     | *add terms and conditions required action to all realm users.*                  |
