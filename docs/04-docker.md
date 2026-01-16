@@ -10,20 +10,20 @@ This section provides a collection of pre-built Docker images and templates desi
 
 ## Utils Images
 
-| Image                                           | Description                                                                                                | Status         | Dockerfiles                                            |
-| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------ |
-| `ghcr.io/this-is-tobi/tools/act-runner:2.0.4`   | Act runner for running GitHub Actions workflows locally (ubuntu based)                                     | Active         | [Dockerfile](../docker/utils/act-runner/Dockerfile)    |
-| `ghcr.io/this-is-tobi/tools/backup:1.1.3`       | Unified backup utility for MariaDB, PostgreSQL, Vault, Qdrant and S3 using rclone streaming (alpine based) | Active         | [Dockerfile](../docker/utils/backup/Dockerfile)        |
-| `ghcr.io/this-is-tobi/tools/curl:1.2.0`         | Lightweight image with curl (debian based)                                                                 | Source removed | -                                                      |
-| `ghcr.io/this-is-tobi/tools/debug:2.1.2`        | Debug container with networking and troubleshooting tools (debian based)                                   | Active         | [Dockerfile](../docker/utils/debug/Dockerfile)         |
-| `ghcr.io/this-is-tobi/tools/dev:2.0.4`          | Development container with common development tools (debian based)                                         | Active         | [Dockerfile](../docker/utils/dev/Dockerfile)           |
-| `ghcr.io/this-is-tobi/tools/gh-runner:1.6.0`    | Self-hosted GitHub Actions runner with common packages (ubuntu based)                                      | Active         | [Dockerfile](../docker/utils/gh-runner/Dockerfile)     |
-| `ghcr.io/this-is-tobi/tools/gh-runner-gp:1.4.0` | Self-hosted GitHub Actions runner with GPU support (ubuntu based)                                          | Active         | [Dockerfile](../docker/utils/gh-runner-gpu/Dockerfile) |
-| `ghcr.io/this-is-tobi/tools/homelab-util:0.0.2` | Homelab utility tools collection (alpine based)                                                            | Active         | [Dockerfile](../docker/utils/homelab-utils/Dockerfile) |
-| `ghcr.io/this-is-tobi/tools/mc:1.1.3`           | MinIO Client for S3-compatible storage operations (alpine based)                                           | Deprecated     | [Dockerfile](../docker/utils/mc/Dockerfile)            |
-| `ghcr.io/this-is-tobi/tools/pg-backup:4.1.0`    | PostgreSQL backup utility with S3 support (postgres based)                                                 | Legacy         | [Dockerfile](../docker/utils/pg-backup/Dockerfile)     |
-| `ghcr.io/this-is-tobi/tools/s3-backup:1.2.0`    | S3 bucket sync and backup utility (debian based)                                                           | Legacy         | [Dockerfile](../docker/utils/s3-backup/Dockerfile)     |
-| `ghcr.io/this-is-tobi/tools/vault-backup:1.7.0` | HashiCorp Vault backup utility with S3 support (vault based)                                               | Legacy         | [Dockerfile](../docker/utils/vault-backup/Dockerfile)  |
+| Image                                            | Description                                                                                                | Status         | Dockerfiles                                            |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------ |
+| `ghcr.io/this-is-tobi/tools/act-runner:2.0.4`    | Act runner for running GitHub Actions workflows locally (ubuntu based)                                     | Active         | [Dockerfile](../docker/utils/act-runner/Dockerfile)    |
+| `ghcr.io/this-is-tobi/tools/backup:1.1.3`        | Unified backup utility for MariaDB, PostgreSQL, Vault, Qdrant and S3 using rclone streaming (alpine based) | Active         | [Dockerfile](../docker/utils/backup/Dockerfile)        |
+| `ghcr.io/this-is-tobi/tools/curl:1.2.0`          | Lightweight image with curl (debian based)                                                                 | Source removed | -                                                      |
+| `ghcr.io/this-is-tobi/tools/debug:2.1.2`         | Debug container with networking and troubleshooting tools (debian based)                                   | Active         | [Dockerfile](../docker/utils/debug/Dockerfile)         |
+| `ghcr.io/this-is-tobi/tools/dev:2.0.4`           | Development container with common development tools (debian based)                                         | Active         | [Dockerfile](../docker/utils/dev/Dockerfile)           |
+| `ghcr.io/this-is-tobi/tools/gh-runner:1.7.0`     | Self-hosted GitHub Actions runner with common packages (ubuntu based)                                      | Active         | [Dockerfile](../docker/utils/gh-runner/Dockerfile)     |
+| `ghcr.io/this-is-tobi/tools/gh-runner-gpu:1.5.0` | Self-hosted GitHub Actions runner with GPU support (ubuntu based)                                          | Active         | [Dockerfile](../docker/utils/gh-runner-gpu/Dockerfile) |
+| `ghcr.io/this-is-tobi/tools/homelab-utils:0.0.2` | Homelab utility tools collection (alpine based)                                                            | Active         | [Dockerfile](../docker/utils/homelab-utils/Dockerfile) |
+| `ghcr.io/this-is-tobi/tools/mc:1.1.3`            | MinIO Client for S3-compatible storage operations (alpine based)                                           | Deprecated     | [Dockerfile](../docker/utils/mc/Dockerfile)            |
+| `ghcr.io/this-is-tobi/tools/pg-backup:4.1.0`     | PostgreSQL backup utility with S3 support (postgres based)                                                 | Legacy         | [Dockerfile](../docker/utils/pg-backup/Dockerfile)     |
+| `ghcr.io/this-is-tobi/tools/s3-backup:1.2.0`     | S3 bucket sync and backup utility (debian based)                                                           | Legacy         | [Dockerfile](../docker/utils/s3-backup/Dockerfile)     |
+| `ghcr.io/this-is-tobi/tools/vault-backup:1.7.0`  | HashiCorp Vault backup utility with S3 support (vault based)                                               | Legacy         | [Dockerfile](../docker/utils/vault-backup/Dockerfile)  |
 
 **Status Legend:**
 - **Active**: Currently maintained and recommended for use

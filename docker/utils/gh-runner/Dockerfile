@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=ghcr.io/actions/actions-runner:2.330.0
+ARG BASE_IMAGE=ghcr.io/actions/actions-runner:2.331.0
 
 FROM ${BASE_IMAGE} AS build
 
