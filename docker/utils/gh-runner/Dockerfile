@@ -17,7 +17,6 @@ RUN curl -fsSL https://raw.githubusercontent.com/upciti/wakemeops/main/assets/in
   age \
   argo \
   argocd \
-  awscli \
   cosign \
   dive \
   github-cli\
