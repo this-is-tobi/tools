@@ -34,4 +34,7 @@ RUN git clone https://github.com/this-is-tobi/dotfiles && touch ./.zshrc \
   && sudo rm -rf /tmp/* \
   && sudo rm -rf /var/lib/apt/lists/*
 
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD echo "healthy" || exit 1
+
 ENTRYPOINT ["/bin/zsh"]
