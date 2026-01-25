@@ -7,7 +7,7 @@
 | Name                                                                        | Description                     | Instruction Name | Type         |
 | --------------------------------------------------------------------------- | ------------------------------- | ---------------- | ------------ |
 | [Consolidated Instructions](../copilot/copilot-instructions.md)             | All best practices in one file  | -                | General      |
-| [Code Review](../copilot/instructions/code-review.md)                       | Expert code review guidelines   | `code-review`    | Review       |
+| [Code Review](../copilot/instructions/code-review.instructions.md)          | Expert code review guidelines   | `code-review`    | Review       |
 | [Commit Message](../copilot/instructions/commit-message.md)                 | Conventional Commits format     | `commit-message` | Git          |
 | [Pull Request](../copilot/instructions/pull-request.md)                     | PR description best practices   | `pull-request`   | Git          |
 | [General Development](../copilot/instructions/general.instructions.md)      | Universal development practices | `general`        | General      |
