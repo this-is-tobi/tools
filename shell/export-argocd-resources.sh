@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 # Colors
 COLOR_OFF='\033[0m'
 COLOR_BLUE='\033[0;34m'

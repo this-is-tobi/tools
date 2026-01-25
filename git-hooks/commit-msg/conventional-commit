@@ -4,7 +4,7 @@
 COMMIT_MSG_FILE=$1
 
 # Regular expression for conventional commit message
-CONVENTIONAL_COMMIT_REGEX='^(feat|fix|docs|style|refactor|perf|test|chore|revert|ci)(\([a-zA-Z0-9\-_ ]+\))?!?: .+'
+CONVENTIONAL_COMMIT_REGEX='^(feat|fix|docs|style|refactor|perf|test|chore|revert|ci|build)(\([a-zA-Z0-9\-_ ]+\))?!?: .+'
 
 # Read the commit message
 COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
