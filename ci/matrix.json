@@ -24,6 +24,18 @@
     }
   },
   {
+    "name": "curl",
+    "description": "Container with curl, wget, jq, yq and openssl installed",
+    "build": {
+      "base": "docker.io/alpine:3.22.3",
+      "context": "./docker/utils/curl",
+      "dockerfile": "./docker/utils/curl/Dockerfile",
+      "target": "build",
+      "tag": "2.0.0",
+      "latest": true
+    }
+  },
+  {
     "name": "debug",
     "description": "Debug container with networking and troubleshooting tools",
     "build": {
