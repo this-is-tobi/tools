@@ -99,6 +99,7 @@
   {
     "name": "pg-backup",
     "description": "PostgreSQL backup utility with S3 support",
+    "deprecated": true,
     "build": {
       "base": "docker.io/postgres:18.1",
       "context": "./docker/utils/pg-backup",
@@ -111,6 +112,7 @@
   {
     "name": "s3-backup",
     "description": "S3 bucket sync and backup utility",
+    "deprecated": true,
     "build": {
       "base": "docker.io/debian:12",
       "context": "./docker/utils/s3-backup",
@@ -123,6 +125,7 @@
   {
     "name": "vault-backup",
     "description": "HashiCorp Vault backup utility with S3 support",
+    "deprecated": true,
     "build": {
       "base": "docker.io/hashicorp/vault:1.21.0",
       "context": "./docker/utils/vault-backup",
