@@ -15,11 +15,11 @@
     "name": "backup",
     "description": "Unified backup utility for PostgreSQL, Vault, Qdrant and S3 using rclone streaming",
     "build": {
-      "base": "docker.io/alpine:3.23.2",
+      "base": "docker.io/alpine:3.23.3",
       "context": "./docker/utils/backup",
       "dockerfile": "./docker/utils/backup/Dockerfile",
       "target": "build",
-      "tag": "1.1.3",
+      "tag": "1.1.4",
       "latest": true
     }
   },
@@ -27,11 +27,11 @@
     "name": "curl",
     "description": "Container with curl, wget, jq, yq and openssl installed",
     "build": {
-      "base": "docker.io/alpine:3.22.3",
+      "base": "docker.io/alpine:3.23.3",
       "context": "./docker/utils/curl",
       "dockerfile": "./docker/utils/curl/Dockerfile",
       "target": "build",
-      "tag": "2.0.0",
+      "tag": "2.0.1",
       "latest": true
     }
   },
@@ -87,11 +87,11 @@
     "name": "homelab-utils",
     "description": "Homelab utility tools collection",
     "build": {
-      "base": "docker.io/alpine:3.23.2",
+      "base": "docker.io/alpine:3.23.3",
       "context": "./docker/utils/homelab-utils",
       "dockerfile": "./docker/utils/homelab-utils/Dockerfile",
       "target": "build",
-      "tag": "0.0.2",
+      "tag": "0.0.3",
       "latest": true
     }
   },
