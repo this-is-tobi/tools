@@ -85,7 +85,7 @@ fi
 # init git repository in the output dir
 printf "\n\n${COLOR_RED}[clone subdir]${COLOR_OFF} Init git repository\n\n"
 
-[ ! -d "$OUPUT_DIR" ] && mkdir -p "$OUTPUT_DIR"
+[ ! -d "$OUTPUT_DIR" ] && mkdir -p "$OUTPUT_DIR"
 cd "$OUTPUT_DIR"
 git init 
 git remote add origin "$REPO_URL"
