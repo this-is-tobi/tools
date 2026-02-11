@@ -42,6 +42,7 @@ chmod +x script.sh
 | [keycloak-add-clients.sh](../shell/keycloak-add-clients.sh)       | *add keycloak clients for a given keycloak realm.*                              |
 | [keycloak-add-users.sh](../shell/keycloak-add-users.sh)           | *add keycloak users for a given keycloak realm.*                                |
 | [keycloak-check-tac.sh](../shell/keycloak-check-tac.sh)           | *check how many users have accepted terms and conditions in a keycloak realm.*  |
+| [keycloak-extract-users.sh](../shell/keycloak-extract-users.sh)   | *extract all users from a keycloak realm to a CSV file.*                        |
 | [keycloak-get-token.sh](../shell/keycloak-get-token.sh)           | *display keycloak token for the given infos.*                                   |
 | [keycloak-list-users.sh](../shell/keycloak-list-users.sh)         | *list keycloak users for a given keycloak realm.*                               |
 | [keycloak-required-tac.sh](../shell/keycloak-required-tac.sh)     | *add terms and conditions required action to all realm users.*                  |
@@ -111,6 +112,25 @@ GITHUB_TOKEN=<token> ./delete-ghcr-image.sh -o owner -r repo -i image-name -t ta
 
 # Purge old tags (dry run)
 ./purge-ghcr-tags.sh -o owner -r repo -i image-name -d 30 --dry-run
+```
+
+### Keycloak Management
+
+```sh
+# Get access token
+./keycloak-get-token.sh -k https://keycloak.example.com -r my-realm -i client-id -s client-secret -u admin -p password
+
+# List users
+./keycloak-list-users.sh -k https://keycloak.example.com -r my-realm -u admin -p password
+
+# Extract users to CSV
+./keycloak-extract-users.sh -k https://keycloak.example.com -r my-realm -u admin -p password -b 100 -o users.csv
+
+# Add users
+./keycloak-add-users.sh -k https://keycloak.example.com -r my-realm -u admin -p password -d '[{"username":"user1","enabled":true}]'
+
+# Check terms acceptance
+./keycloak-check-tac.sh -k https://keycloak.example.com -r my-realm -u admin -p password
 ```
 
 ### Development Tools
