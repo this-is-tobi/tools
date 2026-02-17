@@ -9,6 +9,13 @@ COLOR_RED='\033[0;31m'
 COLOR_GREEN='\033[0;32m'
 COLOR_YELLOW='\033[0;33m'
 
+# Defaults
+INPUT=""
+OUTPUT=""
+REPO=""
+RUN_ID=""
+ARTIFACT_DOWNLOAD_URL=""
+
 # Script helper
 TEXT_HELPER="
 This script aims to build a markdown style vulnerability report for the trivy json scan results. It will read the files and then build a markdown summary (compatible with Github issue) summarising the vulnerabilities for each image and configuration file for the given input folder.

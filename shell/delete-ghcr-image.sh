@@ -11,6 +11,10 @@ COLOR_YELLOW='\033[0;33m'
 
 # Defaults
 MODE="users"
+GITHUB_TOKEN=""
+IMAGE_NAME=""
+OWNER=""
+TAG=""
 
 # Versions
 DOCKER_VERSION="$(docker --version)"

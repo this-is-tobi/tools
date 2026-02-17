@@ -11,6 +11,8 @@ COLOR_YELLOW='\033[0;33m'
 
 # Defaults
 EXPORT_DIR="./kube-export"
+NAMESPACE=""
+RESOURCES_KIND=""
 
 # Script helper
 TEXT_HELPER="

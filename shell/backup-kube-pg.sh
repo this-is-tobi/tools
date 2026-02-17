@@ -11,12 +11,23 @@ COLOR_YELLOW='\033[0;33m'
 
 # Defaults
 NAMESPACE="$(kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}')"
+CONTAINER_NAME=""
 DB_USER="postgres"
 DB_OWNER="postgres"
+DB_NAME=""
+DB_PASS=""
 EXPORT_DIR="./backups"
 DATE_TIME=$(date +"%Y%m%dT%H%M")
 CLEAN_RESTORE="false"
 DUMP_PATH=""
+DUMP_FILE=""
+MODE=""
+TARGET=""
+NAMESPACE_ARG=""
+CONTAINER_ARG=""
+DB_NAME_ARG=""
+POD_NAME=""
+SERVICE_NAME=""
 PATHS=(
   /tmp
   /var/tmp

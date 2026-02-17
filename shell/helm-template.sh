@@ -13,6 +13,7 @@ COLOR_YELLOW='\033[0;33m'
 CHART_NAME="my-awesome-chart"
 OUTPUT_DIR="$(pwd)/$CHART_NAME"
 ADDITIONAL_SERVICE_NAMES=()
+SERVICE_NAME=""
 
 # Script helper
 TEXT_HELPER="

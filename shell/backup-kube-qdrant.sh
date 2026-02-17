@@ -11,10 +11,23 @@ COLOR_YELLOW='\033[0;33m'
 
 # Defaults
 NAMESPACE="$(kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}')"
+CONTAINER_NAME=""
+API_KEY=""
+COLLECTION_NAME=""
 EXPORT_DIR="./backups"
 DATE_TIME=$(date +"%Y%m%dT%H%M")
 DUMP_PATH=""
+DUMP_FILE=""
+MODE=""
+TARGET=""
 QDRANT_PORT="6333"
+NAMESPACE_ARG=""
+CONTAINER_ARG=""
+AUTH_HEADER=""
+POD_NAME=""
+SERVICE_NAME=""
+HTTP_CLIENT=""
+BASE_URL=""
 PATHS=(
   /qdrant/storage
   /tmp

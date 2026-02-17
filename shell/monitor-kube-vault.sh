@@ -14,6 +14,7 @@ COLOR_BOLD='\033[1m'
 # Defaults
 NAMESPACE="$(kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}')"
 VAULT_NAME=""
+NAMESPACE_ARG=""
 
 # Script helper
 TEXT_HELPER="

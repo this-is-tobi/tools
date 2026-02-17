@@ -14,6 +14,9 @@ KC_USERNAME="admin"
 KC_FORCE_ALL=false
 KC_BATCH_SIZE=100
 KC_DRY_RUN=false
+KC_HOST=""
+KC_PASSWORD=""
+KC_REALM=""
 
 # Script helper
 TEXT_HELPER="

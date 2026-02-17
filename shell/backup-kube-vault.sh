@@ -11,9 +11,18 @@ COLOR_YELLOW='\033[0;33m'
 
 # Defaults
 NAMESPACE="$(kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}')"
+CONTAINER_NAME=""
 EXPORT_DIR="./backups"
 DATE_TIME=$(date +"%Y%m%dT%H%M")
 DUMP_PATH=""
+DUMP_FILE=""
+MODE=""
+TARGET=""
+VAULT_TOKEN=""
+NAMESPACE_ARG=""
+CONTAINER_ARG=""
+POD_NAME=""
+SERVICE_NAME=""
 PATHS=(
   /vault/data
   /bitnami/vault/data

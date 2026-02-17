@@ -12,6 +12,9 @@ COLOR_YELLOW='\033[0;33m'
 # Defaults
 KC_USERNAME="admin"
 KC_BATCH_SIZE=500
+KC_HOST=""
+KC_PASSWORD=""
+KC_REALM=""
 
 # Script helper
 TEXT_HELPER="

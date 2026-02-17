@@ -9,6 +9,12 @@ COLOR_RED='\033[0;31m'
 COLOR_GREEN='\033[0;32m'
 COLOR_YELLOW='\033[0;33m'
 
+# Defaults
+BOOLEAN_MODE="false"
+PACKAGE_NAME=""
+SEARCH_MODE="false"
+PACKAGE_VERSION=""
+
 # Script helper
 TEXT_HELPER="
 This script aims to perform a EOL search for a given package.

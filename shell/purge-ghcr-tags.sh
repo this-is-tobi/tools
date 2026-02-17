@@ -10,6 +10,9 @@ COLOR_GREEN='\033[0;32m'
 COLOR_YELLOW='\033[0;33m'
 
 # Defaults
+GITHUB_TOKEN=""
+USER=""
+IMAGE_NAME=""
 if [ $(uname) = 'Darwin' ]; then 
   DATE="$(date -v -1m '+%Y-%m-%d')"
 else

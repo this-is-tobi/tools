@@ -9,6 +9,16 @@ COLOR_RED='\033[0;31m'
 COLOR_GREEN='\033[0;32m'
 COLOR_YELLOW='\033[0;33m'
 
+# Defaults
+APP_NAME=""
+OWNER=""
+TOKEN=""
+DESCRIPTION=""
+HOMEPAGE_URL=""
+CALLBACK_URL=""
+PERMISSIONS=""
+EVENTS=""
+
 # Helper text
 TEXT_HELPER="
 This script creates a GitHub App using the GitHub REST API.

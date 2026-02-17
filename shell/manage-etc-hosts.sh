@@ -9,6 +9,10 @@ COLOR_RED='\033[0;31m'
 COLOR_GREEN='\033[0;32m'
 COLOR_YELLOW='\033[0;33m'
 
+# Defaults
+IP_ADDRESS=""
+HOST_NAME=""
+
 # Script helper
 TEXT_HELPER="
 This script aims to insert or update /etc/hosts file with given values.

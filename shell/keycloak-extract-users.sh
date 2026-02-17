@@ -13,6 +13,9 @@ COLOR_YELLOW='\033[0;33m'
 KC_USERNAME="admin"
 KC_BATCH_SIZE=100
 KC_OUTPUT_FILE="keycloak_users_$(date +%Y%m%d_%H%M%S).csv"
+KC_HOST=""
+KC_PASSWORD=""
+KC_REALM=""
 
 # Script helper
 TEXT_HELPER="

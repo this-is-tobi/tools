@@ -11,6 +11,10 @@ COLOR_YELLOW='\033[0;33m'
 
 # Defaults
 KC_USERNAME="admin"
+KC_HOST=""
+KC_PASSWORD=""
+KC_REALM=""
+KC_USERS=""
 
 # Script helper
 TEXT_HELPER="
@@ -64,7 +68,7 @@ Settings:
   > KC_HOST: ${KC_HOST}
   > KC_REALM: ${KC_REALM}
   > KC_USERNAME: ${KC_USERNAME}
-  > KC_USERS: ${KC_CLIENTS}
+  > KC_USERS: ${KC_USERS}
 "
 
 # Options validation

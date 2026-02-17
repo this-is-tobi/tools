@@ -19,6 +19,8 @@ COMMIT_SHA="$(git rev-parse --short HEAD)"
 PLATFORMS="linux/amd64"
 CSV=false
 RECURSIVE=false
+COMPOSE_FILE=""
+NAMESPACE=""
 
 unset MAJOR_VERSION
 unset MINOR_VERSION

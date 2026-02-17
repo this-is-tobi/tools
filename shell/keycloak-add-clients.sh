@@ -11,6 +11,10 @@ COLOR_YELLOW='\033[0;33m'
 
 # Defaults
 KC_USERNAME="admin"
+KC_HOST=""
+KC_PASSWORD=""
+KC_REALM=""
+KC_CLIENTS=""
 
 # Script helper
 TEXT_HELPER="

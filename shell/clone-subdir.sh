@@ -13,6 +13,8 @@ COLOR_YELLOW='\033[0;33m'
 DELETE_GIT_DIR="false"
 GIT_BRANCH="main"
 OUTPUT_DIR="$(pwd)"
+SUB_DIR=""
+REPO_URL=""
 
 # Script helper
 TEXT_HELPER="
