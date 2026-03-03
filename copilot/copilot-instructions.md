@@ -203,6 +203,49 @@ Expert-level development instructions covering all aspects of modern software de
 - Use pprof for profiling; implement proper caching
 - Use buffered I/O appropriately
 
+## Python
+
+**Setup & Style**
+- Use `pyproject.toml` as the single config source; use `uv` or `poetry`
+- Use `ruff` for linting and formatting; enforce strict `mypy`
+- Annotate all function signatures; use built-in generics (Python 3.9+)
+- Use `pydantic` for structured data and validation
+
+**Code Quality**
+- Keep functions < 25 lines; use early returns to reduce nesting
+- Use `pathlib.Path`; context managers for resource management
+- Raise specific exceptions; structured logging only
+- Never use `eval()` or `exec()` on untrusted input
+
+**Testing**
+- Use `pytest` with `pytest-cov`; target 90%+ coverage
+- Use `pytest.mark.parametrize` for table-driven tests
+- Mock external I/O; never hit real network in unit tests
+
+**API (FastAPI)**
+- FastAPI only; pydantic models for all request/response bodies
+- `Annotated` + `Depends()` for DI; versioned routers (`/api/v1/`)
+- Lifespan context manager for startup/shutdown; `/healthz` + `/readyz` endpoints
+
+## Terraform / IaC
+
+**Structure & Style**
+- Use `src/` layout with `modules/` and `environments/` separation
+- Pin Terraform CLI version; pin all provider versions; commit `.terraform.lock.hcl`
+- Use 2-space indentation; `snake_case` for all names
+- Include `description` for every `variable` and `output`
+
+**State & Secrets**
+- Always use remote state with locking; never commit `.tfstate`
+- Mark secrets with `sensitive = true`; never hardcode credentials
+- Use `validation` blocks on variables
+
+**Security & CI**
+- Run `tfsec` / `checkov` in CI; require plan review before apply
+- Use `prevent_destroy = true` on critical resources
+- Use OIDC for CI authentication; separate roles for plan vs apply
+- Tag every resource with `common_tags`
+
 ## TypeScript Monorepo
 
 **Critical Guidelines**
@@ -239,6 +282,16 @@ tests/          # Integration/e2e tests
 - Update types/schemas/tests; check linting/building/tests
 - Use conventional commits; push to dedicated branch
 - Open PR with detailed description
+
+## AI Agent Behaviour
+
+- **Read before writing.** Explore existing code and patterns before generating new code.
+- **Incremental changes.** Prefer small focused changes over large rewrites.
+- **No unnecessary files.** Do not create docs, changelogs, or summaries unless explicitly asked.
+- **Prefer editing over creating.** Extend existing files when scope fits.
+- **Follow existing conventions.** Match style, naming, and patterns present in the codebase.
+- **Validate changes.** Check for compilation errors, lint issues, and broken tests after editing.
+- **Minimal permissions.** Use the minimum required permissions in CI/CD configuration.
 
 ## Performance & Monitoring
 

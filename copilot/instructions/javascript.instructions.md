@@ -64,9 +64,21 @@ You are an expert in modern JavaScript and TypeScript development.
 - Implement graceful shutdown handling
 - Use structured logging
 - Handle uncaught exceptions and promise rejections
-- Use proper middleware patterns for Express/Fastify
+- Use proper middleware patterns for Fastify
 - Implement rate limiting and security headers
 - Use proper connection pooling for databases
+
+## Bun (alternative runtime)
+
+- Use Bun as a drop-in Node.js alternative for significantly faster startup, test runs, and package installs
+- Use `bun install` instead of `npm install` / `pnpm install`; Bun reads `package.json` natively
+- Use `bun test` for unit tests (Jest-compatible API, no extra packages needed)
+- Use `bun run` to execute scripts; use `bun build` for bundling (replaces esbuild for simple cases)
+- Use `Bun.serve()` for lightweight HTTP servers without a framework dependency
+- Use `Bun.file()` / `Bun.write()` for fast file I/O instead of `fs`
+- Use `bun --hot` for hot reloading during development instead of nodemon/ts-node-dev
+- Bun natively supports TypeScript, JSX, `.env` files, and top-level `await` — no extra config needed
+- Check `Bun.version` / `which bun` in CI to ensure the runtime is available before running scripts
 
 ## Frontend Specific
 

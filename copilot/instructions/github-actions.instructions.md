@@ -28,13 +28,35 @@ You are an expert in GitHub Actions and CI/CD pipeline development.
 
 ## Security Practices
 
-- Use GITHUB_TOKEN with minimal required permissions
-- Store sensitive data in GitHub Secrets
-- Use OIDC for cloud provider authentication when possible
-- Pin action versions to specific commits or tags
-- Use only trusted and verified actions
-- Implement proper secret scanning
-- Use environment protection rules for sensitive deployments
+- Declare `permissions:` explicitly at the **job level**; never rely on repository defaults
+- Use the minimum set of permissions required — default to `contents: read`
+- Use OIDC for cloud provider authentication; never store long-lived cloud credentials in secrets
+- **Pin actions to a full commit SHA**, not a mutable tag (e.g., `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683`)
+- Use only trusted and verified actions; prefer GitHub-owned and well-maintained community actions
+- **Never use `pull_request_target` with an untrusted code checkout** — this gives write permissions to external PRs and is a critical security risk
+- Use environment protection rules and required reviewers for sensitive deployments (`production`, `release`)
+- Avoid printing secrets in logs; use `::add-mask::` for dynamic values
+- Use `CODEOWNERS` combined with environment approvals for change control
+- Enable secret scanning and push protection on the repository
+
+```yaml
+# Minimal permissions example
+permissions:
+  contents: read
+
+jobs:
+  build:
+    permissions:
+      contents: read
+      packages: write   # only on the job that needs it
+```
+
+## Reusable Workflows
+
+- Extract repeated job patterns into reusable workflows (`workflow_call`)
+- Pass inputs and secrets explicitly; never use `secrets: inherit` in security-sensitive workflows
+- Version reusable workflows with tags or SHAs when consumed across repositories
+- Document inputs, outputs, and secrets in the workflow file header
 
 ## Performance Optimization
 
@@ -44,6 +66,7 @@ You are an expert in GitHub Actions and CI/CD pipeline development.
 - Optimize Docker builds with multi-stage builds and layer caching
 - Use artifacts efficiently for job communication
 - Implement proper cleanup of resources
+- Use `concurrency:` groups to cancel stale runs on PR updates
 
 ## Action Development
 

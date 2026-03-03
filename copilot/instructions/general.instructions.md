@@ -148,3 +148,18 @@ You are an expert software developer following modern best practices.
 - Use feature flags for gradual rollouts
 - Implement proper backup and disaster recovery
 - Document operational procedures
+
+## AI Agent Behaviour
+
+When acting as an AI coding agent in this repository, follow these rules:
+
+- **Read before writing.** Always explore existing code, structure, and patterns before generating or modifying code.
+- **Incremental changes.** Prefer small, focused changes over large rewrites. One logical change at a time.
+- **Ask when truly ambiguous.** If requirements are unclear or a decision materially affects architecture, ask before proceeding. Otherwise, infer the most reasonable intent and act.
+- **No unnecessary files.** Do not create documentation, changelogs, or summary files unless explicitly requested.
+- **Prefer editing over creating.** Extend existing files rather than adding new ones when the scope fits.
+- **Follow existing conventions.** Match the style, naming, and patterns already present in the codebase.
+- **Validate changes.** After editing, check for compilation errors, lint issues, and broken tests.
+- **Never expose secrets.** Do not log, print, or commit tokens, passwords, or credentials under any circumstance.
+- **Minimal permissions.** When generating CI/CD configuration, use the minimum required permissions.
+- **Deterministic output.** Prefer deterministic, idempotent operations; avoid side effects that cannot be undone.
