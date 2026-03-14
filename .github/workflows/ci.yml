@@ -41,7 +41,7 @@ jobs:
       build-matrix: ${{ steps.build-matrix.outputs.BUILD_MATRIX }}
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Generate matrix
       id: build-matrix

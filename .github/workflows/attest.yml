@@ -30,7 +30,7 @@ jobs:
         images: ${{ fromJSON(inputs.BUILD_MATRIX) }}
     steps:
     - name: Login to GitHub Container Registry
-      uses: docker/login-action@v3
+      uses: docker/login-action@v4
       with:
         registry: ${{ inputs.REGISTRY }}
         username: ${{ inputs.REGISTRY == 'ghcr.io' && github.actor || secrets.REGISTRY_USERNAME }}
@@ -56,11 +56,11 @@ jobs:
 
     - name: Install Cosign
       if: ${{ steps.image-check.outputs.IMAGE_EXISTS == 'true' }}
-      uses: sigstore/cosign-installer@v3
+      uses: sigstore/cosign-installer@v4.1.0
 
     - name: Install Trivy
       if: ${{ steps.image-check.outputs.IMAGE_EXISTS == 'true' }}
-      uses: aquasecurity/setup-trivy@v0.2.0
+      uses: aquasecurity/setup-trivy@v0.2.5
 
     - name: Generate SBOM
       if: ${{ steps.image-check.outputs.IMAGE_EXISTS == 'true' }}
@@ -171,7 +171,7 @@ jobs:
 
     - name: Upload SBOM artifact
       if: ${{ steps.image-check.outputs.IMAGE_EXISTS == 'true' }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: sbom-${{ matrix.images.name }}-${{ matrix.images.build.tag }}
         path: sbom-${{ matrix.images.name }}-${{ matrix.images.build.tag }}.spdx.json

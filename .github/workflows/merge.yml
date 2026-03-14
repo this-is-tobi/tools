@@ -37,7 +37,7 @@ jobs:
         images: ${{ fromJSON(inputs.BUILD_MATRIX) }}
     steps:
     - name: Login to GitHub Container Registry
-      uses: docker/login-action@v3
+      uses: docker/login-action@v4
       with:
         registry: ${{ inputs.REGISTRY }}
         username: ${{ inputs.REGISTRY == 'ghcr.io' && github.actor || secrets.REGISTRY_USERNAME }}
@@ -99,7 +99,7 @@ jobs:
 
     - name: Download digests
       if: ${{ steps.image-status.outputs.NEEDS_BUILD == 'true' }}
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         pattern: digests-${{ matrix.images.name }}-v${{ matrix.images.build.tag }}-*
         path: /tmp/digests/${{ matrix.images.name }}-v${{ matrix.images.build.tag }}
@@ -107,12 +107,12 @@ jobs:
 
     - name: Set up Docker Buildx
       if: ${{ steps.image-status.outputs.NEEDS_BUILD == 'true' }}
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
 
     - name: Docker meta
       if: ${{ steps.image-status.outputs.NEEDS_BUILD == 'true' }}
       id: meta
-      uses: docker/metadata-action@v5
+      uses: docker/metadata-action@v6
       with:
         images: ${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}
         tags: |
