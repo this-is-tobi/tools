@@ -92,8 +92,8 @@ checkDiskSpace () {
   local PATH_TO_CHECK="$1"
   local MIN_SPACE_MB=1024  # 1GB minimum for snapshots
   
-  # Get available space in MB
-  AVAILABLE_SPACE=$(kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- df -BM "$PATH_TO_CHECK" | tail -1 | awk '{print $4}' | sed 's/M//')
+  # Get available space in MB (-P = POSIX format, prevents line-wrapping for long device names)
+  AVAILABLE_SPACE=$(kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- df -Pk "$PATH_TO_CHECK" | tail -1 | awk '{print int($4/1024)}')
   
   if [ "$AVAILABLE_SPACE" -lt "$MIN_SPACE_MB" ]; then
     printf "\n${COLOR_YELLOW}Warning.${COLOR_OFF} Low disk space on ${PATH_TO_CHECK}: ${AVAILABLE_SPACE}MB available (minimum recommended: ${MIN_SPACE_MB}MB).\n"
@@ -110,6 +110,22 @@ checkDiskSpace () {
   else
     printf "\n${COLOR_GREEN}Disk space check:${COLOR_OFF} ${AVAILABLE_SPACE}MB available on ${PATH_TO_CHECK}.\n"
   fi
+}
+
+getLeaderAddress () {
+  local LEADER_ADDR=""
+  # Try https first, then http to handle both TLS and non-TLS vault setups
+  for SCHEME in https http; do
+    LEADER_ADDR=$(kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- sh -c \
+      "echo ${VAULT_TOKEN} | vault login -no-print -non-interactive -tls-skip-verify - \
+       && vault status -format=json -tls-skip-verify -address ${SCHEME}://127.0.0.1:8200" \
+      2>/dev/null | jq -r '.leader_address // empty' 2>/dev/null)
+    if [[ -n "$LEADER_ADDR" ]]; then
+      echo "$LEADER_ADDR"
+      return 0
+    fi
+  done
+  echo ""
 }
 
 # Parse options
@@ -202,9 +218,20 @@ if [ "$MODE" = "dump" ]; then
   DUMP_FILENAME="${DATE_TIME}-vault.snap"
   DESTINATION_DUMP="${EXPORT_DIR}/${DUMP_FILENAME}"
 
+  # Get vault leader address
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Getting vault leader address.\n\n"
+  LEADER_ADDRESS=$(getLeaderAddress)
+  VAULT_ADDR_ARG=""
+  if [[ -n "$LEADER_ADDRESS" ]]; then
+    printf "${COLOR_GREEN}Leader address:${COLOR_OFF} ${LEADER_ADDRESS}\n"
+    VAULT_ADDR_ARG="-address=${LEADER_ADDRESS}"
+  else
+    printf "${COLOR_YELLOW}Warning.${COLOR_OFF} Could not determine vault leader address, using default.\n"
+  fi
+
   # Dump vault
   printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Dump vault.\n\n"
-  kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- sh -c "echo ${VAULT_TOKEN} | vault login -non-interactive - && vault operator raft snapshot save ${DUMP_PATH}/${DUMP_FILENAME}"
+  kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- sh -c "echo ${VAULT_TOKEN} | vault login -no-print -non-interactive -tls-skip-verify ${VAULT_ADDR_ARG} - && vault operator raft snapshot save -tls-skip-verify ${VAULT_ADDR_ARG} ${DUMP_PATH}/${DUMP_FILENAME}"
 
   # Copy dump locally
   printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Copy dump file locally (path: '${DESTINATION_DUMP}').\n\n"
