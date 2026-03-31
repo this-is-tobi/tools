@@ -42,9 +42,22 @@ configure_rclone_remote "backup_host" "$S3_ENDPOINT" "$S3_ACCESS_KEY" "$S3_SECRE
 # Start dump and stream to s3
 log "Creating Vault snapshot and uploading to S3"
 
+# Vault HA: resolve the active (leader) node address to ensure snapshot save succeeds.
+# Standby nodes do not forward raft snapshot requests, so we must target the leader directly.
+log "Resolving Vault leader address"
+VAULT_LEADER_ADDR=$(VAULT_TOKEN=${VAULT_TOKEN} vault status -format=json -address=${VAULT_ADDR} ${VAULT_EXTRA_ARGS} 2>/dev/null \
+  | jq -r '.leader_address // empty')
+if [[ -n "$VAULT_LEADER_ADDR" ]]; then
+  log "Leader address: ${VAULT_LEADER_ADDR}"
+  VAULT_TARGET_ADDR="${VAULT_LEADER_ADDR%/}"
+else
+  log "Warning: could not resolve leader address, falling back to VAULT_ADDR"
+  VAULT_TARGET_ADDR="${VAULT_ADDR}"
+fi
+
 BACKUP_PATH="backup_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX%/}/${DATE_TIME}-vault.snap"
 
-VAULT_TOKEN=${VAULT_TOKEN} vault operator raft snapshot save -address=${VAULT_ADDR} ${VAULT_EXTRA_ARGS} ./${DATE_TIME}-vault.snap \
+VAULT_TOKEN=${VAULT_TOKEN} vault operator raft snapshot save -address=${VAULT_TARGET_ADDR} ${VAULT_EXTRA_ARGS} ./${DATE_TIME}-vault.snap \
   && rclone copyto --stats-one-line-date ${RCLONE_EXTRA_ARGS} ./${DATE_TIME}-vault.snap "${BACKUP_PATH}" \
   && rm ./${DATE_TIME}-vault.snap
 
