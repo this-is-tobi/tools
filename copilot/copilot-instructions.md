@@ -2,6 +2,16 @@
 
 Expert-level development instructions covering all aspects of modern software development.
 
+## Build & Workflow Commands
+
+- **Package manager**: `bun` (never npm/npx/yarn/pnpm)
+- **Install deps**: `bun install`
+- **Run tests**: `bun test`
+- **Lint/format**: `bun run lint` / `bun run lint:fix`
+- **Build**: `bun run build`
+- **Commit style**: Conventional Commits (lowercase, no scope required)
+- **Branch strategy**: feature branches from `main`, squash merge
+
 ## General Principles
 
 **Code Quality**
@@ -12,7 +22,7 @@ Expert-level development instructions covering all aspects of modern software de
 
 **Version Control**
 - Use conventional commits with semantic versioning
-- Make small, focused commits with meaningful messages
+- Make small, focused, atomic commits with meaningful messages
 - Use proper branching strategies (Git Flow/GitHub Flow)
 - Write descriptive PR descriptions; keep commit history clean
 

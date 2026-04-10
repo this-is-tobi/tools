@@ -1,5 +1,5 @@
 ---
-applyTo: "**/*.{yaml,yml}"
+applyTo: "{**/k8s/**,**/kubernetes/**,**/kube/**,**/helm/**,**/charts/**,**/templates/**,**/manifests/**,**/deploy/**,kind/**}/*.{yaml,yml}"
 ---
 
 # Kubernetes & Helm Instructions
