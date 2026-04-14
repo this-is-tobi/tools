@@ -157,12 +157,6 @@ disable-model-invocation: false # If true, must be manually selected
 
 Tool aliases: `read`, `edit`, `search`, `execute` (shell), `web`, `agent`, `todo`.
 
-## Prompts
-
-| Name                                              | Description                                        | Prompt Name |
-| ------------------------------------------------- | -------------------------------------------------- | ----------- |
-| [Repository Review](../copilot/prompts/review.md) | Full repo analysis: quality, security, performance | `review`    |
-
 ---
 
 ## GitHub Copilot (VS Code)
@@ -317,14 +311,6 @@ curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/in
   -o ".github/instructions/pull-request.md"
 curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/instructions/code-review.instructions.md" \
   -o ".github/instructions/code-review.instructions.md"
-```
-
-### Prompts
-
-```sh
-mkdir -p .github/prompts
-curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/prompts/review.md" \
-  -o ".github/prompts/review.md"
 ```
 
 ---
