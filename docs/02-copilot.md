@@ -98,16 +98,21 @@ done
 
 Agents define specialist personas with their own instructions and restricted tool access.
 
-| Name                                                      | Description                             | Tools            |
-| --------------------------------------------------------- | --------------------------------------- | ---------------- |
-| [Code Reviewer](../copilot/agents/code-reviewer.md)       | Read-only code review specialist        | `read`, `search` |
-| [Security Auditor](../copilot/agents/security-auditor.md) | Security-focused vulnerability analysis | `read`, `search` |
+| Name                                                            | Description                                   | Tools                                      |
+| --------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------ |
+| [Code Reviewer](../copilot/agents/code-reviewer.md)             | Read-only code review specialist              | `read`, `search`                           |
+| [Security Auditor](../copilot/agents/security-auditor.md)       | Security-focused vulnerability analysis       | `read`, `search`                           |
+| [Refactorer](../copilot/agents/refactorer.md)                   | Improves structure while preserving behavior  | `edit`, `search`, `read`                   |
+| [Test Writer](../copilot/agents/test-writer.md)                 | Generates tests following project conventions | `edit`, `search`, `read`, `execute`        |
+| [Doc Writer](../copilot/agents/doc-writer.md)                   | Generates and updates documentation from code | `edit`, `search`, `read`                   |
+| [Migration Assistant](../copilot/agents/migration-assistant.md) | Dependency upgrades and framework migrations  | `edit`, `search`, `read`, `execute`, `web` |
+| [IaC Reviewer](../copilot/agents/iac-reviewer.md)               | Reviews Terraform, K8s, Docker, CI/CD configs | `read`, `search`                           |
 
 ### Setup agents (repository)
 
 ```sh
 mkdir -p .github/agents
-for agent in code-reviewer security-auditor; do
+for agent in code-reviewer security-auditor refactorer test-writer doc-writer migration-assistant iac-reviewer; do
   curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/agents/${agent}.md" \
     -o ".github/agents/${agent}.md"
 done
@@ -119,7 +124,7 @@ Personal agents are supported in VS Code via `chat.agentFilesLocations`. Copilot
 
 ```sh
 mkdir -p ~/.copilot/agents
-for agent in code-reviewer security-auditor; do
+for agent in code-reviewer security-auditor refactorer test-writer doc-writer migration-assistant iac-reviewer; do
   curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/agents/${agent}.md" \
     -o "${HOME}/.copilot/agents/${agent}.md"
 done
