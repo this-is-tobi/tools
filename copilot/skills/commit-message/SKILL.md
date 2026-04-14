@@ -72,6 +72,7 @@ Closes #234
 
 ## Common Mistakes
 
+- Forget to format the codebase before creating the commit - always check for lint/format command in the project and run it before committing if it exists
 - Past tense ("added feature") — use imperative ("add feature")
 - Vague messages ("fix bug", "update code") — be specific
 - Capitalized subject — start lowercase
