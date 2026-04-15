@@ -19,6 +19,7 @@ DB_PASS=""
 EXPORT_DIR="./backups"
 DATE_TIME=$(date +"%Y%m%dT%H%M")
 CLEAN_RESTORE="false"
+JOBS=1
 DUMP_PATH=""
 DUMP_FILE=""
 MODE=""
@@ -43,6 +44,10 @@ Available flags:
   -c    Name of the pod's container.
   -d    Name of the postgres database.
   -f    Local dump file to restore (only needed with restore mode).
+  -j    Number of parallel jobs for dump and restore.
+        Dump: uses directory format (-Fd) packaged as .tar.gz when jobs > 1.
+        Restore: always parallelized regardless of file format.
+        Default: '$JOBS'.
   -m    Mode tu run. Available modes are:
           dump              - Dump the database locally.
           dump_forward      - Dump the database locally with port forward.
@@ -143,7 +148,7 @@ checkDiskSpace () {
 }
 
 # Parse options
-while getopts hc:d:f:m:n:o:p:t:u:x:z flag; do
+while getopts hc:d:f:j:m:n:o:p:t:u:x:z flag; do
   case "${flag}" in
     c)
       CONTAINER_NAME=${OPTARG};;
@@ -151,6 +156,8 @@ while getopts hc:d:f:m:n:o:p:t:u:x:z flag; do
       DB_NAME=${OPTARG};;
     f)
       DUMP_FILE=${OPTARG};;
+    j)
+      JOBS=${OPTARG};;
     m)
       MODE=${OPTARG};;
     n)
@@ -205,6 +212,7 @@ Settings:
   > POD_NAME: ${POD_NAME}
   > CONTAINER_NAME: ${CONTAINER_NAME}
   > CLEAN_RESTORE: $(([ ${MODE} = 'restore' ] || [ ${MODE} = 'restore_forward' ]) && echo \"${CLEAN_RESTORE}\" || echo '-')
+  > JOBS: ${JOBS}
 "
 
 # Options validation
@@ -245,12 +253,21 @@ if [ "$MODE" = "dump" ]; then
   [ ! -d "$EXPORT_DIR" ] && mkdir -p $EXPORT_DIR
 
   # Set paths variables
-  DUMP_FILENAME="${DATE_TIME}-${DB_NAME}.dump"
+  if [ "$JOBS" -gt 1 ]; then
+    DUMP_FILENAME="${DATE_TIME}-${DB_NAME}.tar.gz"
+  else
+    DUMP_FILENAME="${DATE_TIME}-${DB_NAME}.dump"
+  fi
   DESTINATION_DUMP="${EXPORT_DIR}/${DUMP_FILENAME}"
 
   # Dump database
   printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Dump database.\n\n"
-  kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "pg_dump -Fc -d $(getPgUri \"${DB_NAME}\") > ${DUMP_PATH}/${DUMP_FILENAME}"
+  if [ "$JOBS" -gt 1 ]; then
+    DUMP_DIR="${DATE_TIME}-${DB_NAME}"
+    kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "pg_dump -Fd -j ${JOBS} -d $(getPgUri \"${DB_NAME}\") -f ${DUMP_PATH}/${DUMP_DIR} && tar -czf ${DUMP_PATH}/${DUMP_FILENAME} -C ${DUMP_PATH} ${DUMP_DIR} && rm -rf ${DUMP_PATH}/${DUMP_DIR}"
+  else
+    kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "pg_dump -Fc -d $(getPgUri \"${DB_NAME}\") > ${DUMP_PATH}/${DUMP_FILENAME}"
+  fi
 
   # Copy dump locally
   printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Copy dump file locally (path: '${DESTINATION_DUMP}').\n\n"
@@ -266,7 +283,11 @@ elif [ "$MODE" = "dump_forward" ]; then
   [ ! -d "$EXPORT_DIR" ] && mkdir -p $EXPORT_DIR
 
   # Set paths variables
-  DUMP_FILENAME="${DATE_TIME}-${DB_NAME}.dump"
+  if [ "$JOBS" -gt 1 ]; then
+    DUMP_FILENAME="${DATE_TIME}-${DB_NAME}.tar.gz"
+  else
+    DUMP_FILENAME="${DATE_TIME}-${DB_NAME}.dump"
+  fi
   DESTINATION_DUMP="${EXPORT_DIR}/${DUMP_FILENAME}"
 
   # Dump database
@@ -274,7 +295,14 @@ elif [ "$MODE" = "dump_forward" ]; then
   set +e
   kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5432:5432 &
   sleep 2
-  pg_dump -Fc -d $(getPgUri "${DB_NAME}") > ${DESTINATION_DUMP}
+  if [ "$JOBS" -gt 1 ]; then
+    DUMP_DIR="${EXPORT_DIR}/${DATE_TIME}-${DB_NAME}"
+    pg_dump -Fd -j ${JOBS} -d $(getPgUri "${DB_NAME}") -f "${DUMP_DIR}"
+    tar -czf "${DESTINATION_DUMP}" -C "${EXPORT_DIR}" "${DATE_TIME}-${DB_NAME}"
+    rm -rf "${DUMP_DIR}"
+  else
+    pg_dump -Fc -d $(getPgUri "${DB_NAME}") > ${DESTINATION_DUMP}
+  fi
 
   kill %1
 
@@ -292,7 +320,14 @@ elif [ "$MODE" = "restore" ]; then
     kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "psql -d $(getPgUri 'postgres') -c 'DROP DATABASE IF EXISTS \"${DB_NAME}\";'"
     kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "psql -d $(getPgUri 'postgres') -c 'CREATE DATABASE \"${DB_NAME}\";'"
   fi
-  kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "pg_restore -Fc -d $(getPgUri \"${DB_NAME}\") ${DUMP_PATH}/${DUMP_FILE_BASENAME}"
+  if [[ "${DUMP_FILE_BASENAME}" == *.tar.gz ]]; then
+    DUMP_DIR_NAME="${DUMP_FILE_BASENAME%.tar.gz}"
+    kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "tar -xzf ${DUMP_PATH}/${DUMP_FILE_BASENAME} -C ${DUMP_PATH}"
+    kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "pg_restore -Fd -j ${JOBS} -d $(getPgUri \"${DB_NAME}\") ${DUMP_PATH}/${DUMP_DIR_NAME}"
+    kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "rm -rf ${DUMP_PATH}/${DUMP_DIR_NAME} ${DUMP_PATH}/${DUMP_FILE_BASENAME}"
+  else
+    kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "pg_restore -Fc -j ${JOBS} -d $(getPgUri \"${DB_NAME}\") ${DUMP_PATH}/${DUMP_FILE_BASENAME}"
+  fi
   kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "psql -d $(getPgUri 'postgres') -c 'ALTER DATABASE \"${DB_NAME}\" OWNER TO \"${DB_OWNER}\";'"
 
 elif [ "$MODE" = "restore_forward" ]; then
@@ -306,7 +341,14 @@ elif [ "$MODE" = "restore_forward" ]; then
     psql -d $(getPgUri 'postgres') -c "DROP DATABASE IF EXISTS \"${DB_NAME}\";"
     psql -d $(getPgUri 'postgres') -c "CREATE DATABASE \"${DB_NAME}\";"
   fi
-  pg_restore -Fc -d $(getPgUri "${DB_NAME}") ${DUMP_FILE}
+  if [[ "${DUMP_FILE}" == *.tar.gz ]]; then
+    DUMP_DIR="${DUMP_FILE%.tar.gz}"
+    tar -xzf "${DUMP_FILE}" -C "$(dirname "${DUMP_FILE}")"
+    pg_restore -Fd -j ${JOBS} -d $(getPgUri "${DB_NAME}") "${DUMP_DIR}"
+    rm -rf "${DUMP_DIR}"
+  else
+    pg_restore -Fc -j ${JOBS} -d $(getPgUri "${DB_NAME}") ${DUMP_FILE}
+  fi
   psql -d $(getPgUri 'postgres') -c "ALTER DATABASE \"${DB_NAME}\" OWNER TO \"${DB_OWNER}\";"
 
   kill %1
