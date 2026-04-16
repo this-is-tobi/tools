@@ -42,7 +42,7 @@ Alias files (`AGENTS.md`, `CLAUDE.md`, `Copilot.md`, `GEMINI.md`, `CODEX.md`) pr
 | [Consolidated](../copilot/copilot-instructions.md)                          | All best practices in one file       | —                | General      |
 | [Code Review](../copilot/instructions/code-review.instructions.md)          | Code review guidelines (lightweight) | `code-review`    | Review       |
 | [Commit Message](../copilot/instructions/commit-message.instructions.md)    | Conventional Commits format          | `commit-message` | Git          |
-| [Pull Request](../copilot/instructions/pull-request.md)                     | PR description best practices        | `pull-request`   | Git          |
+| [Pull Request](../copilot/instructions/pull-request.instructions.md)        | PR description best practices        | `pull-request`   | Git          |
 | [General Development](../copilot/instructions/general.instructions.md)      | Universal development practices      | `general`        | General      |
 | [JavaScript/TypeScript](../copilot/instructions/javascript.instructions.md) | Scoped to JS/TS files (incl. Bun)    | `javascript`     | Language     |
 | [Go](../copilot/instructions/go.instructions.md)                            | Scoped to Go files                   | `go`             | Language     |

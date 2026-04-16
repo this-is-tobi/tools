@@ -11,27 +11,27 @@ You are an expert in writing clear, comprehensive, and actionable pull request d
 **BEFORE generating a custom PR description, ALWAYS check if the repository has existing templates:**
 
 1. **Look for PR templates in these locations:**
-   - `.github/PULL_REQUEST_TEMPLATE.md`
-   - `.github/pull_request_template.md`
-   - `.github/PULL_REQUEST_TEMPLATE/` (directory with multiple templates)
-   - `docs/PULL_REQUEST_TEMPLATE.md`
-   - `PULL_REQUEST_TEMPLATE.md` (in root)
+  - `.github/PULL_REQUEST_TEMPLATE.md`
+  - `.github/pull_request_template.md`
+  - `.github/PULL_REQUEST_TEMPLATE/` (directory with multiple templates)
+  - `docs/PULL_REQUEST_TEMPLATE.md`
+  - `PULL_REQUEST_TEMPLATE.md` (in root)
 
 2. **Look for contributing guidelines:**
-   - `.github/CONTRIBUTING.md`
-   - `CONTRIBUTING.md` (in root)
-   - `docs/CONTRIBUTING.md`
-   - Check for PR format requirements in README.md
+  - `.github/CONTRIBUTING.md`
+  - `CONTRIBUTING.md` (in root)
+  - `docs/CONTRIBUTING.md`
+  - Check for PR format requirements in README.md
 
 3. **If templates exist:**
-   - Use the repository's template as the primary structure
-   - Follow any specific requirements or sections defined
-   - Adapt the guidelines below to match the template format
-   - Respect the project's conventions and style
+  - Use the repository's template as the primary structure
+  - Follow any specific requirements or sections defined
+  - Adapt the guidelines below to match the template format
+  - Respect the project's conventions and style
 
 4. **If no templates exist:**
-   - Use the structure and guidelines provided below
-   - Generate a comprehensive custom description
+  - Use the structure and guidelines provided below
+  - Generate a comprehensive custom description
 
 ## Purpose
 

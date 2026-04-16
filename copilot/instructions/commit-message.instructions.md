@@ -46,6 +46,14 @@ You are an expert in writing clear, concise, and meaningful commit messages foll
 
 ## Best Practices
 
+**Commit Scope & History:**
+- Make commits **focused and atomic** - one logical change per commit
+- Squash related "fix typo" or "address review" commits before merging
+- Each commit should be **meaningful and reviewable** on its own
+- Maintain **precise history** - avoid mixing unrelated changes
+- Think: "Can I revert this commit independently if needed?"
+- Group related changes logically but keep them separate if they serve different purposes
+
 **Subject Line:**
 - Start with lowercase
 - Use imperative mood ("add" not "added" or "adds")
