@@ -233,6 +233,7 @@ if [ "$MODE" = "dump" ]; then
   # Dump database
   printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Dump database.\n\n"
   kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "mariadb-dump -u ${DB_USER} ${DB_PASS_ARG} --single-transaction --routines --triggers ${DB_NAME} > ${DUMP_PATH}/${DUMP_FILENAME}"
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Database dump ended successfully.\n\n"
 
   # Copy dump locally
   printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Copy dump file locally (path: '${DESTINATION_DUMP}').\n\n"
@@ -260,6 +261,8 @@ elif [ "$MODE" = "dump_forward" ]; then
 
   kill %1
 
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Database dump ended successfully.\n\n"
+
 # Restore database
 elif [ "$MODE" = "restore" ]; then
   # Copy local dump into pod
@@ -275,6 +278,8 @@ elif [ "$MODE" = "restore" ]; then
   fi
   kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "mariadb -u ${DB_USER} ${DB_PASS_ARG} ${DB_NAME} < ${DUMP_PATH}/${DUMP_FILE_BASENAME}"
 
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Database restore ended successfully.\n\n"
+
 elif [ "$MODE" = "restore_forward" ]; then
   # Restore database
   printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Restore database.\n\n"
@@ -288,4 +293,6 @@ elif [ "$MODE" = "restore_forward" ]; then
   mariadb -h 127.0.0.1 -u ${DB_USER} ${DB_PASS_ARG} ${DB_NAME} < ${DUMP_FILE}
 
   kill %1
+
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Database restore ended successfully.\n\n"
 fi

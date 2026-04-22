@@ -242,6 +242,8 @@ if [ "$MODE" = "dump" ]; then
   kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- rm -f "${DUMP_PATH}/${DUMP_FILENAME}"
   printf "${COLOR_GREEN}Done.${COLOR_OFF} Dump file removed from container.\n"
 
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Vault dump ended successfully.\n\n"
+
 elif [ "$MODE" = "dump_forward" ]; then
   # Create output directory
   [ ! -d "$EXPORT_DIR" ] && mkdir -p $EXPORT_DIR
@@ -260,6 +262,8 @@ elif [ "$MODE" = "dump_forward" ]; then
 
   kill %1
 
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Vault dump ended successfully.\n\n"
+
 # Restore vault
 elif [ "$MODE" = "restore" ]; then
   # Copy local dump into pod
@@ -271,9 +275,11 @@ elif [ "$MODE" = "restore" ]; then
   printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Restore vault.\n\n"
   kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- sh -c "echo ${VAULT_TOKEN} | vault login -non-interactive - && vault operator raft snapshot restore ${DUMP_PATH}/${DUMP_FILE_BASENAME}"
 
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Vault restore ended successfully.\n\n"
+
 elif [ "$MODE" = "restore_forward" ]; then
-  # Restore database
-  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Restore database.\n\n"
+  # Restore vault
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Restore vault.\n\n"
   set +e
   kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5555:8200 &
   sleep 2
@@ -281,4 +287,6 @@ elif [ "$MODE" = "restore_forward" ]; then
     && vault operator raft snapshot restore -address=https://127.0.0.1:8200 ${DUMP_FILE}
 
   kill %1
+
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Vault restore ended successfully.\n\n"
 fi

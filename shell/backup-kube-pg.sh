@@ -268,6 +268,7 @@ if [ "$MODE" = "dump" ]; then
   else
     kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "pg_dump -Fc -d $(getPgUri \"${DB_NAME}\") > ${DUMP_PATH}/${DUMP_FILENAME}"
   fi
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Database dump ended successfully.\n\n"
 
   # Copy dump locally
   printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Copy dump file locally (path: '${DESTINATION_DUMP}').\n\n"
@@ -306,6 +307,8 @@ elif [ "$MODE" = "dump_forward" ]; then
 
   kill %1
 
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Database dump ended successfully.\n\n"
+
 # Restore database
 elif [ "$MODE" = "restore" ]; then
   # Copy local dump into pod
@@ -330,6 +333,8 @@ elif [ "$MODE" = "restore" ]; then
   fi
   kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- bash -c "psql -d $(getPgUri 'postgres') -c 'ALTER DATABASE \"${DB_NAME}\" OWNER TO \"${DB_OWNER}\";'"
 
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Database restore ended successfully.\n\n"
+
 elif [ "$MODE" = "restore_forward" ]; then
   # Restore database
   printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Restore database.\n\n"
@@ -352,4 +357,6 @@ elif [ "$MODE" = "restore_forward" ]; then
   psql -d $(getPgUri 'postgres') -c "ALTER DATABASE \"${DB_NAME}\" OWNER TO \"${DB_OWNER}\";"
 
   kill %1
+
+  printf "\n\n${COLOR_RED}[Dump wrapper].${COLOR_OFF} Database restore ended successfully.\n\n"
 fi

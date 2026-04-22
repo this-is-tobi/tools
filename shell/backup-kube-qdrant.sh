@@ -316,7 +316,7 @@ fi
 
 # List collections
 if [ "$MODE" = "list" ]; then
-  printf "\n\n${COLOR_BLUE}[Backup wrapper].${COLOR_OFF} Listing collections.\n\n"
+  printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Listing collections.\n\n"
   
   set +e
   kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5555:${QDRANT_PORT} &
@@ -349,17 +349,17 @@ elif [ "$MODE" = "dump" ]; then
   DESTINATION_DUMP="${BACKUP_DIR}/${SNAPSHOT_FILE}"
   mkdir -p "$BACKUP_DIR"
 
-  printf "\n\n${COLOR_BLUE}[Backup wrapper].${COLOR_OFF} Creating storage snapshot using Qdrant CLI.\n\n"
+  printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Creating storage snapshot using Qdrant CLI.\n\n"
   
   # Create snapshot using Qdrant CLI
   kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- /qdrant/qdrant --storage-snapshot "${DUMP_PATH}/${SNAPSHOT_FILE}"
 
   # Copy snapshot locally
-  printf "\n\n${COLOR_BLUE}[Backup wrapper].${COLOR_OFF} Copying snapshot locally (path: '${DESTINATION_DUMP}').\n\n"
+  printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Copying snapshot locally (path: '${DESTINATION_DUMP}').\n\n"
   kubectl ${NAMESPACE_ARG} cp ${POD_NAME}:${DUMP_PATH}/${SNAPSHOT_FILE} "${DESTINATION_DUMP}" ${CONTAINER_ARG}
 
   # Clean up snapshot from pod
-  printf "\n\n${COLOR_BLUE}[Backup wrapper].${COLOR_OFF} Cleaning up snapshot file from container.\n\n"
+  printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Cleaning up snapshot file from container.\n\n"
   kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- rm -f "${DUMP_PATH}/${SNAPSHOT_FILE}"
   printf "${COLOR_GREEN}Done.${COLOR_OFF} Snapshot file removed from container.\n"
 
@@ -371,7 +371,7 @@ elif [ "$MODE" = "dump_forward" ]; then
   BACKUP_DIR="${EXPORT_DIR}/${DATE_TIME}-qdrant"
   mkdir -p "$BACKUP_DIR"
 
-  printf "\n\n${COLOR_BLUE}[Backup wrapper].${COLOR_OFF} Creating snapshots using port forward.\n\n"
+  printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Creating snapshots using port forward.\n\n"
   
   set +e
   kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5555:${QDRANT_PORT} &
@@ -391,7 +391,7 @@ elif [ "$MODE" = "dump_forward" ]; then
 
   # Create and download snapshots for each collection
   for collection in $COLLECTIONS; do
-    printf "\n${COLOR_BLUE}[Backup wrapper].${COLOR_OFF} Processing collection: ${collection}\n"
+    printf "\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Processing collection: ${collection}\n"
     
     # Create snapshot
     SNAPSHOT_RESULT=$(curl -s -X POST ${AUTH_HEADER} "http://127.0.0.1:5555/collections/${collection}/snapshots")
@@ -412,22 +412,22 @@ elif [ "$MODE" = "dump_forward" ]; then
 
 # Restore snapshots using Qdrant CLI
 elif [ "$MODE" = "restore" ]; then
-  printf "\n\n${COLOR_BLUE}[Backup wrapper].${COLOR_OFF} Restoring storage snapshot using Qdrant CLI.\n\n"
+  printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Restoring storage snapshot using Qdrant CLI.\n\n"
 
   # Copy local snapshot into pod
   DUMP_FILE_BASENAME="$(basename ${DUMP_FILE})"
-  printf "\n\n${COLOR_BLUE}[Backup wrapper].${COLOR_OFF} Copy local snapshot file into container (path: '$DUMP_PATH/$DUMP_FILE_BASENAME').\n\n"
+  printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Copy local snapshot file into container (path: '$DUMP_PATH/$DUMP_FILE_BASENAME').\n\n"
   kubectl ${NAMESPACE_ARG} cp ${DUMP_FILE} ${POD_NAME}:${DUMP_PATH}/${DUMP_FILE_BASENAME} ${CONTAINER_ARG}
 
   # Restore using Qdrant CLI
-  printf "\n\n${COLOR_BLUE}[Backup wrapper].${COLOR_OFF} Restore storage snapshot.\n\n"
+  printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Restore storage snapshot.\n\n"
   kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- /qdrant/qdrant --storage-snapshot ${DUMP_PATH}/${DUMP_FILE_BASENAME} --force-snapshot
 
   # Clean up
   kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- rm -f "${DUMP_PATH}/${DUMP_FILE_BASENAME}"
 
 elif [ "$MODE" = "restore_forward" ]; then
-  printf "\n\n${COLOR_BLUE}[Backup wrapper].${COLOR_OFF} Restoring snapshots using port forward.\n\n"
+  printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Restoring snapshots using port forward.\n\n"
   
   set +e
   kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5555:${QDRANT_PORT} &
@@ -441,7 +441,7 @@ elif [ "$MODE" = "restore_forward" ]; then
       filename=$(basename "$snapshot_file")
       collection=$(echo "$filename" | cut -d'-' -f1)
       
-      printf "\n${COLOR_BLUE}[Backup wrapper].${COLOR_OFF} Restoring collection: ${collection}\n"
+      printf "\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Restoring collection: ${collection}\n"
       
       # Upload snapshot
       curl -s -X PUT ${AUTH_HEADER} "http://127.0.0.1:5555/collections/${collection}/snapshots/upload" --data-binary "@${snapshot_file}"
@@ -451,7 +451,7 @@ elif [ "$MODE" = "restore_forward" ]; then
     filename=$(basename "$DUMP_FILE")
     collection=$(echo "$filename" | cut -d'-' -f1)
     
-    printf "\n${COLOR_BLUE}[Backup wrapper].${COLOR_OFF} Restoring collection: ${collection}\n"
+    printf "\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Restoring collection: ${collection}\n"
     
     # Upload snapshot
     curl -s -X PUT ${AUTH_HEADER} "http://127.0.0.1:5555/collections/${collection}/snapshots/upload" --data-binary "@${DUMP_FILE}"
@@ -460,4 +460,4 @@ elif [ "$MODE" = "restore_forward" ]; then
   kill %1 2>/dev/null || true
 fi
 
-printf "\n\n${COLOR_GREEN}[Backup wrapper].${COLOR_OFF} Operation completed successfully.\n\n"
+printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Operation completed successfully.\n\n"
