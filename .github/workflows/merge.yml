@@ -47,38 +47,16 @@ jobs:
     - name: Get image status
       id: image-status
       run: |
-        IMAGE_STATUS=$(curl \
-          --head \
-          --silent \
-          --write-out '%{http_code}' \
-          --output /dev/null \
-          -H "Authorization: Bearer $(echo -n '${{ secrets.GITHUB_TOKEN }}' | base64)" \
-          https://${{ inputs.REGISTRY }}/v2/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}/manifests/${{ matrix.images.build.tag }})
-
-        if [ ! "$IMAGE_STATUS" == "404" ]; then
+        NEEDS_BUILD="true"
+        if MANIFEST=$(docker manifest inspect ${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}:${{ matrix.images.build.tag }} 2>/dev/null); then
           if [ "${{ inputs.BUILD_AMD64 }}" == "true" ] && [ "${{ inputs.BUILD_ARM64 }}" == "true" ]; then
-            NEEDS_BUILD=$(curl \
-              --silent \
-              -H "Authorization: Bearer $(echo -n '${{ secrets.GITHUB_TOKEN }}' | base64)" \
-              https://${{ inputs.REGISTRY }}/v2/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}/manifests/${{ matrix.images.build.tag }} \
-              | jq '[.manifests[] | select(.platform.architecture == "amd64" or .platform.architecture == "arm64")] | length < 2')
+            NEEDS_BUILD=$(echo "$MANIFEST" | jq 'if .manifests then [.manifests[] | select(.platform.architecture == "amd64" or .platform.architecture == "arm64")] | length < 2 else true end')
           elif [ "${{ inputs.BUILD_ARM64 }}" == "true" ]; then
-            NEEDS_BUILD=$(curl \
-              --silent \
-              -H "Authorization: Bearer $(echo -n '${{ secrets.GITHUB_TOKEN }}' | base64)" \
-              https://${{ inputs.REGISTRY }}/v2/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}/manifests/${{ matrix.images.build.tag }} \
-              | jq '[.manifests[] | select(.platform.architecture == "arm64")] | length < 1')
+            NEEDS_BUILD=$(echo "$MANIFEST" | jq 'if .manifests then [.manifests[] | select(.platform.architecture == "arm64")] | length < 1 else false end')
           else
-            NEEDS_BUILD=$(curl \
-              --silent \
-              -H "Authorization: Bearer $(echo -n '${{ secrets.GITHUB_TOKEN }}' | base64)" \
-              https://${{ inputs.REGISTRY }}/v2/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}/manifests/${{ matrix.images.build.tag }} \
-              | jq '[.manifests[] | select(.platform.architecture == "amd64")] | length < 1')
+            NEEDS_BUILD=$(echo "$MANIFEST" | jq 'if .manifests then [.manifests[] | select(.platform.architecture == "amd64")] | length < 1 else false end')
           fi
-        else
-          NEEDS_BUILD="true"
         fi
-
         echo "NEEDS_BUILD=$NEEDS_BUILD" >> $GITHUB_OUTPUT
 
     - name: Get image tags

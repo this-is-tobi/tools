@@ -40,15 +40,7 @@ jobs:
     - name: Check if image exists
       id: image-check
       run: |
-        IMAGE_STATUS=$(curl \
-          --head \
-          --silent \
-          --write-out '%{http_code}' \
-          --output /dev/null \
-          -H "Authorization: Bearer $(echo -n '${{ secrets.GITHUB_TOKEN }}' | base64)" \
-          https://${{ inputs.REGISTRY }}/v2/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}/manifests/${{ matrix.images.build.tag }})
-        
-        if [ "$IMAGE_STATUS" == "200" ]; then
+        if docker manifest inspect ${{ inputs.REGISTRY }}/${{ inputs.NAMESPACE }}/${{ matrix.images.name }}:${{ matrix.images.build.tag }} > /dev/null 2>&1; then
           echo "IMAGE_EXISTS=true" >> $GITHUB_OUTPUT
         else
           echo "IMAGE_EXISTS=false" >> $GITHUB_OUTPUT
