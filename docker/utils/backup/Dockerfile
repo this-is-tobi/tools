@@ -18,6 +18,7 @@ RUN apk add --no-cache \
   bash \
   ca-certificates \
   curl \
+  etcd \
   jq \
   mariadb-client \
   mongodb-tools \

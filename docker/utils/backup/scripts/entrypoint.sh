@@ -17,6 +17,7 @@ Available backup scripts:
   • postgres-backup.sh    - Backup PostgreSQL database to S3
   • mariadb-backup.sh     - Backup MariaDB database to S3
   • mongodb-backup.sh     - Backup MongoDB database to S3
+  • etcd-backup.sh        - Backup etcd cluster to S3
   • vault-backup.sh       - Backup HashiCorp Vault to S3
   • qdrant-backup.sh      - Backup Qdrant vector database to S3
   • s3-backup.sh          - Sync/backup between S3 buckets
@@ -27,6 +28,7 @@ Available tools:
   • pg_dump/pg_restore    - PostgreSQL client tools
   • mariadb-dump/mariadb  - MariaDB client tools
   • mongodump             - MongoDB database tools
+  • etcdctl               - etcd client CLI
   • curl, jq, yq          - Data processing utilities
 
 Usage examples:
@@ -93,6 +95,23 @@ Environment variables required (varies by script):
       - S3_BUCKET_NAME     S3 bucket name
     Optional:
       - DB_AUTH_DB         Authentication database (default: admin)
+      - S3_BUCKET_PREFIX   S3 prefix path (default: empty)
+      - S3_PATH_STYLE      Force path-style URLs (true/false, default: false)
+      - RETENTION          Retention period (e.g., 30d, 60d)
+      - RCLONE_EXTRA_ARGS  Additional rclone arguments
+
+  etcd backup:
+    Required:
+      - ETCD_ENDPOINTS     Comma-separated list of etcd endpoints (e.g., https://etcd:2379)
+      - S3_ENDPOINT        S3 endpoint URL
+      - S3_ACCESS_KEY      S3 access key
+      - S3_SECRET_KEY      S3 secret key
+      - S3_BUCKET_NAME     S3 bucket name
+    Optional:
+      - ETCD_CACERT        Path to CA certificate file
+      - ETCD_CERT          Path to client certificate file
+      - ETCD_KEY           Path to client key file
+      - ETCD_INSECURE_SKIP_TLS_VERIFY  Skip TLS verification (true/false, default: false)
       - S3_BUCKET_PREFIX   S3 prefix path (default: empty)
       - S3_PATH_STYLE      Force path-style URLs (true/false, default: false)
       - RETENTION          Retention period (e.g., 30d, 60d)
