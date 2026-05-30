@@ -20,6 +20,7 @@ RUN apk add --no-cache \
   curl \
   jq \
   mariadb-client \
+  mongodb-tools \
   postgresql${PG_VERSION}-client \
   rclone \
   unzip \

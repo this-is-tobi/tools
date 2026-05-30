@@ -16,6 +16,7 @@ cat << EOF
 Available backup scripts:
   • postgres-backup.sh    - Backup PostgreSQL database to S3
   • mariadb-backup.sh     - Backup MariaDB database to S3
+  • mongodb-backup.sh     - Backup MongoDB database to S3
   • vault-backup.sh       - Backup HashiCorp Vault to S3
   • qdrant-backup.sh      - Backup Qdrant vector database to S3
   • s3-backup.sh          - Sync/backup between S3 buckets
@@ -25,6 +26,7 @@ Available tools:
   • vault                 - HashiCorp Vault CLI
   • pg_dump/pg_restore    - PostgreSQL client tools
   • mariadb-dump/mariadb  - MariaDB client tools
+  • mongodump             - MongoDB database tools
   • curl, jq, yq          - Data processing utilities
 
 Usage examples:
@@ -75,6 +77,24 @@ Environment variables required (varies by script):
       - S3_BUCKET_PREFIX   S3 prefix path (default: empty)
       - S3_PATH_STYLE      Force path-style URLs (true/false, default: false)
       - DB_DUMP_ARGS       mariadb-dump arguments (default: --single-transaction --routines --triggers)
+      - RETENTION          Retention period (e.g., 30d, 60d)
+      - RCLONE_EXTRA_ARGS  Additional rclone arguments
+
+  MongoDB backup:
+    Required:
+      - DB_HOST            Database host
+      - DB_PORT            Database port (numeric, 1-65535)
+      - DB_NAME            Database name
+      - DB_USER            Database user
+      - DB_PASS            Database password
+      - S3_ENDPOINT        S3 endpoint URL
+      - S3_ACCESS_KEY      S3 access key
+      - S3_SECRET_KEY      S3 secret key
+      - S3_BUCKET_NAME     S3 bucket name
+    Optional:
+      - DB_AUTH_DB         Authentication database (default: admin)
+      - S3_BUCKET_PREFIX   S3 prefix path (default: empty)
+      - S3_PATH_STYLE      Force path-style URLs (true/false, default: false)
       - RETENTION          Retention period (e.g., 30d, 60d)
       - RCLONE_EXTRA_ARGS  Additional rclone arguments
 
