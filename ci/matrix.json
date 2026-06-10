@@ -63,11 +63,11 @@
     "name": "gh-runner",
     "description": "Self-hosted GitHub Actions runner",
     "build": {
-      "base": "ghcr.io/actions/actions-runner:2.334.0",
+      "base": "ghcr.io/actions/actions-runner:2.335.1",
       "context": "./docker/utils/gh-runner",
       "dockerfile": "./docker/utils/gh-runner/Dockerfile",
       "target": "build",
-      "tag": "1.10.0",
+      "tag": "1.11.0",
       "latest": true
     }
   },
@@ -75,11 +75,11 @@
     "name": "gh-runner-gpu",
     "description": "Self-hosted GitHub Actions runner with GPU support",
     "build": {
-      "base": "ghcr.io/actions/actions-runner:2.334.0",
+      "base": "ghcr.io/actions/actions-runner:2.335.1",
       "context": "./docker/utils/gh-runner-gpu",
       "dockerfile": "./docker/utils/gh-runner-gpu/Dockerfile",
       "target": "build",
-      "tag": "1.8.0",
+      "tag": "1.9.0",
       "latest": true
     }
   },
