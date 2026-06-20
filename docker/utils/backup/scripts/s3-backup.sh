@@ -6,6 +6,9 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/utils.sh"
 
+# Validate destination configuration
+validate_destination
+
 # Trap errors
 trap 'error "Backup failed at line $LINENO"' ERR
 

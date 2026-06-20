@@ -63,6 +63,7 @@ Environment variables required (varies by script):
       - S3_PATH_STYLE      Force path-style URLs (true/false, default: false)
       - RETENTION          Retention period (e.g., 30d, 60d)
       - RCLONE_EXTRA_ARGS  Additional rclone arguments
+      - S3_BUCKET_CREATION  Set to true to allow bucket creation (default: false)
 
   MariaDB backup:
     Required:
@@ -81,6 +82,7 @@ Environment variables required (varies by script):
       - DB_DUMP_ARGS       mariadb-dump arguments (default: --single-transaction --routines --triggers)
       - RETENTION          Retention period (e.g., 30d, 60d)
       - RCLONE_EXTRA_ARGS  Additional rclone arguments
+      - S3_BUCKET_CREATION  Set to true to allow bucket creation (default: false)
 
   MongoDB backup:
     Required:
@@ -99,6 +101,7 @@ Environment variables required (varies by script):
       - S3_PATH_STYLE      Force path-style URLs (true/false, default: false)
       - RETENTION          Retention period (e.g., 30d, 60d)
       - RCLONE_EXTRA_ARGS  Additional rclone arguments
+      - S3_BUCKET_CREATION  Set to true to allow bucket creation (default: false)
 
   etcd backup:
     Required:
@@ -116,6 +119,7 @@ Environment variables required (varies by script):
       - S3_PATH_STYLE      Force path-style URLs (true/false, default: false)
       - RETENTION          Retention period (e.g., 30d, 60d)
       - RCLONE_EXTRA_ARGS  Additional rclone arguments
+      - S3_BUCKET_CREATION  Set to true to allow bucket creation (default: false)
 
   Vault backup:
     Required:
@@ -131,6 +135,7 @@ Environment variables required (varies by script):
       - RETENTION          Retention period (e.g., 30d, 60d)
       - VAULT_EXTRA_ARGS   Additional vault arguments
       - RCLONE_EXTRA_ARGS  Additional rclone arguments
+      - S3_BUCKET_CREATION  Set to true to allow bucket creation (default: false)
 
   Qdrant backup:
     Required:
@@ -146,6 +151,7 @@ Environment variables required (varies by script):
       - S3_PATH_STYLE      Force path-style URLs (true/false, default: false)
       - RETENTION          Retention period (e.g., 30d, 60d)
       - RCLONE_EXTRA_ARGS  Additional rclone arguments
+      - S3_BUCKET_CREATION  Set to true to allow bucket creation (default: false)
 
   S3 sync:
     Required:
@@ -162,6 +168,7 @@ Environment variables required (varies by script):
       - S3_BUCKET_PREFIX        Target S3 prefix path (default: empty)
       - S3_PATH_STYLE           Force path-style URLs (true/false, default: false)
       - RCLONE_EXTRA_ARGS       Additional rclone arguments
+      - S3_BUCKET_CREATION  Set to true to allow bucket creation (default: false)
 
 For more information, check the scripts in ${HOME}/scripts/
 
