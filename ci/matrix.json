@@ -27,11 +27,11 @@
     "name": "curl",
     "description": "Container with curl, wget, jq, yq and openssl installed",
     "build": {
-      "base": "docker.io/alpine:3.23.4",
+      "base": "docker.io/alpine:3.24.1",
       "context": "./docker/utils/curl",
       "dockerfile": "./docker/utils/curl/Dockerfile",
       "target": "build",
-      "tag": "2.0.2",
+      "tag": "2.0.3",
       "latest": true
     }
   },
