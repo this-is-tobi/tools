@@ -93,14 +93,12 @@ configure_rclone_remote() {
 validate_destination() {
   # Ensure S3 bucket is not auto‑created by rclone; add flags to avoid bucket checks
   if [ -z "${RCLONE_EXTRA_ARGS}" ]; then
-    export RCLONE_EXTRA_ARGS="--s3-no-check-bucket"
     # Add bucket creation flag only if S3_BUCKET_CREATION is not set to true
-    [ "${S3_BUCKET_CREATION}" != "true" ] && export RCLONE_EXTRA_ARGS="${RCLONE_EXTRA_ARGS} --s3-no-create-bucket"
+    [ "${S3_BUCKET_CREATION}" != "true" ] && export RCLONE_EXTRA_ARGS="${RCLONE_EXTRA_ARGS} --s3-no-check-bucket"
   else
-    [[ "${RCLONE_EXTRA_ARGS}" != *"--s3-no-check-bucket"* ]] && export RCLONE_EXTRA_ARGS="${RCLONE_EXTRA_ARGS} --s3-no-check-bucket"
-    # Conditionally add no-create flag
-    if [ "${S3_BUCKET_CREATION}" != "true" ] && [[ "${RCLONE_EXTRA_ARGS}" != *"--s3-no-create-bucket"* ]]; then
-      export RCLONE_EXTRA_ARGS="${RCLONE_EXTRA_ARGS} --s3-no-create-bucket"
+    # Conditionally add no-check flag
+    if [ "${S3_BUCKET_CREATION}" != "true" ] && [[ "${RCLONE_EXTRA_ARGS}" != *"--s3-no-check-bucket"* ]]; then
+      export RCLONE_EXTRA_ARGS="${RCLONE_EXTRA_ARGS} --s3-no-check-bucket"
     fi
   fi
   validate_required_vars "S3_ENDPOINT" "S3_ACCESS_KEY" "S3_SECRET_KEY" "S3_BUCKET_NAME"
