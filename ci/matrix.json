@@ -60,6 +60,18 @@
     }
   },
   {
+    "name": "dev-lite",
+    "description": "Development container with common development tools (lite version)",
+    "build": {
+      "base": "docker.io/debian:13",
+      "context": "./docker/utils/dev",
+      "dockerfile": "./docker/utils/dev/Dockerfile.lite",
+      "target": "build",
+      "tag": "1.0.0",
+      "latest": true
+    }
+  },
+  {
     "name": "gh-runner",
     "description": "Self-hosted GitHub Actions runner",
     "build": {
