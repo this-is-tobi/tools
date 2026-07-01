@@ -54,6 +54,7 @@ chmod +x script.sh
 | [monitor-kube-redis.sh](../shell/monitor-kube-redis.sh)           | *generate and print redis monitoring report.*                                   |
 | [monitor-kube-vault.sh](../shell/monitor-kube-vault.sh)           | *generate and print vault monitoring report.*                                   |
 | [purge-ghcr-tags.sh](../shell/purge-ghcr-tags.sh)                 | *purge ghcr tags older than a given date.*                                      |
+| [setup-ai-agent.sh](../shell/setup-ai-agent.sh)                   | *bootstrap Claude Code / Copilot instructions, skills, agents, and safely run `rtk init -g --copilot`.* |
 | [trivy-report.sh](../shell/trivy-report.sh)                       | *parse trivy json reports to create a markdown summary.*                        |
 | [update-zsh-completions.sh](../shell/update-zsh-completions.sh)   | *update zsh-completions sources.*                                               |
 

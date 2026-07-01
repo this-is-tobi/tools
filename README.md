@@ -9,7 +9,7 @@ The repository is continuously updated and maintained to ensure compatibility wi
 **Website:** <https://this-is-tobi.com/tools/introduction>
 
 **Table of Contents** *- md sources*:
-- [Copilot](./docs/02-copilot.md) *- GitHub Copilot instructions for various technologies*
+- [AI](./docs/02-ai.md) *- Instructions, skills & agents for Copilot, Claude Code, and other AI coding agents*
 - [DevOps](./docs/03-devops.md) *- Kubernetes and CI/CD templates*
 - [Docker](./docs/04-docker.md) *- Pre-built Docker images and templates*
 - [Git Hooks](./docs/05-git-hooks.md) *- Git hooks for various tasks*

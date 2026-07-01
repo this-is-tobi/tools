@@ -4,35 +4,7 @@ applyTo: "**"
 
 # General Development Instructions
 
-<!-- rtk-instructions v2 -->
-# RTK — Token-Optimized CLI
-
-**rtk** is a CLI proxy that filters and compresses command outputs, saving 60-90% tokens.
-
-## Rule
-
-Always prefix shell commands with `rtk` (if the binary is present — check with `command -v rtk`):
-
-```bash
-# Instead of:              Use:
-git status                 rtk git status
-git log -10                rtk git log -10
-cargo test                 rtk cargo test
-docker ps                  rtk docker ps
-kubectl get pods           rtk kubectl pods
-```
-
-## Meta commands (use directly)
-
-```bash
-rtk gain              # Token savings dashboard
-rtk gain --history    # Per-command savings history
-rtk discover          # Find missed rtk opportunities
-rtk proxy <cmd>       # Run raw (no filtering) but track usage
-```
-<!-- /rtk-instructions -->
-
-> This block is kept identical to what `rtk init -g` / `rtk init -g --copilot` generates, so it's a drop-in match if you also run the official installer. It's a best-effort fallback only — installing rtk's auto-rewrite hook is still the only way to guarantee *every* supported command gets rewritten. See [docs/02-copilot.md](../../docs/02-copilot.md) for setup and merge notes.
+> For token-optimized shell commands, run `rtk init -g` (or `rtk init -g --copilot`) — it installs a hook that rewrites supported commands automatically, no prompt-level instructions needed. See [Token-Efficient Terminal Commands (RTK)](../../../docs/02-ai.md#token-efficient-terminal-commands-rtk) for details.
 
 You are an expert software developer following modern best practices.
 

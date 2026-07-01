@@ -20,7 +20,8 @@ This repository serves as a centralized toolkit for developers and DevOps engine
 tools/
 ├── act/              # Local GitHub Actions testing
 ├── ci/               # CI/CD configurations
-├── copilot/          # GitHub Copilot instructions
+├── claude/           # Claude Code agents
+├── copilot/          # GitHub Copilot instructions, skills & agents
 ├── devops/           # Kubernetes and ArgoCD templates
 ├── docker/           # Docker images and templates
 ├── docs/             # Documentation
@@ -52,7 +53,7 @@ chmod +x ".git/hooks/commit-msg"
 **Setup Copilot instructions:**
 ```sh
 mkdir -p .github/instructions
-curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/copilot/instructions/javascript.instructions.md" \
+curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/ai/common/instructions/javascript.instructions.md" \
   -o ".github/instructions/javascript.instructions.md"
 ```
 
