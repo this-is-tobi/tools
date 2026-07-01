@@ -37,22 +37,49 @@ Alias files (`AGENTS.md`, `CLAUDE.md`, `Copilot.md`, `GEMINI.md`, `CODEX.md`) pr
 
 ## Available Instructions
 
-| Name                                                                        | Description                          | Instruction Name | Type         |
-| --------------------------------------------------------------------------- | ------------------------------------ | ---------------- | ------------ |
-| [Consolidated](../copilot/copilot-instructions.md)                          | All best practices in one file       | —                | General      |
-| [Code Review](../copilot/instructions/code-review.instructions.md)          | Code review guidelines (lightweight) | `code-review`    | Review       |
-| [Commit Message](../copilot/instructions/commit-message.instructions.md)    | Conventional Commits format          | `commit-message` | Git          |
-| [Pull Request](../copilot/instructions/pull-request.instructions.md)        | PR description best practices        | `pull-request`   | Git          |
-| [General Development](../copilot/instructions/general.instructions.md)      | Universal development practices      | `general`        | General      |
-| [JavaScript/TypeScript](../copilot/instructions/javascript.instructions.md) | Scoped to JS/TS files (incl. Bun)    | `javascript`     | Language     |
-| [Go](../copilot/instructions/go.instructions.md)                            | Scoped to Go files                   | `go`             | Language     |
-| [Bash/Shell](../copilot/instructions/shell.instructions.md)                 | Scoped to shell scripts              | `shell`          | Language     |
-| [Python](../copilot/instructions/python.instructions.md)                    | Scoped to Python files (FastAPI)     | `python`         | Language     |
-| [TypeScript Monorepo](../copilot/instructions/ts-monorepo.instructions.md)  | Complete TS monorepo setup           | `ts-monorepo`    | Architecture |
-| [Docker](../copilot/instructions/docker.instructions.md)                    | Scoped to Dockerfiles                | `docker`         | Platform     |
-| [Kubernetes/Helm](../copilot/instructions/kubernetes.instructions.md)       | Scoped to K8s YAML files             | `kubernetes`     | Platform     |
-| [GitHub Actions](../copilot/instructions/github-actions.instructions.md)    | Scoped to workflow files             | `github-actions` | CI/CD        |
-| [Terraform/IaC](../copilot/instructions/terraform.instructions.md)          | Scoped to Terraform files            | `terraform`      | Platform     |
+> [!TIP]
+> Both the **Consolidated** and **General Development** instructions include a [rtk](https://github.com/rtk-ai/rtk) section for 60-90% lower token usage on terminal commands. Prompt-level guidance alone only covers commands the agent happens to recall — install rtk's auto-rewrite hook for guaranteed, full coverage. See [Token-Efficient Terminal Commands (RTK)](#token-efficient-terminal-commands-rtk) below.
+
+| Name                                                                        | Description                                 | Instruction Name | Type         |
+| --------------------------------------------------------------------------- | ------------------------------------------- | ---------------- | ------------ |
+| [Consolidated](../copilot/copilot-instructions.md)                          | All best practices in one file (incl. RTK)  | —                | General      |
+| [Code Review](../copilot/instructions/code-review.instructions.md)          | Code review guidelines (lightweight)        | `code-review`    | Review       |
+| [Commit Message](../copilot/instructions/commit-message.instructions.md)    | Conventional Commits format                 | `commit-message` | Git          |
+| [Pull Request](../copilot/instructions/pull-request.instructions.md)        | PR description best practices               | `pull-request`   | Git          |
+| [General Development](../copilot/instructions/general.instructions.md)      | Universal development practices (incl. RTK) | `general`        | General      |
+| [JavaScript/TypeScript](../copilot/instructions/javascript.instructions.md) | Scoped to JS/TS files (incl. Bun)           | `javascript`     | Language     |
+| [Go](../copilot/instructions/go.instructions.md)                            | Scoped to Go files                          | `go`             | Language     |
+| [Bash/Shell](../copilot/instructions/shell.instructions.md)                 | Scoped to shell scripts                     | `shell`          | Language     |
+| [Python](../copilot/instructions/python.instructions.md)                    | Scoped to Python files (FastAPI)            | `python`         | Language     |
+| [TypeScript Monorepo](../copilot/instructions/ts-monorepo.instructions.md)  | Complete TS monorepo setup                  | `ts-monorepo`    | Architecture |
+| [Docker](../copilot/instructions/docker.instructions.md)                    | Scoped to Dockerfiles                       | `docker`         | Platform     |
+| [Kubernetes/Helm](../copilot/instructions/kubernetes.instructions.md)       | Scoped to K8s YAML files                    | `kubernetes`     | Platform     |
+| [GitHub Actions](../copilot/instructions/github-actions.instructions.md)    | Scoped to workflow files                    | `github-actions` | CI/CD        |
+| [Terraform/IaC](../copilot/instructions/terraform.instructions.md)          | Scoped to Terraform files                   | `terraform`      | Platform     |
+
+## Token-Efficient Terminal Commands (RTK)
+
+[rtk](https://github.com/rtk-ai/rtk) is a CLI proxy that filters/compresses terminal command output (git, tests, build/lint, containers, GitHub CLI, AWS, IaC, package managers, 100+ commands total) before it reaches the model context, cutting token usage by 60-90%.
+
+**Install the auto-rewrite hook** — this is the only setup that guarantees every supported command gets rewritten, since it intercepts the shell tool call itself instead of relying on the model to remember to type `rtk`:
+
+```sh
+# Install (macOS/Linux)
+brew install rtk
+# or: curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+
+# Enable the hook for your tool
+rtk init -g --copilot   # GitHub Copilot (VS Code + CLI)
+rtk init -g             # Claude Code (default agent)
+```
+
+The **Consolidated** and **General Development** instructions also tell the agent to prefix commands with `rtk` as a fallback when the hook isn't installed — but this is best-effort only, limited to what the model recalls, and does not cover the full command set.
+
+> [!NOTE]
+> The auto-rewrite hook only intercepts shell/terminal tool calls. Built-in editor tools (e.g. VS Code's file read/search tools) are never rewritten by the hook or the prompt instructions — they're a separate, already token-efficient code path.
+
+> [!WARNING]
+> `rtk init -g --copilot` **overwrites** `~/.copilot/copilot-instructions.md` with just its own `<!-- rtk-instructions v2 --> ... <!-- /rtk-instructions -->` block — it does not merge into existing content. If you already curl your own `copilot-instructions.md` into that path (see [Personal setup](#personal-setup-applies-to-all-repos) below), back it up before running `rtk init`, then re-add your content around the injected block. The **Consolidated** instructions in this repo already embed that exact block (kept byte-for-byte identical to rtk's output) so you can curl your file straight in without re-running `rtk init` at all — only run it again if you want to pick up a newer rtk-generated block, and diff before overwriting.
 
 ## Agent Skills
 
