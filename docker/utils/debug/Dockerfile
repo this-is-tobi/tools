@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=docker.io/debian:12
+ARG BASE_IMAGE=docker.io/debian:13
 
 FROM ${BASE_IMAGE} AS build
 
