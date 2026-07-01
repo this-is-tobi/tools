@@ -18,11 +18,7 @@ validate_required_vars \
   "DB_PORT" \
   "DB_NAME" \
   "DB_USER" \
-  "DB_PASS" \
-  "S3_ENDPOINT" \
-  "S3_ACCESS_KEY" \
-  "S3_SECRET_KEY" \
-  "S3_BUCKET_NAME"
+  "DB_PASS"
 
 # Validate DB_PORT is numeric
 validate_port "DB_PORT" "$DB_PORT"
@@ -43,18 +39,19 @@ printf "  > S3_SECRET_KEY: $(obfuscate "$S3_SECRET_KEY")\n"
 printf "  > S3_BUCKET_NAME: ${S3_BUCKET_NAME}\n"
 printf "  > S3_BUCKET_PREFIX: ${S3_BUCKET_PREFIX}\n"
 printf "  > S3_PATH_STYLE: ${S3_PATH_STYLE}\n"
+printf "  > LOCAL_PATH: ${LOCAL_PATH}\n"
 printf "  > RETENTION: ${RETENTION}\n"
 printf "  > RCLONE_EXTRA_ARGS: ${RCLONE_EXTRA_ARGS}\n"
 
 
-# Configure rclone remote
-configure_rclone_remote "backup_host" "$S3_ENDPOINT" "$S3_ACCESS_KEY" "$S3_SECRET_KEY" "$S3_PATH_STYLE"
+# Configure backup destination
+configure_backup_destination
 
 
-# Start dump and stream to s3
-log "Starting database dump and upload to S3"
+# Start dump and stream to destination
+log "Starting database dump and upload to destination"
 
-BACKUP_PATH="backup_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX%/}/${DATE_TIME}-${DB_NAME}.archive"
+BACKUP_PATH="${DEST_BASE}/${DATE_TIME}-${DB_NAME}.archive"
 
 mongodump \
   --host "${DB_HOST}" \
@@ -70,6 +67,6 @@ log "Backup completed: ${BACKUP_PATH}"
 
 
 # Delete backups older than retention period
-cleanup_old_backups "backup_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX}/" "$RETENTION" "$RCLONE_EXTRA_ARGS"
+cleanup_old_backups "${DEST_BASE}/" "$RETENTION" "$RCLONE_EXTRA_ARGS"
 
 log "Backup process finished successfully"

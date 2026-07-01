@@ -15,11 +15,7 @@ trap 'error "Backup failed at line $LINENO"' ERR
 # Validate required environment variables
 validate_required_vars \
   "QDRANT_URL" \
-  "QDRANT_COLLECTION" \
-  "S3_ENDPOINT" \
-  "S3_ACCESS_KEY" \
-  "S3_SECRET_KEY" \
-  "S3_BUCKET_NAME"
+  "QDRANT_COLLECTION"
 
 DATE_TIME=$(date +"%Y%m%dT%H%M")
 
@@ -34,12 +30,13 @@ printf "  > S3_SECRET_KEY: $(obfuscate "$S3_SECRET_KEY")\n"
 printf "  > S3_BUCKET_NAME: ${S3_BUCKET_NAME}\n"
 printf "  > S3_BUCKET_PREFIX: ${S3_BUCKET_PREFIX}\n"
 printf "  > S3_PATH_STYLE: ${S3_PATH_STYLE}\n"
+printf "  > LOCAL_PATH: ${LOCAL_PATH}\n"
 printf "  > RETENTION: ${RETENTION}\n"
 printf "  > RCLONE_EXTRA_ARGS: ${RCLONE_EXTRA_ARGS}\n"
 
 
-# Configure rclone remote
-configure_rclone_remote "backup_host" "$S3_ENDPOINT" "$S3_ACCESS_KEY" "$S3_SECRET_KEY" "$S3_PATH_STYLE"
+# Configure backup destination
+configure_backup_destination
 
 
 # Prepare auth header if API key is provided
@@ -64,9 +61,9 @@ if [ -z "${QDRANT_COLLECTION}" ] || [ "${QDRANT_COLLECTION}" = "all" ]; then
   fi
   
   log "Snapshot created: ${SNAPSHOT}"
-  log "Uploading to S3..."
+  log "Uploading to destination..."
   
-  BACKUP_PATH="backup_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX%/}/${DATE_TIME}-cluster.snapshot"
+  BACKUP_PATH="${DEST_BASE}/${DATE_TIME}-cluster.snapshot"
   
   curl -s ${AUTH_HEADER} "${QDRANT_URL}/snapshots/${SNAPSHOT}" \
     | rclone rcat --stats-one-line-date ${RCLONE_EXTRA_ARGS} "${BACKUP_PATH}"
@@ -88,9 +85,9 @@ else
   fi
   
   log "Snapshot created: ${SNAPSHOT}"
-  log "Streaming to S3..."
+  log "Streaming to destination..."
   
-  BACKUP_PATH="backup_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX%/}/${DATE_TIME}-${QDRANT_COLLECTION}.snapshot"
+  BACKUP_PATH="${DEST_BASE}/${DATE_TIME}-${QDRANT_COLLECTION}.snapshot"
   
   curl -s ${AUTH_HEADER} "${QDRANT_URL}/collections/${QDRANT_COLLECTION}/snapshots/${SNAPSHOT}" \
     | rclone rcat --stats-one-line-date ${RCLONE_EXTRA_ARGS} "${BACKUP_PATH}"
@@ -103,6 +100,6 @@ fi
 
 
 # Delete backups older than retention period
-cleanup_old_backups "backup_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX}/" "$RETENTION" "$RCLONE_EXTRA_ARGS"
+cleanup_old_backups "${DEST_BASE}/" "$RETENTION" "$RCLONE_EXTRA_ARGS"
 
 log "Backup process finished successfully"

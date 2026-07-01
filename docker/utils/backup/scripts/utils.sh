@@ -91,17 +91,38 @@ configure_rclone_remote() {
 # Validate backup destination: require S3 configuration variables
 # Usage: validate_destination
 validate_destination() {
-  # Ensure S3 bucket is not auto‑created by rclone; add flags to avoid bucket checks
-  if [ -z "${RCLONE_EXTRA_ARGS}" ]; then
-    # Add bucket creation flag only if S3_BUCKET_CREATION is not set to true
-    [ "${S3_BUCKET_CREATION}" != "true" ] && export RCLONE_EXTRA_ARGS="${RCLONE_EXTRA_ARGS} --s3-no-check-bucket"
-  else
-    # Conditionally add no-check flag
-    if [ "${S3_BUCKET_CREATION}" != "true" ] && [[ "${RCLONE_EXTRA_ARGS}" != *"--s3-no-check-bucket"* ]]; then
-      export RCLONE_EXTRA_ARGS="${RCLONE_EXTRA_ARGS} --s3-no-check-bucket"
+  if [ -n "${LOCAL_PATH}" ]; then
+    if [ ! -d "${LOCAL_PATH}" ]; then
+      error "LOCAL_PATH directory does not exist: ${LOCAL_PATH}"
+      exit 1
     fi
+  else
+    # Ensure S3 bucket is not auto‑created by rclone; add flags to avoid bucket checks
+    if [ -z "${RCLONE_EXTRA_ARGS}" ]; then
+      # Add bucket creation flag only if S3_BUCKET_CREATION is not set to true
+      [ "${S3_BUCKET_CREATION}" != "true" ] && export RCLONE_EXTRA_ARGS="${RCLONE_EXTRA_ARGS} --s3-no-check-bucket"
+    else
+      # Conditionally add no-check flag
+      if [ "${S3_BUCKET_CREATION}" != "true" ] && [[ "${RCLONE_EXTRA_ARGS}" != *"--s3-no-check-bucket"* ]]; then
+        export RCLONE_EXTRA_ARGS="${RCLONE_EXTRA_ARGS} --s3-no-check-bucket"
+      fi
+    fi
+    validate_required_vars "S3_ENDPOINT" "S3_ACCESS_KEY" "S3_SECRET_KEY" "S3_BUCKET_NAME"
   fi
-  validate_required_vars "S3_ENDPOINT" "S3_ACCESS_KEY" "S3_SECRET_KEY" "S3_BUCKET_NAME"
+}
+
+# Configure backup destination and set DEST_BASE variable
+# When LOCAL_PATH is set, uses rclone :local: backend
+# When S3 vars are set, configures rclone S3 remote
+# Usage: configure_backup_destination
+configure_backup_destination() {
+  if [ -n "${LOCAL_PATH}" ]; then
+    log "Using local destination: ${LOCAL_PATH}"
+    DEST_BASE=":local:${LOCAL_PATH%/}"
+  else
+    configure_rclone_remote "backup_host" "$S3_ENDPOINT" "$S3_ACCESS_KEY" "$S3_SECRET_KEY" "$S3_PATH_STYLE"
+    DEST_BASE="backup_host:${S3_BUCKET_NAME%/}${S3_BUCKET_PREFIX:+/}${S3_BUCKET_PREFIX%/}"
+  fi
 }
 
 # Cleanup old backups based on retention period

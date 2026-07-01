@@ -54,10 +54,12 @@ Environment variables required (varies by script):
       - DB_NAME            Database name
       - DB_USER            Database user
       - DB_PASS            Database password
-      - S3_ENDPOINT        S3 endpoint URL
-      - S3_ACCESS_KEY      S3 access key
-      - S3_SECRET_KEY      S3 secret key
-      - S3_BUCKET_NAME     S3 bucket name
+    Destination (choose one):
+      - LOCAL_PATH         Local filesystem path for backup output
+      - S3_ENDPOINT        S3 endpoint URL          \ required together
+      - S3_ACCESS_KEY      S3 access key            \ when LOCAL_PATH
+      - S3_SECRET_KEY      S3 secret key            \ is not set
+      - S3_BUCKET_NAME     S3 bucket name           /
     Optional:
       - S3_BUCKET_PREFIX   S3 prefix path (default: empty)
       - S3_PATH_STYLE      Force path-style URLs (true/false, default: false)
@@ -72,10 +74,12 @@ Environment variables required (varies by script):
       - DB_NAME            Database name
       - DB_USER            Database user
       - DB_PASS            Database password
-      - S3_ENDPOINT        S3 endpoint URL
-      - S3_ACCESS_KEY      S3 access key
-      - S3_SECRET_KEY      S3 secret key
-      - S3_BUCKET_NAME     S3 bucket name
+    Destination (choose one):
+      - LOCAL_PATH         Local filesystem path for backup output
+      - S3_ENDPOINT        S3 endpoint URL          \ required together
+      - S3_ACCESS_KEY      S3 access key            \ when LOCAL_PATH
+      - S3_SECRET_KEY      S3 secret key            \ is not set
+      - S3_BUCKET_NAME     S3 bucket name           /
     Optional:
       - S3_BUCKET_PREFIX   S3 prefix path (default: empty)
       - S3_PATH_STYLE      Force path-style URLs (true/false, default: false)
@@ -91,10 +95,12 @@ Environment variables required (varies by script):
       - DB_NAME            Database name
       - DB_USER            Database user
       - DB_PASS            Database password
-      - S3_ENDPOINT        S3 endpoint URL
-      - S3_ACCESS_KEY      S3 access key
-      - S3_SECRET_KEY      S3 secret key
-      - S3_BUCKET_NAME     S3 bucket name
+    Destination (choose one):
+      - LOCAL_PATH         Local filesystem path for backup output
+      - S3_ENDPOINT        S3 endpoint URL          \ required together
+      - S3_ACCESS_KEY      S3 access key            \ when LOCAL_PATH
+      - S3_SECRET_KEY      S3 secret key            \ is not set
+      - S3_BUCKET_NAME     S3 bucket name           /
     Optional:
       - DB_AUTH_DB         Authentication database (default: admin)
       - S3_BUCKET_PREFIX   S3 prefix path (default: empty)
@@ -106,10 +112,12 @@ Environment variables required (varies by script):
   etcd backup:
     Required:
       - ETCD_ENDPOINTS     Comma-separated list of etcd endpoints (e.g., https://etcd:2379)
-      - S3_ENDPOINT        S3 endpoint URL
-      - S3_ACCESS_KEY      S3 access key
-      - S3_SECRET_KEY      S3 secret key
-      - S3_BUCKET_NAME     S3 bucket name
+    Destination (choose one):
+      - LOCAL_PATH         Local filesystem path for backup output
+      - S3_ENDPOINT        S3 endpoint URL          \ required together
+      - S3_ACCESS_KEY      S3 access key            \ when LOCAL_PATH
+      - S3_SECRET_KEY      S3 secret key            \ is not set
+      - S3_BUCKET_NAME     S3 bucket name           /
     Optional:
       - ETCD_CACERT        Path to CA certificate file
       - ETCD_CERT          Path to client certificate file
@@ -125,10 +133,12 @@ Environment variables required (varies by script):
     Required:
       - VAULT_ADDR         Vault server address
       - VAULT_TOKEN        Vault authentication token
-      - S3_ENDPOINT        S3 endpoint URL
-      - S3_ACCESS_KEY      S3 access key
-      - S3_SECRET_KEY      S3 secret key
-      - S3_BUCKET_NAME     S3 bucket name
+    Destination (choose one):
+      - LOCAL_PATH         Local filesystem path for backup output
+      - S3_ENDPOINT        S3 endpoint URL          \ required together
+      - S3_ACCESS_KEY      S3 access key            \ when LOCAL_PATH
+      - S3_SECRET_KEY      S3 secret key            \ is not set
+      - S3_BUCKET_NAME     S3 bucket name           /
     Optional:
       - S3_BUCKET_PREFIX   S3 prefix path (default: empty)
       - S3_PATH_STYLE      Force path-style URLs (true/false, default: false)
@@ -141,10 +151,12 @@ Environment variables required (varies by script):
     Required:
       - QDRANT_URL         Qdrant server URL
       - QDRANT_COLLECTION  Collection name or "all" for full cluster
-      - S3_ENDPOINT        S3 endpoint URL
-      - S3_ACCESS_KEY      S3 access key
-      - S3_SECRET_KEY      S3 secret key
-      - S3_BUCKET_NAME     S3 bucket name
+    Destination (choose one):
+      - LOCAL_PATH         Local filesystem path for backup output
+      - S3_ENDPOINT        S3 endpoint URL          \ required together
+      - S3_ACCESS_KEY      S3 access key            \ when LOCAL_PATH
+      - S3_SECRET_KEY      S3 secret key            \ is not set
+      - S3_BUCKET_NAME     S3 bucket name           /
     Optional:
       - QDRANT_API_KEY     Qdrant API key for authentication
       - S3_BUCKET_PREFIX   S3 prefix path (default: empty)

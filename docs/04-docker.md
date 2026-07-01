@@ -229,3 +229,22 @@ echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
 - Check bucket permissions and policies
 - For large databases (>48GB), add `RCLONE_EXTRA_ARGS="--s3-chunk-size 128Mi"`
 - Check available disk space if not using streaming mode
+
+**Local destination (`LOCAL_PATH`) usage:**
+- Mount a host directory into the container and set `LOCAL_PATH` to its path
+- S3 env vars (`S3_ENDPOINT`, `S3_ACCESS_KEY`, etc.) are not required when `LOCAL_PATH` is set
+- Useful for testing against port-forwarded Kubernetes services or air-gapped environments:
+  ```sh
+  kubectl port-forward svc/postgres 5432:5432 &
+  docker run --rm \
+    --network host \
+    -v /local/backups:/backups \
+    -e DB_HOST=localhost \
+    -e DB_PORT=5432 \
+    -e DB_NAME=mydb \
+    -e DB_USER=user \
+    -e DB_PASS=password \
+    -e LOCAL_PATH=/backups \
+    ghcr.io/this-is-tobi/tools/backup:latest \
+    /home/alpine/scripts/postgres-backup.sh
+  ```
