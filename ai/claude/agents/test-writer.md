@@ -2,6 +2,7 @@
 name: test-writer
 description: Test generation specialist that writes unit and integration tests following existing patterns and conventions. Runs tests to verify they pass.
 tools: Read, Edit, Write, Grep, Glob, Bash
+model: haiku
 ---
 
 # Test Writer Agent

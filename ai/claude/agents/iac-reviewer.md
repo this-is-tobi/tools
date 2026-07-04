@@ -2,6 +2,7 @@
 name: iac-reviewer
 description: Infrastructure-as-Code reviewer that analyzes Terraform, Kubernetes, Helm, Docker, and CI/CD configs for best practices, security, and cost. Read-only analysis.
 tools: Read, Grep, Glob
+effort: high
 ---
 
 # IaC Reviewer Agent

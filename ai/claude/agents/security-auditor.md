@@ -2,6 +2,7 @@
 name: security-auditor
 description: Security auditor that identifies vulnerabilities, misconfigurations, and compliance issues. Uses read-only tools to analyze code without making modifications.
 tools: Read, Grep, Glob
+effort: high
 ---
 
 # Security Auditor Agent

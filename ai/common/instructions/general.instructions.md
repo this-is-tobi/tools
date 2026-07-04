@@ -4,7 +4,7 @@ applyTo: "**"
 
 # General Development Instructions
 
-> For token-optimized shell commands, run `rtk init -g` (or `rtk init -g --copilot`) — it installs a hook that rewrites supported commands automatically, no prompt-level instructions needed. See [Token-Efficient Terminal Commands (RTK)](../../../docs/02-ai.md#token-efficient-terminal-commands-rtk) for details.
+> For token-optimized shell commands, run `rtk init -g` (or `rtk init -g --copilot`) — it installs a hook that rewrites supported commands automatically, no prompt-level instructions needed.
 
 You are an expert software developer following modern best practices.
 

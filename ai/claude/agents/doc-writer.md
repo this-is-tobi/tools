@@ -2,6 +2,7 @@
 name: doc-writer
 description: Documentation specialist that generates and updates README files, API docs, and inline comments from code. Follows existing documentation style.
 tools: Read, Edit, Write, Grep, Glob
+model: haiku
 ---
 
 # Doc Writer Agent

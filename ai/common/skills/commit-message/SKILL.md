@@ -1,11 +1,15 @@
 ---
 name: commit-message
 description: Generate commit messages following Conventional Commits specification. Use when asked to write a commit message, generate a commit, or format a commit message.
+model: haiku
+allowed-tools: Bash(git diff *) Bash(git status *) Bash(git log *) Bash(git add *) Bash(git commit *)
 ---
 
 # Commit Message Generation
 
 Generate clear, concise commit messages following the Conventional Commits specification.
+
+> Do not mention the AI assistant in the commit message (eg., "Co-authored-by: AI Assistant"). Instead, focus on the changes made, their purpose, and any relevant context.
 
 ## Format
 

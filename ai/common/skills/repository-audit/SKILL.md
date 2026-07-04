@@ -1,6 +1,8 @@
 ---
 name: repository-audit
 description: Comprehensive repository review covering code quality, security, performance, DevOps, and architecture. Use when asked to audit a repository, perform a full review, or analyze an entire codebase.
+allowed-tools: Write
+effort: high
 ---
 
 # Repository Audit
