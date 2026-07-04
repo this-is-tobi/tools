@@ -83,9 +83,9 @@ You are an expert in modern JavaScript and TypeScript development with strong De
 - Use debouncing/throttling for event handlers
 - Optimize database queries and indexing strategies if applicable
 
-## Node.js Specific
+## Bun Specific
 
-- Always use the latest LTS version of Node.js
+- Always use the latest LTS version of Bun
 - Use async/await for asynchronous operations
 - Avoid blocking the event loop
 - Use environment variables for configuration
@@ -110,7 +110,7 @@ You are an expert in modern JavaScript and TypeScript development with strong De
 - Follow responsive design principles
 - Follow mobile-first design principles
 - Use Tailwind CSS for consistent styling
-- Use component libraries (e.g., shadcn-vue) for consistent UI/UX
+- Use component libraries (e.g., primevue) for consistent UI/UX
 - Use Vue Router for client-side routing
 - Use Pinia for state management in Vue applications
 - Use Axios for making HTTP requests
@@ -164,8 +164,7 @@ You are an expert in modern JavaScript and TypeScript development with strong De
 ## Tools and Libraries
 
 - Use [proto](https://moonrepo.dev/proto) for version management
-- Use [nodejs](https://nodejs.org/) in LTS version
-- Use [pnpm](https://pnpm.io/) as the package manager
+- Use [bun](https://bun.sh/) as the package manager and runtime environment
 - Use [typescript](https://www.typescriptlang.org/) with strict mode enabled
 - Use [husky](https://typicode.github.io/husky/#/) for git hooks
 - Use [lint-staged](https://github.com/lint-staged/lint-staged) to run linters on staged files
@@ -192,7 +191,7 @@ You are an expert in modern JavaScript and TypeScript development with strong De
 - Use [vue-router](https://router.vuejs.org/) for routing in Vue applications
 - Use [axios](https://axios-http.com/) for making HTTP requests
 - Use [tailwindcss](https://tailwindcss.com/) for utility-first CSS
-- Use [shadcn-vue](https://www.shadcn-vue.com/) for UI components based on Tailwind CSS
+- Use [primevue](https://www.primevue.org/) for UI components based on Tailwind CSS
 - Use [Vitepress](https://vitepress.vuejs.org/) for documentation sites
 - Use [Docker](https://www.docker.com/) for containerization
 - Use [Makefile](https://www.gnu.org/software/make/) for task automation
@@ -226,7 +225,7 @@ You are an expert in modern JavaScript and TypeScript development with strong De
 ├── eslint.config.js        # ESLint configuration
 ├── lint-staged.config.js   # lint-staged configuration
 ├── package.json            # Project manifest
-├── pnpm-workspace.yaml     # pnpm workspace configuration
+├── bun-workspace.yaml      # Bun workspace configuration
 ├── Makefile                # Makefile for common tasks
 ├── README.md               # Project README
 ├── turbo.json              # Turborepo configuration
@@ -248,7 +247,7 @@ On each task, follow these steps:
 - Never use `any` type, prefer `unknown` (highly prefer using specific types)
 - Add or update tests to cover new or changed functionality
 - Update documentation (README, inline comments, JSDoc) to reflect changes
-- Check that linting, building and tests are passing (using `pnpm run lint`, `pnpm run build`, `pnpm run test`)
+- Check that linting, building and tests are passing (using `bun run lint`, `bun run build`, `bun run test`)
 - Double-check that changes do not introduce breakings along the application
 - Double-check that changes adhere to best practices and guidelines mentioned above
 - Commit changes with meaningful commit messages following the Conventional Commits specification
