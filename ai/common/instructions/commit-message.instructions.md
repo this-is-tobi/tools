@@ -6,6 +6,8 @@ applyTo: "**"
 
 You are an expert in writing clear, concise, and meaningful commit messages following the Conventional Commits specification.
 
+> Do not mention the AI assistant in the commit message (eg., "Co-authored-by: AI Assistant"). Instead, focus on the changes made, their purpose, and any relevant context.
+
 ## Format
 
 ```
