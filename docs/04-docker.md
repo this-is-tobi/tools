@@ -179,6 +179,7 @@ Pre-configured Docker image templates that can be customized for specific use ca
 | Name                                          | Description                                                                                                                                 |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | [nginx](../docker/templates/nginx/Dockerfile) | *Bun dev/build + rootless nginx SPA prod image with runtime env substitution, hardened for restricted environments (OpenShift-compatible).* |
+| [bun](../docker/templates/bun/Dockerfile)     | *Bun dev/build/prod multi-stage image for APIs, hardened for restricted environments (OpenShift-compatible).*                               |
 
 ### nginx (frontend/SPA)
 
@@ -206,6 +207,30 @@ docker run -p 8080:8080 -e SERVER=my-backend:3000 my-frontend:latest
 - To inject runtime env vars into built JS files (values not baked in at build time), set `VARIABLES="MY_VAR OTHER_VAR"` plus the corresponding `MY_VAR=...` env vars at `docker run` time — see the comments in `entrypoint.sh`.
 - The prod image runs as a non-root user with group `0`, and all files it needs to read/write are group-owned and group-writable, so it works unmodified under OpenShift's restricted SCC (arbitrary UID, GID `0`).
 - For a `readOnlyRootFilesystem: true` security context, mount writable `emptyDir` volumes at `/tmp` and `/etc/nginx/conf.d` (nginx needs to write its pid/temp files and the templated config at startup).
+
+### bun (API)
+
+Expects a `package.json` with a `build` script (e.g. `bun build ./src/index.ts --outdir dist --target bun`) producing `dist/index.js`, and a committed `bun.lock`. Adjust the entrypoints at the top of the Dockerfile if your app's layout differs.
+
+**Usage:**
+```sh
+curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/docker/templates/bun/Dockerfile" -o Dockerfile
+curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/docker/templates/bun/.dockerignore" -o .dockerignore
+
+# Dev image, meant to be run with your source bind-mounted over /app for hot reload
+docker build --target dev -t my-api:dev .
+docker run -p 3000:3000 -v "$(pwd):/app" my-api:dev
+
+# Production image (build + prod stages)
+docker build --target prod -t my-api:latest .
+docker run -p 3000:3000 my-api:latest
+```
+
+**Notes:**
+- Three stages: `dev` (hot reload via `bun --watch`), `build` (bundles and prunes to production-only dependencies), `prod` (minimal `distroless` runtime, no shell/package manager).
+- The prod image runs as a non-root user with group `0` (OpenShift restricted SCC compatible) and needs no writable volumes even under `readOnlyRootFilesystem: true`.
+- The `distroless` prod image has no shell or `wget`/`curl`, so there's no Docker `HEALTHCHECK`; wire an HTTP liveness/readiness probe (e.g. `/healthz`) at the orchestrator level instead.
+- `NODE_ENV` is set to `production` before the `build` stage runs, not just at runtime, since bundlers inline `process.env.NODE_ENV` at build time.
 
 ## Troubleshooting
 
