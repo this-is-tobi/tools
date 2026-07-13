@@ -1,0 +1,94 @@
+# add_header only inherits into a location that defines none of its own, so
+# Cache-Control is driven by this map and set once at server level instead
+# of being repeated (and accidentally dropping the security headers below)
+# in each location.
+map $uri $cache_control {
+  default "no-cache";
+  ~*\.(?:css|js|mjs|json|map|svg|png|jpg|jpeg|gif|ico|webp|avif|woff2?|ttf|eot)$ "public, max-age=31536000, immutable";
+}
+
+upstream backend {
+  server ${SERVER};
+}
+
+server {
+  listen 8080;
+  server_name frontend;
+  root /usr/share/nginx/html;
+  index index.html;
+
+  server_tokens off;
+  large_client_header_buffers 4 32k;
+  client_max_body_size 10m;
+
+  gzip on;
+  gzip_vary on;
+  gzip_comp_level 5;
+  gzip_min_length 256;
+  gzip_proxied any;
+  gzip_types
+    text/plain
+    text/css
+    text/xml
+    text/javascript
+    application/javascript
+    application/json
+    application/xml
+    application/rss+xml
+    image/svg+xml
+    font/ttf
+    font/otf
+    font/woff
+    font/woff2;
+
+  add_header X-Frame-Options "SAMEORIGIN" always;
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+  add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;
+  # Assumes TLS is terminated upstream (e.g. an OpenShift Route/Ingress) and this app is never served over plain HTTP. Drop this header otherwise.
+  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+  # Tune to your app's needs; drop 'unsafe-inline' too if you can move to nonces/hashes.
+  add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://fonts.googleapis.com; img-src 'self' data: https:; connect-src 'self' https: wss:; manifest-src 'self'; frame-ancestors 'none'; frame-src 'self';" always;
+  add_header Cache-Control $cache_control always;
+
+  location = /healthz {
+    access_log off;
+    default_type text/plain;
+    return 200 "ok\n";
+  }
+
+  # Block dotfiles (.env, .git, ...) but keep ACME/well-known lookups working.
+  location ~ /\.(?!well-known) {
+    deny all;
+    access_log off;
+    log_not_found off;
+  }
+
+  # Hashed build assets get a long, immutable cache lifetime via $cache_control above.
+  # Anything else falls through to "no-cache" (including index.html).
+  location ~* \.(?:css|js|mjs|json|map|svg|png|jpg|jpeg|gif|ico|webp|avif|woff2?|ttf|eot)$ {
+    try_files $uri =404;
+  }
+
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+
+  location /api {
+    # Proxied same-origin, so no CORS headers are needed here. If this is
+    # genuinely called cross-origin, add an explicit allowlist rather than
+    # reflecting $http_origin, which would allow any site to call this API.
+    proxy_pass http://backend;
+    proxy_redirect off;
+    proxy_buffering off;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    # For WebSockets
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+  }
+}

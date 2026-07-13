@@ -176,19 +176,36 @@ docker buildx build --platform linux/amd64,linux/arm64 \
 
 Pre-configured Docker image templates that can be customized for specific use cases.
 
-| Name                                          | Description                                        |
-| --------------------------------------------- | -------------------------------------------------- |
-| [nginx](../docker/templates/nginx/Dockerfile) | *nignx rootless conf with variables substitution.* |
+| Name                                          | Description                                                                                                                                 |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| [nginx](../docker/templates/nginx/Dockerfile) | *Bun dev/build + rootless nginx SPA prod image with runtime env substitution, hardened for restricted environments (OpenShift-compatible).* |
+
+### nginx (frontend/SPA)
+
+Expects a `package.json` with a Vite-style `dev` script and a `build` script producing `dist/`, and a committed `bun.lock`. Adjust the dev/build commands in the Dockerfile if your app's toolchain differs.
 
 **Usage:**
 ```sh
-# Copy template
-curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/docker/templates/nginx/Dockerfile" \
-  -o Dockerfile
+# Copy the whole template (Dockerfile + conf + entrypoint) next to your app
+curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/docker/templates/nginx/Dockerfile" -o Dockerfile
+curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/docker/templates/nginx/default.conf.template" -o default.conf.template
+curl -fsSL "https://raw.githubusercontent.com/this-is-tobi/tools/main/docker/templates/nginx/entrypoint.sh" -o entrypoint.sh
 
-# Build customized image
-docker build -t my-nginx:latest .
+# Dev image, meant to be run with your source bind-mounted over /app for hot reload
+docker build --target dev -t my-frontend:dev .
+docker run -p 5173:5173 -v "$(pwd):/app" my-frontend:dev
+
+# Production image (build + prod stages, served by nginx)
+docker build --target prod -t my-frontend:latest .
+docker run -p 8080:8080 -e SERVER=my-backend:3000 my-frontend:latest
 ```
+
+**Notes:**
+- Three stages: `dev` (Vite/similar dev server via `bun run dev -- --host`), `build` (`bun run build` -> `dist`), `prod` (served by rootless nginx).
+- `SERVER` sets the `/api` reverse-proxy upstream (`host:port`). It defaults to a harmless loopback placeholder so the container still starts if you don't use `/api`.
+- To inject runtime env vars into built JS files (values not baked in at build time), set `VARIABLES="MY_VAR OTHER_VAR"` plus the corresponding `MY_VAR=...` env vars at `docker run` time — see the comments in `entrypoint.sh`.
+- The prod image runs as a non-root user with group `0`, and all files it needs to read/write are group-owned and group-writable, so it works unmodified under OpenShift's restricted SCC (arbitrary UID, GID `0`).
+- For a `readOnlyRootFilesystem: true` security context, mount writable `emptyDir` volumes at `/tmp` and `/etc/nginx/conf.d` (nginx needs to write its pid/temp files and the templated config at startup).
 
 ## Troubleshooting
 
