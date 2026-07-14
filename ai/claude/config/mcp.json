@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
+      }
+    },
+    "example-stdio-server": {
+      "command": "npx",
+      "args": ["-y", "example-mcp-server@latest"],
+      "env": {
+        "EXAMPLE_API_TOKEN": "${EXAMPLE_API_TOKEN}",
+        "EXAMPLE_BASE_URL": "${EXAMPLE_BASE_URL:-https://api.example.com}"
+      }
+    }
+  }
+}
