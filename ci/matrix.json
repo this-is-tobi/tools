@@ -43,7 +43,7 @@
       "context": "./docker/utils/debug",
       "dockerfile": "./docker/utils/debug/Dockerfile",
       "target": "build",
-      "tag": "3.0.0",
+      "tag": "3.0.1",
       "latest": true
     }
   },
@@ -55,7 +55,7 @@
       "context": "./docker/utils/dev",
       "dockerfile": "./docker/utils/dev/Dockerfile",
       "target": "build",
-      "tag": "3.0.0",
+      "tag": "3.0.1",
       "latest": true
     }
   },
@@ -67,7 +67,7 @@
       "context": "./docker/utils/dev",
       "dockerfile": "./docker/utils/dev/Dockerfile.lite",
       "target": "build",
-      "tag": "1.0.0",
+      "tag": "1.0.1",
       "latest": true
     }
   },
