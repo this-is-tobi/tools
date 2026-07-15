@@ -13,11 +13,11 @@ This section provides a collection of pre-built Docker images and templates desi
 | Image                                            | Description                                                                                                               | Status                | Dockerfiles                                            |
 | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------ |
 | `ghcr.io/this-is-tobi/tools/act-runner:2.0.4`    | Act runner for running GitHub Actions workflows locally (ubuntu based)                                                    | Active                | [Dockerfile](../docker/utils/act-runner/Dockerfile)    |
-| `ghcr.io/this-is-tobi/tools/backup:1.3.4`        | Unified backup utility for MariaDB, MongoDB, PostgreSQL, etcd, Vault, Qdrant and S3 using rclone streaming (alpine based) | Active                | [Dockerfile](../docker/utils/backup/Dockerfile)        |
+| `ghcr.io/this-is-tobi/tools/backup:1.4.0`        | Unified backup utility for MariaDB, MongoDB, PostgreSQL, etcd, Vault, Qdrant and S3 using rclone streaming (alpine based) | Active                | [Dockerfile](../docker/utils/backup/Dockerfile)        |
 | `ghcr.io/this-is-tobi/tools/curl:2.0.3`          | Lightweight image with curl, wget, jq, yq and openssl (alpine based)                                                      | Active                | [Dockerfile](../docker/utils/curl/Dockerfile)          |
 | `ghcr.io/this-is-tobi/tools/debug:3.0.1`         | Debug container with networking and troubleshooting tools (debian based)                                                  | Active                | [Dockerfile](../docker/utils/debug/Dockerfile)         |
 | `ghcr.io/this-is-tobi/tools/dev:3.0.1`           | Development container with common development tools (debian based)                                                        | Active                | [Dockerfile](../docker/utils/dev/Dockerfile)           |
-| `ghcr.io/this-is-tobi/tools/dev-lite:1.0.1`      | Development container with common development tools (lite version, debian based)                                          | Active                | [Dockerfile](../docker/utils/dev/Dockerfile.lite)      |
+| `ghcr.io/this-is-tobi/tools/dev-lite:1.0.1`      | Development container with common development tools (lite version, debian based)                                          | Active                | [Dockerfile](../docker/utils/dev-lite/Dockerfile)      |
 | `ghcr.io/this-is-tobi/tools/gh-runner:1.11.0`    | Self-hosted GitHub Actions runner with common packages (ubuntu based)                                                     | Active                | [Dockerfile](../docker/utils/gh-runner/Dockerfile)     |
 | `ghcr.io/this-is-tobi/tools/gh-runner-gpu:1.9.0` | Self-hosted GitHub Actions runner with GPU support (ubuntu based)                                                         | Active                | [Dockerfile](../docker/utils/gh-runner-gpu/Dockerfile) |
 | `ghcr.io/this-is-tobi/tools/homelab-utils:0.0.4` | Homelab utility tools collection (alpine based)                                                                           | Active                | [Dockerfile](../docker/utils/homelab-utils/Dockerfile) |
@@ -171,6 +171,60 @@ docker buildx create --use
 docker buildx build --platform linux/amd64,linux/arm64 \
   -t myregistry/image:latest --push .
 ```
+
+## Release & Build Automation
+
+Active images (the `deprecated` images below use static, hand-maintained tags and are excluded from all of this) are versioned and rebuilt automatically. Nothing about publishing a new image version normally requires a manual step.
+
+**End-to-end flow:**
+
+1. A base image gets a new version, or a month goes by → a commit lands on `main` scoped to one image's directory.
+2. [`cd.yml`](../.github/workflows/cd.yml) runs `release-please` on every push to `main`. For each image directory with unreleased `fix`/`feat`/breaking commits since its last release, it opens (or updates) an independent release PR bumping that image's version, updating its `CHANGELOG.md`, and patching its `tag` field in [`ci/matrix.json`](../ci/matrix.json).
+3. Merging a release PR creates a git tag `<image-name>-v<version>` (e.g. `curl-v2.0.4`).
+4. That tag push triggers [`build-images.yml`](../.github/workflows/build-images.yml), which looks up the matching entry in `ci/matrix.json` and builds/pushes just that one image (multi-arch, plus SBOM + provenance attestations), via the shared [`this-is-tobi/github-workflows`](https://github.com/this-is-tobi/github-workflows) reusable workflows.
+
+Each image versions and releases **independently** — bumping `curl` never touches `debug`'s version or triggers its rebuild.
+
+### Base image updates
+
+[Renovate](https://docs.renovatebot.com/) ([`renovate.json`](../renovate.json)) watches the `ARG BASE_IMAGE=...` default in every active Dockerfile (this is the single source of truth for the base image — `ci/matrix.json` no longer duplicates it) and opens a PR per outdated base, commit-scoped as `fix(...)` so release-please treats it as a patch release for that image. Deprecated images are excluded from Renovate entirely.
+
+### Scheduled dependency refresh
+
+None of these Dockerfiles pin `apt`/`apk` package versions, so a base image bump alone won't catch newer package versions between base image releases. [`refresh-images.yml`](../.github/workflows/refresh-images.yml) runs monthly, touches a `.refresh` marker file inside each active image's directory, and pushes one `fix(docker): scheduled dependency refresh` commit. That's a real, path-scoped commit, so release-please cuts a genuine patch release from it — this is the mechanism that keeps floating packages current without hand-tracking every dependency. Trigger it manually via `workflow_dispatch` with a comma-separated `IMAGES` input to refresh specific images on demand.
+
+### Versioning (release-please)
+
+[`release-please-config.json`](../release-please-config.json) + [`.release-please-manifest.json`](../.release-please-manifest.json) define one [release-please](https://github.com/googleapis/release-please) "package" per active image directory (`docker/utils/<name>`), each with:
+- `component`: the image name, used to build the `<name>-v<version>` tag.
+- `initial-version`: where that image's version counter starts.
+- `bootstrap-sha`: the commit this system was introduced at — release-please only considers commits *after* this SHA for that path. This repo had real unreleased `feat:`/`fix:` history predating this pipeline; without `bootstrap-sha` release-please would walk that entire history on its first run and could bump several images unexpectedly. **Don't remove this field** unless you specifically want release-please to re-scan full history for a package.
+- `extra-files`: a `jsonpath` pointer back into `ci/matrix.json`'s matching `build.tag`, so that file stays in sync automatically.
+
+Release PRs are **not auto-merged** (`AUTOMERGE_RELEASE: false` in `cd.yml`) — review and merge them like any other PR. This matches the convention used in the `github-workflows` repo itself.
+
+### Adding a new image
+
+1. Add its Dockerfile under `docker/utils/<name>/` with `ARG BASE_IMAGE=...` + `FROM ${BASE_IMAGE}` (needed for Renovate to detect it).
+2. Add an entry to `ci/matrix.json` (`name`, `description`, `build.context`, `build.dockerfile`, `build.target`, `build.tag` = its starting version, `build.latest`).
+3. Add a matching package to `release-please-config.json` (`component`, `initial-version` = same starting version, `bootstrap-sha` = current `HEAD`, and an `extra-files` entry targeting its `matrix.json` row) and a matching entry to `.release-please-manifest.json`.
+4. Add its row to the table above and to `docs/04-docker.md`'s docs.
+
+> [!NOTE]
+> If an image shares a directory with another (like `dev`/`dev-lite` used to), release-please can't version them independently — a change to either one's Dockerfile bumps both. Give each image its own directory unless you deliberately want lockstep versioning.
+
+### Deprecating an image
+
+Set `"deprecated": true` on its `ci/matrix.json` entry. This excludes it from Renovate, from the scheduled refresh, and from `release-please-config.json`/the manifest (remove its package if present) — it keeps whatever tag it has and is no longer auto-released. It remains buildable via `build-images.yml`'s manual `workflow_dispatch` (explicit `IMAGES` input bypasses the deprecated filter, so you can still force a rebuild — e.g. to patch a CVE — before removing it entirely).
+
+### Manual rebuilds
+
+`build-images.yml` also accepts `workflow_dispatch` with an optional comma-separated `IMAGES` input (leave empty to rebuild every active image). Useful for forcing a rebuild without waiting on a release-please PR.
+
+### Known limitations
+
+- **No cosign keyless signing.** The old pipeline signed every published tag with `cosign sign`; the shared `build-docker.yml` workflow's built-in attestation step only forwards SBOM and SLSA provenance, not signing. SBOM/provenance attestations are still generated.
+- **No automated image testing yet.** Builds aren't smoke-tested before being tagged `latest`. Options were scoped (post-publish smoke test, a true pre-push gate, or a `TEST_COMMAND` hook proposed upstream in `build-docker.yml`) but deferred.
 
 ## Template Images
 

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "semanticCommits": "enabled",
+  "packageRules": [
+    {
+      "description": "Base image bumps land as 'fix' so release-please cuts a patch release for the affected image.",
+      "matchManagers": ["dockerfile"],
+      "semanticCommitType": "fix",
+      "commitMessageTopic": "{{depName}} base image"
+    },
+    {
+      "description": "Deprecated legacy images are not released anymore, skip churn.",
+      "matchFileNames": [
+        "docker/utils/pg-backup/**",
+        "docker/utils/s3-backup/**",
+        "docker/utils/vault-backup/**"
+      ],
+      "enabled": false
+    }
+  ]
+}

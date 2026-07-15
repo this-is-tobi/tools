@@ -1,109 +1,19 @@
 name: CI
 
 on:
+  pull_request:
+    types:
+    - opened
+    - reopened
+    - synchronize
+    - ready_for_review
+    branches:
+    - main
   workflow_dispatch:
-    inputs:
-      REGISTRY:
-        description: Target registry to push images
-        required: true
-        type: string
-        default: ghcr.io
-      NAMESPACE:
-        description: Target namespace to the given registry
-        required: true
-        type: string
-        default: this-is-tobi/tools
-      IMAGES:
-        description: Comma separated list of image to build (leave empty to build all)
-        required: false
-        type: string
-      BUILD_AMD64:
-        description: Build for amd64
-        required: true
-        type: boolean
-        default: true
-      BUILD_ARM64:
-        description: Build for arm64
-        required: true
-        type: boolean
-        default: true
-      USE_QEMU:
-        description: Use QEMU for non amd64 builds
-        required: true
-        type: boolean
-        default: false
 
 jobs:
-  matrix:
-    name: Generate build matrix
-    runs-on: ubuntu-24.04
-    outputs:
-      build-matrix: ${{ steps.build-matrix.outputs.BUILD_MATRIX }}
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v6
-
-    - name: Generate matrix
-      id: build-matrix
-      run: |
-        if [ ! -z "${{ inputs.IMAGES }}" ]; then
-          JQ_FILTER=$(echo "${{ inputs.IMAGES }}" | jq -R 'split(",")')
-          echo "BUILD_MATRIX=$(jq -c --argjson images "$JQ_FILTER" '[.[] | select(.name | IN($images[]))]' < ./ci/matrix.json)" >> $GITHUB_OUTPUT
-        else
-          echo "BUILD_MATRIX=$(jq -c '.' < ./ci/matrix.json)" >> $GITHUB_OUTPUT
-        fi
-
-  build-amd64:
-    needs: matrix
-    uses: ./.github/workflows/build.yml
-    if: ${{ inputs.BUILD_AMD64 }}
-    with:
-      REGISTRY: ${{ inputs.REGISTRY }}
-      NAMESPACE: ${{ inputs.NAMESPACE }}
-      BUILD_MATRIX: ${{ needs.matrix.outputs.build-matrix }}
-      BUILD_AMD64: ${{ inputs.BUILD_AMD64 == true }}
-      BUILD_ARM64: false
-      USE_QEMU: ${{ inputs.USE_QEMU == true }}
-
-  build-arm64:
-    needs: matrix
-    uses: ./.github/workflows/build.yml
-    if: ${{ inputs.BUILD_ARM64 }}
-    with:
-      REGISTRY: ${{ inputs.REGISTRY }}
-      NAMESPACE: ${{ inputs.NAMESPACE }}
-      BUILD_MATRIX: ${{ needs.matrix.outputs.build-matrix }}
-      BUILD_AMD64: false
-      BUILD_ARM64: ${{ inputs.BUILD_ARM64 == true }}
-      USE_QEMU: ${{ inputs.USE_QEMU == true }}
-
-  merge:
-    needs:
-      - matrix
-      - build-amd64
-      - build-arm64
-    uses: ./.github/workflows/merge.yml
-    if: |
-      always() && 
-      (inputs.BUILD_AMD64 || inputs.BUILD_ARM64) &&
-      !contains(needs.*.result, 'failure') &&
-      !contains(needs.*.result, 'cancelled')
-    with:
-      REGISTRY: ${{ inputs.REGISTRY }}
-      NAMESPACE: ${{ inputs.NAMESPACE }}
-      BUILD_MATRIX: ${{ needs.matrix.outputs.build-matrix }}
-      BUILD_AMD64: ${{ inputs.BUILD_AMD64 == true }}
-      BUILD_ARM64: ${{ inputs.BUILD_ARM64 == true }}
-
-  attest:
-    needs:
-      - matrix
-      - merge
-    uses: ./.github/workflows/attest.yml
-    if: |
-      always() &&
-      needs.merge.result == 'success'
-    with:
-      REGISTRY: ${{ inputs.REGISTRY }}
-      NAMESPACE: ${{ inputs.NAMESPACE }}
-      BUILD_MATRIX: ${{ needs.matrix.outputs.build-matrix }}
+  lint-commits:
+    uses: this-is-tobi/github-workflows/.github/workflows/lint-commits.yml@v0
+    permissions:
+      contents: read
+      pull-requests: read

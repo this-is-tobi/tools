@@ -3,7 +3,6 @@
     "name": "act-runner",
     "description": "Act runner for running GitHub Actions workflows locally",
     "build": {
-      "base": "docker.io/ubuntu:24.04",
       "context": "./docker/utils/act-runner",
       "dockerfile": "./docker/utils/act-runner/Dockerfile",
       "target": "build",
@@ -15,7 +14,6 @@
     "name": "backup",
     "description": "Unified backup utility for PostgreSQL, Vault, Qdrant and S3 using rclone streaming",
     "build": {
-      "base": "docker.io/alpine:3.24.1",
       "context": "./docker/utils/backup",
       "dockerfile": "./docker/utils/backup/Dockerfile",
       "target": "build",
@@ -27,7 +25,6 @@
     "name": "curl",
     "description": "Container with curl, wget, jq, yq and openssl installed",
     "build": {
-      "base": "docker.io/alpine:3.24.1",
       "context": "./docker/utils/curl",
       "dockerfile": "./docker/utils/curl/Dockerfile",
       "target": "build",
@@ -39,7 +36,6 @@
     "name": "debug",
     "description": "Debug container with networking and troubleshooting tools",
     "build": {
-      "base": "docker.io/debian:13",
       "context": "./docker/utils/debug",
       "dockerfile": "./docker/utils/debug/Dockerfile",
       "target": "build",
@@ -51,7 +47,6 @@
     "name": "dev",
     "description": "Development container with common development tools",
     "build": {
-      "base": "docker.io/debian:13",
       "context": "./docker/utils/dev",
       "dockerfile": "./docker/utils/dev/Dockerfile",
       "target": "build",
@@ -63,9 +58,8 @@
     "name": "dev-lite",
     "description": "Development container with common development tools (lite version)",
     "build": {
-      "base": "docker.io/debian:13",
-      "context": "./docker/utils/dev",
-      "dockerfile": "./docker/utils/dev/Dockerfile.lite",
+      "context": "./docker/utils/dev-lite",
+      "dockerfile": "./docker/utils/dev-lite/Dockerfile",
       "target": "build",
       "tag": "1.0.1",
       "latest": true
@@ -75,7 +69,6 @@
     "name": "gh-runner",
     "description": "Self-hosted GitHub Actions runner",
     "build": {
-      "base": "ghcr.io/actions/actions-runner:2.335.1",
       "context": "./docker/utils/gh-runner",
       "dockerfile": "./docker/utils/gh-runner/Dockerfile",
       "target": "build",
@@ -87,7 +80,6 @@
     "name": "gh-runner-gpu",
     "description": "Self-hosted GitHub Actions runner with GPU support",
     "build": {
-      "base": "ghcr.io/actions/actions-runner:2.335.1",
       "context": "./docker/utils/gh-runner-gpu",
       "dockerfile": "./docker/utils/gh-runner-gpu/Dockerfile",
       "target": "build",
@@ -99,7 +91,6 @@
     "name": "homelab-utils",
     "description": "Homelab utility tools collection",
     "build": {
-      "base": "docker.io/alpine:3.23.4",
       "context": "./docker/utils/homelab-utils",
       "dockerfile": "./docker/utils/homelab-utils/Dockerfile",
       "target": "build",
@@ -112,7 +103,6 @@
     "description": "PostgreSQL backup utility with S3 support",
     "deprecated": true,
     "build": {
-      "base": "docker.io/postgres:18.1",
       "context": "./docker/utils/pg-backup",
       "dockerfile": "./docker/utils/pg-backup/Dockerfile",
       "target": "build",
@@ -125,7 +115,6 @@
     "description": "S3 bucket sync and backup utility",
     "deprecated": true,
     "build": {
-      "base": "docker.io/debian:12",
       "context": "./docker/utils/s3-backup",
       "dockerfile": "./docker/utils/s3-backup/Dockerfile",
       "target": "build",
@@ -138,7 +127,6 @@
     "description": "HashiCorp Vault backup utility with S3 support",
     "deprecated": true,
     "build": {
-      "base": "docker.io/hashicorp/vault:1.21.0",
       "context": "./docker/utils/vault-backup",
       "dockerfile": "./docker/utils/vault-backup/Dockerfile",
       "target": "build",

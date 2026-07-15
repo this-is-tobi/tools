@@ -1,0 +1,19 @@
+name: CD
+
+on:
+  push:
+    branches:
+    - main
+  workflow_dispatch:
+
+jobs:
+  release:
+    uses: this-is-tobi/github-workflows/.github/workflows/release-app.yml@v0
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    with:
+      ENABLE_PRERELEASE: false
+      TAG_MAJOR_AND_MINOR: false
+      AUTOMERGE_RELEASE: false

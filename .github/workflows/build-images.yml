@@ -1,0 +1,66 @@
+name: Build images
+
+on:
+  push:
+    tags:
+    - '*-v*.*.*'
+  workflow_dispatch:
+    inputs:
+      IMAGES:
+        description: Comma separated list of images to build (leave empty to build all active images)
+        required: false
+        type: string
+
+jobs:
+  matrix:
+    name: Resolve build matrix
+    runs-on: ubuntu-24.04
+    outputs:
+      images: ${{ steps.resolve.outputs.IMAGES }}
+    steps:
+    - name: Checks-out repository
+      uses: actions/checkout@v6
+
+    - name: Resolve images to build
+      id: resolve
+      run: |
+        if [ "${{ github.ref_type }}" == "tag" ]; then
+          IMAGE_NAME="${GITHUB_REF_NAME%-v*}"
+          IMAGES=$(jq -c --arg name "$IMAGE_NAME" '[.[] | select(.name == $name)]' ci/matrix.json)
+        elif [ -n "${{ inputs.IMAGES }}" ]; then
+          # Explicit selection bypasses the deprecated filter (e.g. to patch a legacy image before removal).
+          JQ_FILTER=$(echo "${{ inputs.IMAGES }}" | jq -R 'split(",")')
+          IMAGES=$(jq -c --argjson names "$JQ_FILTER" '[.[] | select(.name | IN($names[]))]' ci/matrix.json)
+        else
+          IMAGES=$(jq -c '[.[] | select(.deprecated != true)]' ci/matrix.json)
+        fi
+        echo "Resolved images: $IMAGES"
+        echo "IMAGES=$IMAGES" >> $GITHUB_OUTPUT
+
+  build:
+    name: Build ${{ matrix.image.name }}
+    needs: matrix
+    if: ${{ needs.matrix.outputs.images != '[]' }}
+    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@v0
+    permissions:
+      packages: write
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      matrix:
+        image: ${{ fromJSON(needs.matrix.outputs.images) }}
+    with:
+      IMAGE_NAME: ghcr.io/this-is-tobi/tools/${{ matrix.image.name }}
+      IMAGE_TAG: ${{ matrix.image.build.tag }}
+      IMAGE_CONTEXT: ${{ matrix.image.build.context }}
+      IMAGE_DOCKERFILE: ${{ matrix.image.build.dockerfile }}
+      IMAGE_TARGET: ${{ matrix.image.build.target }}
+      LATEST_TAG: ${{ matrix.image.build.latest == true }}
+      TAG_MAJOR_AND_MINOR: true
+      BUILD_AMD64: true
+      BUILD_ARM64: true
+      USE_QEMU: false
+      CACHE: true
+      PROVENANCE: true
+      SBOM: true
