@@ -73,14 +73,14 @@ RUN sudo mkdir -m 0755 -p /etc/apt/keyrings \
 
 # Install proto packages
 RUN curl -fsSL https://moonrepo.dev/install/proto.sh | bash -s -- --yes \
-  && proto install bun \
-  && proto install node \
-  && proto install npm \
-  && proto install pnpm \
-  && proto install yarn \
-  && proto install go \
-  && proto install uv \
-  && proto install rust
+  && proto install bun --pin global --yes \
+  && proto install node --pin global --yes \
+  && proto install npm --pin global --yes \
+  && proto install pnpm --pin global --yes \
+  && proto install yarn --pin global --yes \
+  && proto install go --pin global --yes \
+  && proto install uv --pin global --yes \
+  && proto install rust --pin global --yes
 
 # Install python packages
 RUN uv venv ${HOME}/.venv \
