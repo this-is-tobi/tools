@@ -20,7 +20,7 @@ jobs:
       contents: write
     steps:
     - name: Checks-out repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Touch refresh markers
       id: touch

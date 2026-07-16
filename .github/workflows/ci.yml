@@ -29,7 +29,7 @@ jobs:
       templates: ${{ steps.resolve.outputs.TEMPLATES }}
     steps:
     - name: Checks-out repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         fetch-depth: 0
 
@@ -98,7 +98,7 @@ jobs:
         template: ${{ fromJSON(needs.resolve-affected.outputs.templates) }}
     steps:
     - name: Checks-out repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Build ${{ matrix.template.name }}
       run: |
@@ -115,7 +115,7 @@ jobs:
       names: ${{ steps.list.outputs.NAMES }}
     steps:
     - name: Checks-out repository
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: List active images
       id: list
