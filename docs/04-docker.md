@@ -220,6 +220,13 @@ Set `"deprecated": true` on its `ci/matrix.json` entry. This excludes it from Re
 
 `build-images.yml` also accepts `workflow_dispatch` with an optional comma-separated `IMAGES` input (leave empty to rebuild every active image). Useful for forcing a rebuild without waiting on a release-please PR.
 
+### PR build checks
+
+`ci.yml` verifies buildability before anything merges, not just commit message format. On every non-draft PR it diffs changed files against `ci/matrix.json`'s `build.context` fields and builds (AMD64 only, no attestation) just the images actually touched, tagged `<image>:pr-<number>` and pushed to ghcr.io — a PR touching only docs or a single Dockerfile builds nothing or exactly that one image. `docker/templates/**` changes get a local `docker build` for both the `dev` and `prod` stages instead (no push — templates were never published by this pipeline, they're copy-paste starting points). PR-tagged images are deleted from ghcr.io once the PR closes (merged or not), via the shared `clean-cache.yml` workflow.
+
+> [!NOTE]
+> PRs from forks won't be able to push the check image — `GITHUB_TOKEN` is read-only for `pull_request` events from forks, which GitHub enforces regardless of the `permissions:` requested in the workflow. Not an issue for same-repo branches.
+
 ### Known limitations
 
 - **No cosign keyless signing.** The old pipeline signed every published tag with `cosign sign`; the shared `build-docker.yml` workflow's built-in attestation step only forwards SBOM and SLSA provenance, not signing. SBOM/provenance attestations are still generated.

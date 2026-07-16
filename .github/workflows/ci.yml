@@ -7,13 +7,133 @@ on:
     - reopened
     - synchronize
     - ready_for_review
+    - closed
     branches:
     - main
   workflow_dispatch:
 
 jobs:
   lint-commits:
+    if: ${{ github.event.action != 'closed' && !github.event.pull_request.draft }}
     uses: this-is-tobi/github-workflows/.github/workflows/lint-commits.yml@v0
     permissions:
       contents: read
       pull-requests: read
+
+  resolve-affected:
+    name: Resolve affected images and templates
+    if: ${{ github.event.action != 'closed' && !github.event.pull_request.draft }}
+    runs-on: ubuntu-24.04
+    outputs:
+      images: ${{ steps.resolve.outputs.IMAGES }}
+      templates: ${{ steps.resolve.outputs.TEMPLATES }}
+    steps:
+    - name: Checks-out repository
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: Resolve affected images and templates
+      id: resolve
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      run: |
+        CHANGED=$(git diff --name-only "$BASE_SHA"...HEAD)
+        echo "Changed files:"
+        echo "$CHANGED"
+
+        IMAGES=$(jq -c '[.[] | select(.deprecated != true)]' ci/matrix.json | \
+          jq -c --arg files "$CHANGED" '
+            ($files | split("\n")) as $changed
+            | [.[] | select(.build.context as $ctx | $changed | any(startswith(($ctx | ltrimstr("./")) + "/")))]
+          ')
+        echo "Affected images: $IMAGES"
+        echo "IMAGES=$IMAGES" >> $GITHUB_OUTPUT
+
+        # Templates aren't tracked in matrix.json (they're never built/published by
+        # this pipeline), so their build-check matrix is declared inline. Both a
+        # dev and prod target are checked per template since a base-image bump
+        # can affect either stage independently.
+        TEMPLATES=$(jq -nc '
+          [
+            {name: "nginx-dev", context: "docker/templates/nginx", dockerfile: "docker/templates/nginx/Dockerfile", target: "dev"},
+            {name: "nginx-prod", context: "docker/templates/nginx", dockerfile: "docker/templates/nginx/Dockerfile", target: "prod"},
+            {name: "bun-dev", context: "docker/templates/bun", dockerfile: "docker/templates/bun/Dockerfile", target: "dev"},
+            {name: "bun-prod", context: "docker/templates/bun", dockerfile: "docker/templates/bun/Dockerfile", target: "prod"}
+          ]' | jq -c --arg files "$CHANGED" '
+            ($files | split("\n")) as $changed
+            | [.[] | select(.context as $ctx | $changed | any(startswith($ctx + "/")))]
+          ')
+        echo "Affected templates: $TEMPLATES"
+        echo "TEMPLATES=$TEMPLATES" >> $GITHUB_OUTPUT
+
+  build-images:
+    name: Build ${{ matrix.image.name }} (PR check)
+    needs: resolve-affected
+    if: ${{ needs.resolve-affected.outputs.images != '[]' }}
+    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@v0
+    permissions:
+      packages: write
+      contents: read
+    strategy:
+      matrix:
+        image: ${{ fromJSON(needs.resolve-affected.outputs.images) }}
+    with:
+      IMAGE_NAME: ghcr.io/this-is-tobi/tools/${{ matrix.image.name }}
+      IMAGE_TAG: pr-${{ github.event.pull_request.number }}
+      IMAGE_CONTEXT: ${{ matrix.image.build.context }}
+      IMAGE_DOCKERFILE: ${{ matrix.image.build.dockerfile }}
+      IMAGE_TARGET: ${{ matrix.image.build.target }}
+      BUILD_AMD64: true
+      BUILD_ARM64: false
+      CACHE: true
+
+  build-templates:
+    name: Build ${{ matrix.template.name }} (PR check)
+    needs: resolve-affected
+    if: ${{ needs.resolve-affected.outputs.templates != '[]' }}
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        template: ${{ fromJSON(needs.resolve-affected.outputs.templates) }}
+    steps:
+    - name: Checks-out repository
+      uses: actions/checkout@v6
+
+    - name: Build ${{ matrix.template.name }}
+      run: |
+        docker build \
+          --target ${{ matrix.template.target }} \
+          -f ${{ matrix.template.dockerfile }} \
+          ${{ matrix.template.context }}
+
+  resolve-active:
+    name: Resolve active images
+    if: ${{ github.event.action == 'closed' }}
+    runs-on: ubuntu-24.04
+    outputs:
+      names: ${{ steps.list.outputs.NAMES }}
+    steps:
+    - name: Checks-out repository
+      uses: actions/checkout@v6
+
+    - name: List active images
+      id: list
+      run: |
+        NAMES=$(jq -c '[.[] | select(.deprecated != true) | .name]' ci/matrix.json)
+        echo "NAMES=$NAMES" >> $GITHUB_OUTPUT
+
+  cleanup-images:
+    name: Delete ${{ matrix.name }}:pr-${{ github.event.pull_request.number }}
+    needs: resolve-active
+    if: ${{ github.event.action == 'closed' }}
+    uses: this-is-tobi/github-workflows/.github/workflows/clean-cache.yml@v0
+    permissions:
+      packages: write
+    strategy:
+      matrix:
+        name: ${{ fromJSON(needs.resolve-active.outputs.names) }}
+    with:
+      CLEAN_GH_CACHE: false
+      CLEAN_GHCR_IMAGE: true
+      IMAGE: ghcr.io/this-is-tobi/tools/${{ matrix.name }}:pr-${{ github.event.pull_request.number }}
