@@ -132,6 +132,7 @@ jobs:
     uses: this-is-tobi/github-workflows/.github/workflows/clean-cache.yml@v0
     permissions:
       packages: write
+      actions: write
     strategy:
       matrix:
         name: ${{ fromJSON(needs.resolve-active.outputs.names) }}
