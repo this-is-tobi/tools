@@ -178,9 +178,9 @@ Active images (the `deprecated` images below use static, hand-maintained tags an
 **End-to-end flow:**
 
 1. A base image gets a new version, or a month goes by → a commit lands on `main` scoped to one image's directory.
-2. [`cd.yml`](../.github/workflows/cd.yml) runs `release-please` on every push to `main`. For each image directory with unreleased `fix`/`feat`/breaking commits since its last release, it opens (or updates) an independent release PR bumping that image's version, updating its `CHANGELOG.md`, and patching its `tag` field in [`ci/matrix.json`](../ci/matrix.json).
+2. [`cd.yml`](../.github/workflows/cd.yml) runs `release-please` on every push to `main`. For each image directory with unreleased `fix`/`feat`/breaking commits since its last release, it opens (or updates) an independent release PR bumping that image's version, updating its `CHANGELOG.md`, and bumping its entry in [`.release-please-manifest.json`](../.release-please-manifest.json).
 3. Merging a release PR creates a git tag `<image-name>-v<version>` (e.g. `curl-v2.0.4`).
-4. That tag push triggers [`build-images.yml`](../.github/workflows/build-images.yml), which looks up the matching entry in `ci/matrix.json` and builds/pushes just that one image (multi-arch, plus SBOM + provenance attestations), via the shared [`this-is-tobi/github-workflows`](https://github.com/this-is-tobi/github-workflows) reusable workflows.
+4. That tag push triggers [`build-images.yml`](../.github/workflows/build-images.yml), which looks up the matching entry in `ci/matrix.json` for build metadata (context, Dockerfile, target), resolves the version to build from `.release-please-manifest.json`, and builds/pushes just that one image (multi-arch, plus SBOM + provenance attestations), via the shared [`this-is-tobi/github-workflows`](https://github.com/this-is-tobi/github-workflows) reusable workflows.
 
 Each image versions and releases **independently** — bumping `curl` never touches `debug`'s version or triggers its rebuild.
 
@@ -198,15 +198,19 @@ None of these Dockerfiles pin `apt`/`apk` package versions, so a base image bump
 - `component`: the image name, used to build the `<name>-v<version>` tag.
 - `initial-version`: where that image's version counter starts.
 - `bootstrap-sha`: the commit this system was introduced at — release-please only considers commits *after* this SHA for that path. This repo had real unreleased `feat:`/`fix:` history predating this pipeline; without `bootstrap-sha` release-please would walk that entire history on its first run and could bump several images unexpectedly. **Don't remove this field** unless you specifically want release-please to re-scan full history for a package.
-- `extra-files`: a `jsonpath` pointer back into `ci/matrix.json`'s matching `build.tag`, so that file stays in sync automatically.
+
+`ci/matrix.json` deliberately has **no `tag` field** for actively-released images, and `release-please-config.json` deliberately has **no `extra-files`** pointing back into it. `build-images.yml` resolves each active image's version straight from `.release-please-manifest.json` at build time instead (deprecated images, which aren't release-please-managed, keep a static hand-set `tag` in `matrix.json` as their only source).
+
+> [!WARNING]
+> Don't add an `extra-files` entry targeting `ci/matrix.json` (or any other root-level JSON *array* file). Release-please's built-in JSON `extra-files` updater assumes the target file's root is an object — its format-preserving stringifier slices the content before the first `{` and after the last `}` ([`json-stringify.ts`](https://github.com/googleapis/release-please/blob/main/src/util/json-stringify.ts)). Pointed at an array-rooted file, this corrupts it into a doubly-nested array (`[[...]]`) on every patch, silently breaking every `jq '.[] | ...'` consumer. Hit this for real on 2026-07-16 (PR #11, act-runner 2.0.5) — root-caused by reading release-please's source directly, not guessed. If a future release-please version fixes this upstream, it'd be safe to reintroduce `extra-files` here, but verify against a real generated PR diff first.
 
 Release PRs are **not auto-merged** (`AUTOMERGE_RELEASE: false` in `cd.yml`) — review and merge them like any other PR. This matches the convention used in the `github-workflows` repo itself.
 
 ### Adding a new image
 
 1. Add its Dockerfile under `docker/utils/<name>/` with `ARG BASE_IMAGE=...` + `FROM ${BASE_IMAGE}` (needed for Renovate to detect it).
-2. Add an entry to `ci/matrix.json` (`name`, `description`, `build.context`, `build.dockerfile`, `build.target`, `build.tag` = its starting version, `build.latest`).
-3. Add a matching package to `release-please-config.json` (`component`, `initial-version` = same starting version, `bootstrap-sha` = current `HEAD`, and an `extra-files` entry targeting its `matrix.json` row) and a matching entry to `.release-please-manifest.json`.
+2. Add an entry to `ci/matrix.json` (`name`, `description`, `build.context`, `build.dockerfile`, `build.target`, `build.latest`) — **no `build.tag` field**, that's resolved at build time from the manifest.
+3. Add a matching package to `release-please-config.json` (`component`, `initial-version` = its starting version, `bootstrap-sha` = current `HEAD` — **no `extra-files`**, see the warning above) and a matching entry to `.release-please-manifest.json` (same starting version).
 4. Add its row to the table above and to `docs/04-docker.md`'s docs.
 
 > [!NOTE]

@@ -6,7 +6,6 @@
       "context": "./docker/utils/act-runner",
       "dockerfile": "./docker/utils/act-runner/Dockerfile",
       "target": "build",
-      "tag": "2.0.4",
       "latest": true
     }
   },
@@ -17,7 +16,6 @@
       "context": "./docker/utils/backup",
       "dockerfile": "./docker/utils/backup/Dockerfile",
       "target": "build",
-      "tag": "1.4.0",
       "latest": true
     }
   },
@@ -28,7 +26,6 @@
       "context": "./docker/utils/curl",
       "dockerfile": "./docker/utils/curl/Dockerfile",
       "target": "build",
-      "tag": "2.0.3",
       "latest": true
     }
   },
@@ -39,7 +36,6 @@
       "context": "./docker/utils/debug",
       "dockerfile": "./docker/utils/debug/Dockerfile",
       "target": "build",
-      "tag": "3.0.1",
       "latest": true
     }
   },
@@ -50,7 +46,6 @@
       "context": "./docker/utils/dev",
       "dockerfile": "./docker/utils/dev/Dockerfile",
       "target": "build",
-      "tag": "3.0.1",
       "latest": true
     }
   },
@@ -61,7 +56,6 @@
       "context": "./docker/utils/dev-lite",
       "dockerfile": "./docker/utils/dev-lite/Dockerfile",
       "target": "build",
-      "tag": "1.0.1",
       "latest": true
     }
   },
@@ -72,7 +66,6 @@
       "context": "./docker/utils/gh-runner",
       "dockerfile": "./docker/utils/gh-runner/Dockerfile",
       "target": "build",
-      "tag": "1.11.0",
       "latest": true
     }
   },
@@ -83,7 +76,6 @@
       "context": "./docker/utils/gh-runner-gpu",
       "dockerfile": "./docker/utils/gh-runner-gpu/Dockerfile",
       "target": "build",
-      "tag": "1.9.0",
       "latest": true
     }
   },

@@ -48,6 +48,16 @@ jobs:
           IMAGES=$(jq -c '[.[] | select(.deprecated != true)]' ci/matrix.json)
         fi
 
+        # Resolve each image's version. matrix.json no longer carries a `tag` field for
+        # actively-released images (release-please's extra-files JSON updater corrupts a
+        # root-array file like matrix.json - see docs/04-docker.md). The release-please
+        # manifest is the authoritative current version instead. Deprecated images aren't
+        # release-please-managed, so matrix.json's own frozen `tag` is kept for those.
+        MANIFEST=$(cat .release-please-manifest.json)
+        IMAGES=$(echo "$IMAGES" | jq -c --argjson manifest "$MANIFEST" '
+          map(.build.tag = (.build.tag // $manifest["docker/utils/" + .name]))
+        ')
+
         # Skip images whose exact tag is already published (e.g. release-please bootstrap
         # tags matching an already-shipped version). --FORCE bypasses this for manual dispatch.
         if [ "${{ inputs.FORCE }}" != "true" ]; then
