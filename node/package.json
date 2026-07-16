@@ -1,7 +1,7 @@
 {
   "description": "TypeScript versions of crypto and worker modules",
   "devDependencies": {
-    "@types/node": "^24.3.0"
+    "@types/node": "^26.0.0"
   },
   "name": "typescript-modules",
   "scripts": {
