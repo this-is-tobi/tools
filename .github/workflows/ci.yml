@@ -75,6 +75,8 @@ jobs:
     permissions:
       packages: write
       contents: read
+      id-token: write
+      attestations: write
     strategy:
       matrix:
         image: ${{ fromJSON(needs.resolve-affected.outputs.images) }}
