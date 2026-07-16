@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=docker.io/ubuntu:24.04
+ARG BASE_IMAGE=docker.io/ubuntu:26.04
 
 FROM ${BASE_IMAGE} AS build
 
