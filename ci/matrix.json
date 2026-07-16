@@ -88,17 +88,6 @@
     }
   },
   {
-    "name": "homelab-utils",
-    "description": "Homelab utility tools collection",
-    "build": {
-      "context": "./docker/utils/homelab-utils",
-      "dockerfile": "./docker/utils/homelab-utils/Dockerfile",
-      "target": "build",
-      "tag": "0.0.4",
-      "latest": true
-    }
-  },
-  {
     "name": "pg-backup",
     "description": "PostgreSQL backup utility with S3 support",
     "deprecated": true,

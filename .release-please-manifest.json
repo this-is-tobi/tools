@@ -6,6 +6,5 @@
   "docker/utils/dev": "3.0.1",
   "docker/utils/dev-lite": "1.0.1",
   "docker/utils/gh-runner": "1.11.0",
-  "docker/utils/gh-runner-gpu": "1.9.0",
-  "docker/utils/homelab-utils": "0.0.4"
+  "docker/utils/gh-runner-gpu": "1.9.0"
 }

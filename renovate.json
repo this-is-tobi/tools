@@ -6,9 +6,17 @@
   "semanticCommits": "enabled",
   "packageRules": [
     {
-      "description": "Base image bumps land as 'fix' so release-please cuts a patch release for the affected image.",
+      "description": "Base image bumps for released images land as 'fix' so release-please cuts a patch release for the affected image.",
       "matchManagers": ["dockerfile"],
+      "matchFileNames": ["docker/utils/**"],
       "semanticCommitType": "fix",
+      "commitMessageTopic": "{{depName}} base image"
+    },
+    {
+      "description": "Templates aren't built/released by this pipeline (no release-please package exists for docker/templates/**) - keep them updated without implying a release is needed.",
+      "matchManagers": ["dockerfile"],
+      "matchFileNames": ["docker/templates/**"],
+      "semanticCommitType": "chore",
       "commitMessageTopic": "{{depName}} base image"
     },
     {

@@ -5,80 +5,149 @@
   "separate-pull-requests": true,
   "bootstrap-sha": "f288ae62a16ddd676015511af23fc1a1446086c1",
   "changelog-sections": [
-    { "type": "feat", "section": "Features", "hidden": false },
-    { "type": "fix", "section": "Bug Fixes", "hidden": false },
-    { "type": "perf", "section": "Performance Improvements", "hidden": false },
-    { "type": "revert", "section": "Reverts", "hidden": false },
-    { "type": "refactor", "section": "Code Refactoring", "hidden": false },
-    { "type": "build", "section": "Dependencies", "hidden": false },
-    { "type": "docs", "section": "Documentation", "hidden": true },
-    { "type": "style", "section": "Styles", "hidden": true },
-    { "type": "chore", "section": "Miscellaneous Chores", "hidden": true },
-    { "type": "test", "section": "Tests", "hidden": true },
-    { "type": "ci", "section": "Continuous Integration", "hidden": true }
+    {
+      "type": "feat",
+      "section": "Features",
+      "hidden": false
+    },
+    {
+      "type": "fix",
+      "section": "Bug Fixes",
+      "hidden": false
+    },
+    {
+      "type": "perf",
+      "section": "Performance Improvements",
+      "hidden": false
+    },
+    {
+      "type": "revert",
+      "section": "Reverts",
+      "hidden": false
+    },
+    {
+      "type": "refactor",
+      "section": "Code Refactoring",
+      "hidden": false
+    },
+    {
+      "type": "build",
+      "section": "Dependencies",
+      "hidden": false
+    },
+    {
+      "type": "docs",
+      "section": "Documentation",
+      "hidden": true
+    },
+    {
+      "type": "style",
+      "section": "Styles",
+      "hidden": true
+    },
+    {
+      "type": "chore",
+      "section": "Miscellaneous Chores",
+      "hidden": true
+    },
+    {
+      "type": "test",
+      "section": "Tests",
+      "hidden": true
+    },
+    {
+      "type": "ci",
+      "section": "Continuous Integration",
+      "hidden": true
+    }
   ],
   "packages": {
     "docker/utils/act-runner": {
       "component": "act-runner",
       "initial-version": "2.0.4",
       "extra-files": [
-        { "type": "json", "path": "/ci/matrix.json", "jsonpath": "$[?(@.name=='act-runner')].build.tag" }
+        {
+          "type": "json",
+          "path": "/ci/matrix.json",
+          "jsonpath": "$[?(@.name=='act-runner')].build.tag"
+        }
       ]
     },
     "docker/utils/backup": {
       "component": "backup",
       "initial-version": "1.4.0",
       "extra-files": [
-        { "type": "json", "path": "/ci/matrix.json", "jsonpath": "$[?(@.name=='backup')].build.tag" }
+        {
+          "type": "json",
+          "path": "/ci/matrix.json",
+          "jsonpath": "$[?(@.name=='backup')].build.tag"
+        }
       ]
     },
     "docker/utils/curl": {
       "component": "curl",
       "initial-version": "2.0.3",
       "extra-files": [
-        { "type": "json", "path": "/ci/matrix.json", "jsonpath": "$[?(@.name=='curl')].build.tag" }
+        {
+          "type": "json",
+          "path": "/ci/matrix.json",
+          "jsonpath": "$[?(@.name=='curl')].build.tag"
+        }
       ]
     },
     "docker/utils/debug": {
       "component": "debug",
       "initial-version": "3.0.1",
       "extra-files": [
-        { "type": "json", "path": "/ci/matrix.json", "jsonpath": "$[?(@.name=='debug')].build.tag" }
+        {
+          "type": "json",
+          "path": "/ci/matrix.json",
+          "jsonpath": "$[?(@.name=='debug')].build.tag"
+        }
       ]
     },
     "docker/utils/dev": {
       "component": "dev",
       "initial-version": "3.0.1",
       "extra-files": [
-        { "type": "json", "path": "/ci/matrix.json", "jsonpath": "$[?(@.name=='dev')].build.tag" }
+        {
+          "type": "json",
+          "path": "/ci/matrix.json",
+          "jsonpath": "$[?(@.name=='dev')].build.tag"
+        }
       ]
     },
     "docker/utils/dev-lite": {
       "component": "dev-lite",
       "initial-version": "1.0.1",
       "extra-files": [
-        { "type": "json", "path": "/ci/matrix.json", "jsonpath": "$[?(@.name=='dev-lite')].build.tag" }
+        {
+          "type": "json",
+          "path": "/ci/matrix.json",
+          "jsonpath": "$[?(@.name=='dev-lite')].build.tag"
+        }
       ]
     },
     "docker/utils/gh-runner": {
       "component": "gh-runner",
       "initial-version": "1.11.0",
       "extra-files": [
-        { "type": "json", "path": "/ci/matrix.json", "jsonpath": "$[?(@.name=='gh-runner')].build.tag" }
+        {
+          "type": "json",
+          "path": "/ci/matrix.json",
+          "jsonpath": "$[?(@.name=='gh-runner')].build.tag"
+        }
       ]
     },
     "docker/utils/gh-runner-gpu": {
       "component": "gh-runner-gpu",
       "initial-version": "1.9.0",
       "extra-files": [
-        { "type": "json", "path": "/ci/matrix.json", "jsonpath": "$[?(@.name=='gh-runner-gpu')].build.tag" }
-      ]
-    },
-    "docker/utils/homelab-utils": {
-      "component": "homelab-utils",
-      "initial-version": "0.0.4",
-      "extra-files": [
-        { "type": "json", "path": "/ci/matrix.json", "jsonpath": "$[?(@.name=='homelab-utils')].build.tag" }
+        {
+          "type": "json",
+          "path": "/ci/matrix.json",
+          "jsonpath": "$[?(@.name=='gh-runner-gpu')].build.tag"
+        }
       ]
     }
   }
