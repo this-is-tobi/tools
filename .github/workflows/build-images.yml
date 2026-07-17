@@ -37,6 +37,8 @@ jobs:
     - name: Resolve images to build
       id: resolve
       run: |
+        set -x
+        jq --version
         if [ "${{ github.ref_type }}" == "tag" ]; then
           IMAGE_NAME="${GITHUB_REF_NAME%-v*}"
           IMAGES=$(jq -c --arg name "$IMAGE_NAME" '[.[] | select(.name == $name)]' ci/matrix.json)
