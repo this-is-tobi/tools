@@ -17,3 +17,23 @@ jobs:
       ENABLE_PRERELEASE: false
       TAG_MAJOR_AND_MINOR: false
       AUTOMERGE_RELEASE: false
+
+  trigger-build:
+    name: Trigger image builds
+    needs: release
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+    steps:
+    - name: Dispatch build-images.yml
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        # release-please-action creates release tags using GITHUB_TOKEN, and tags pushed by
+        # GITHUB_TOKEN don't trigger other workflows' `push: tags:` events (GitHub's built-in
+        # anti-recursion guard) - so build-images.yml's tag trigger never fires on its own.
+        # workflow_dispatch is explicitly exempt from that restriction, so dispatch it here
+        # instead. No need to know which package(s) actually released: build-images.yml's own
+        # skip-if-already-published guard makes an unconditional "build every active image"
+        # dispatch a safe no-op for whichever images didn't just get a new version.
+        gh workflow run build-images.yml --repo ${{ github.repository }} --ref ${{ github.ref_name }}
