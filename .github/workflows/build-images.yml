@@ -37,8 +37,6 @@ jobs:
     - name: Resolve images to build
       id: resolve
       run: |
-        set -x
-        jq --version
         if [ "${{ github.ref_type }}" == "tag" ]; then
           IMAGE_NAME="${GITHUB_REF_NAME%-v*}"
           IMAGES=$(jq -c --arg name "$IMAGE_NAME" '[.[] | select(.name == $name)]' ci/matrix.json)
@@ -64,7 +62,10 @@ jobs:
         # tags matching an already-shipped version). --FORCE bypasses this for manual dispatch.
         if [ "${{ inputs.FORCE }}" != "true" ]; then
           FILTERED="[]"
-          for row in $(echo "$IMAGES" | jq -c '.[]'); do
+          # `for row in $(...)` would word-split each JSON object's own spaces (e.g. inside
+          # "description") instead of just splitting on jq's newline-per-element output -
+          # read it line-by-line instead so each $row stays one intact JSON object.
+          while IFS= read -r row; do
             NAME=$(echo "$row" | jq -r '.name')
             TAG=$(echo "$row" | jq -r '.build.tag')
             if docker manifest inspect "ghcr.io/this-is-tobi/tools/${NAME}:${TAG}" > /dev/null 2>&1; then
@@ -72,7 +73,7 @@ jobs:
             else
               FILTERED=$(echo "$FILTERED" | jq -c --argjson row "$row" '. + [$row]')
             fi
-          done
+          done < <(echo "$IMAGES" | jq -c '.[]')
           IMAGES="$FILTERED"
         fi
 
