@@ -193,11 +193,15 @@ Each image versions and releases **independently** — bumping `curl` never touc
 
 ### Base image updates
 
-[Renovate](https://docs.renovatebot.com/) ([`renovate.json`](../renovate.json)) watches the `ARG BASE_IMAGE=...` default in every active Dockerfile (this is the single source of truth for the base image — `ci/matrix.json` no longer duplicates it) and opens a PR per outdated base, commit-scoped as `fix(...)` so release-please treats it as a patch release for that image. Deprecated images are excluded from Renovate entirely.
+[Renovate](https://docs.renovatebot.com/) ([`renovate.json`](../renovate.json)) watches the `ARG BASE_IMAGE=...` default in every active Dockerfile (this is the single source of truth for the base image — `ci/matrix.json` no longer duplicates it) and opens a PR per outdated base, commit-scoped as `build(...)` so release-please treats it as a patch release for that image. Deprecated images are excluded from Renovate entirely.
+
+Active bases are pinned as `tag@sha256:...` (`pinDigests`). The tag alone isn't enough: upstream rebuilds floating tags like `debian:13` with new security patches without ever changing the tag string, so a tag-only pin would silently go stale until the next major. With the digest pinned, those rebuilds become a Renovate PR within hours instead of waiting on the monthly refresh below.
+
+The pinned digest is always the **index (manifest-list) digest**, not a per-architecture one — it points at a list of per-platform manifests, so buildx still resolves the right one for each of `linux/amd64` and `linux/arm64`. Pinning a platform-specific digest by mistake (e.g. one copied from `docker pull --platform ...` or a registry UI's per-arch row) breaks the other arch with `no match for platform in manifest`. Read the correct one with `docker buildx imagetools inspect <image>:<tag>` and take the top-level `Digest:`.
 
 ### Scheduled dependency refresh
 
-None of these Dockerfiles pin `apt`/`apk` package versions, so a base image bump alone won't catch newer package versions between base image releases. [`refresh-images.yml`](../.github/workflows/refresh-images.yml) runs monthly, touches a `.refresh` marker file inside each active image's directory, and pushes one `fix(docker): scheduled dependency refresh` commit. That's a real, path-scoped commit, so release-please cuts a genuine patch release from it — this is the mechanism that keeps floating packages current without hand-tracking every dependency. Trigger it manually via `workflow_dispatch` with a comma-separated `IMAGES` input to refresh specific images on demand.
+None of these Dockerfiles pin `apt`/`apk` package versions, so a base image bump alone won't catch newer package versions between base image releases. [`refresh-images.yml`](../.github/workflows/refresh-images.yml) runs monthly, touches a `.refresh` marker file inside each active image's directory, and pushes one `build(docker): scheduled dependency refresh` commit. That's a real, path-scoped commit, so release-please cuts a genuine patch release from it — this is the mechanism that keeps floating packages current without hand-tracking every dependency. Trigger it manually via `workflow_dispatch` with a comma-separated `IMAGES` input to refresh specific images on demand.
 
 ### Versioning (release-please)
 
