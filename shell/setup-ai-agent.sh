@@ -14,10 +14,14 @@ TOOL="both"
 PRESET="general"
 CUSTOM_INSTRUCTIONS=""
 WITH_AGENTS=0
+WITH_PLUGINS=0
 GLOBAL=0
 WITH_CLI=0
 RTK_MERGE=0
 COPILOT_CLI_FILE="${HOME}/.copilot/copilot-instructions.md"
+CLAUDE_MARKETPLACE="claude-plugins-official"
+CLAUDE_MARKETPLACE_SOURCE="anthropics/claude-plugins-official"
+CLAUDE_PLUGINS="claude-security"
 
 # Script helper
 TEXT_HELPER="
@@ -31,6 +35,11 @@ Available flags:
         Always includes 'general'; presets add the scoped files for that stack.
   -i    Custom comma-separated instruction names, overrides -p (e.g. 'general,docker,terraform').
   -a    Also install custom agents (off by default — instructions + skills only).
+  -P    Also install Claude Code plugins ('${CLAUDE_PLUGINS}') from the official Anthropic marketplace
+        ('${CLAUDE_MARKETPLACE_SOURCE}'). Always user scope, so the plugin is available in every repo
+        regardless of -g. Claude Code-only — ignored with -t copilot. Skipped with a warning when the
+        'claude' binary isn't on PATH. Idempotent: re-running re-checks the marketplace and updates
+        already-installed plugins.
   -g    Personal/global setup (~/.claude, ~/.copilot) instead of repo-level.
   -c    Also populate Copilot CLI's personal file (~/.copilot/copilot-instructions.md), always just
         'general' regardless of -p/-i (matches how Copilot CLI's personal setup works — one always-loaded
@@ -45,6 +54,7 @@ Examples:
   ./setup-ai-agent.sh -t claude
   ./setup-ai-agent.sh -t copilot -p javascript -a
   ./setup-ai-agent.sh -t both -g
+  ./setup-ai-agent.sh -t claude -g -P
   ./setup-ai-agent.sh -t copilot -g -c
   ./setup-ai-agent.sh -r
 "
@@ -141,6 +151,25 @@ setup_claude() {
   printf "${COLOR_GREEN}Claude Code setup done.${COLOR_OFF}\n"
 }
 
+setup_claude_plugins() {
+  if ! command -v claude > /dev/null 2>&1; then
+    printf "${COLOR_RED}Warning${COLOR_OFF}: 'claude' binary not found — skipping plugin install (-P).\n"
+    return 0
+  fi
+
+  printf "${COLOR_BLUE}Installing Claude Code plugins${COLOR_OFF} (user scope)...\n"
+  claude plugin marketplace add "$CLAUDE_MARKETPLACE_SOURCE" > /dev/null
+
+  for plugin in $CLAUDE_PLUGINS; do
+    # 'install' is a no-op once the plugin is present, so 'update' is what keeps re-runs current
+    claude plugin install "${plugin}@${CLAUDE_MARKETPLACE}" -s user
+    claude plugin update "${plugin}@${CLAUDE_MARKETPLACE}"
+  done
+
+  printf "${COLOR_GREEN}Claude Code plugins done.${COLOR_OFF}\n"
+  printf "${COLOR_BLUE}Note${COLOR_OFF}: plugin state lives in '~/.claude/settings.json' (enabledPlugins + extraKnownMarketplaces) — anything that overwrites that file wholesale drops it. Run '/reload-plugins' to activate in an already-open session.\n"
+}
+
 setup_copilot() {
   local instructions="$1"
   printf "${COLOR_BLUE}Setting up GitHub Copilot${COLOR_OFF} (%s)...\n" "$([ "$GLOBAL" = "1" ] && echo personal || echo repo)"
@@ -183,7 +212,7 @@ setup_copilot() {
 }
 
 # Parse options
-while getopts t:p:i:acgrh flag
+while getopts t:p:i:acgPrh flag
 do
   case "${flag}" in
     t)
@@ -194,6 +223,8 @@ do
       CUSTOM_INSTRUCTIONS="${OPTARG}";;
     a)
       WITH_AGENTS=1;;
+    P)
+      WITH_PLUGINS=1;;
     c)
       WITH_CLI=1;;
     g)
@@ -223,10 +254,18 @@ if [ "$WITH_CLI" = "1" ] && [ "$GLOBAL" = "0" ]; then
   WITH_CLI=0
 fi
 
+if [ "$WITH_PLUGINS" = "1" ] && [ "$TOOL" = "copilot" ]; then
+  printf "${COLOR_RED}Warning${COLOR_OFF}: -P is Claude Code-only — ignoring it for this '-t copilot' run.\n"
+  WITH_PLUGINS=0
+fi
+
 INSTRUCTIONS="$(resolve_instructions)"
 
 if [ "$TOOL" = "claude" ] || [ "$TOOL" = "both" ]; then
   setup_claude "$INSTRUCTIONS"
+  if [ "$WITH_PLUGINS" = "1" ]; then
+    setup_claude_plugins
+  fi
 fi
 if [ "$TOOL" = "copilot" ] || [ "$TOOL" = "both" ]; then
   setup_copilot "$INSTRUCTIONS"
