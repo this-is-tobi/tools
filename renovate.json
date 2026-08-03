@@ -6,10 +6,11 @@
   "semanticCommits": "enabled",
   "packageRules": [
     {
-      "description": "Base image bumps for released images land as 'fix' so release-please cuts a patch release for the affected image.",
+      "description": "Base image bumps for released images land as 'build' so release-please cuts a patch release for the affected image. Digests are pinned (index/manifest-list digest, so multi-arch builds still resolve per-platform) - upstream rebuilds a floating tag like debian:13 without changing the tag string, and only a digest bump catches that.",
       "matchManagers": ["dockerfile"],
       "matchFileNames": ["docker/utils/**"],
-      "semanticCommitType": "fix",
+      "semanticCommitType": "build",
+      "pinDigests": true,
       "commitMessageTopic": "{{depName}} base image"
     },
     {
