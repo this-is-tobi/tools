@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=docker.io/debian:13
+ARG BASE_IMAGE=docker.io/debian:13@sha256:fac46bff2e02f51425b6e33b0e1169f55dfb053d83511ca28aa50c09fd5ed7a4
 
 FROM ${BASE_IMAGE} AS build
 
