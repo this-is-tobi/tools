@@ -1,6 +1,6 @@
 {
   "docker/utils/act-runner": "2.0.6",
-  "docker/utils/backup": "1.4.0",
+  "docker/utils/backup": "1.4.1",
   "docker/utils/curl": "2.0.4",
   "docker/utils/debug": "3.0.2",
   "docker/utils/dev": "3.0.1",
