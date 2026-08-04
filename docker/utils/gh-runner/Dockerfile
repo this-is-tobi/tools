@@ -2,6 +2,12 @@ ARG BASE_IMAGE=ghcr.io/actions/actions-runner:2.336.0@sha256:0cfdcc701ce933c6d24
 
 FROM ${BASE_IMAGE} AS build
 
+# Cache-busting marker, rewritten by refresh-images.yml. It has to be copied in
+# for the refresh to mean anything: a context file no instruction reads never
+# enters a layer's cache key, so every RUN below would be served from the build
+# cache and the "refreshed" image would ship the exact same packages.
+COPY .refresh /etc/.image-refresh
+
 # Set system env
 ARG TARGETOS
 ARG TARGETARCH
@@ -46,7 +52,15 @@ RUN sudo mkdir -m 0755 -p /etc/apt/keyrings \
 
 # Install mise and language runtimes
 # npm is not pinned separately: it ships inside the node release.
-RUN curl -fsSL https://mise.run | sh \
+# GITHUB_TOKEN comes from a build secret, never a build arg, so it stays out of
+# the image layers and `docker history`. mise resolves `@latest` through the
+# GitHub API; unauthenticated that is 60 requests/hour shared across every runner
+# on the same egress IP, and the aqua/ubi backends fail with a 403 that mise
+# treats as permanent once it is hit. Optional - a local build without the secret
+# still works, it just gets the anonymous limit.
+RUN --mount=type=secret,id=github_token,mode=0444 \
+  export GITHUB_TOKEN="$(cat /run/secrets/github_token 2> /dev/null || true)" \
+  && curl -fsSL https://mise.run | sh \
   && mise use --global \
   node@latest \
   bun@latest \
@@ -61,7 +75,9 @@ RUN curl -fsSL https://mise.run | sh \
 # chart-testing, kubescape and scw have no short name in mise's registry, so
 # they are addressed through their aqua packages directly. chart-testing
 # provides the `ct` binary.
-RUN mise use --global \
+RUN --mount=type=secret,id=github_token,mode=0444 \
+  export GITHUB_TOKEN="$(cat /run/secrets/github_token 2> /dev/null || true)" \
+  && mise use --global \
   age@latest \
   argo@latest \
   argocd@latest \
@@ -95,3 +111,9 @@ RUN mise use --global \
 RUN uv venv ${HOME}/.venv \
   && . ${HOME}/.venv/bin/activate \
   && uv pip install ansible
+
+# Stated explicitly rather than left to the base image. It changes nothing at
+# runtime - the actions-runner base already ends on this user, which the smoke
+# test asserts - but a Dockerfile that never names a USER reads as root to any
+# static analysis, and to anyone skimming it.
+USER runner

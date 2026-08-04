@@ -1,0 +1,42 @@
+# Gitleaks allowlists for findings that are not secrets.
+#
+# The secret scan in ci.yml runs over the full git history and gates the
+# pipeline, so this file exists to keep that gate meaningful: without it the
+# scan reports eleven findings on every pull request, none of them a credential,
+# and a real leak would arrive as the twelfth line of a list nobody reads.
+#
+# Two rules for editing this file. Allowlist the *value* rather than the file,
+# so a genuine credential committed next to one of these still fails the scan.
+# And state why in terms of this repository - if a reason stops being true, the
+# entry gets deleted rather than reworded.
+#
+# Gitleaks auto-detects `.gitleaks.toml` at the scan root, so ci.yml passes
+# nothing; `gitleaks git .` in the checkout picks this up on its own.
+
+[extend]
+useDefault = true
+
+# `curl-auth-user` fires on `curl ... -u <value>`. Every match here is the same
+# documented one-liner, where the `-u` belongs to clone-subdir.sh on the far
+# side of a pipe, not to curl:
+#
+#   curl -fsSL .../clone-subdir.sh | bash -s -- -u "https://github.com/..." ...
+#
+# What gitleaks extracts as the secret is therefore a public repository URL.
+# Scoped to values that look like one, so `curl -u user:password` anywhere in
+# this repository would still be reported.
+[[allowlists]]
+description = "Public repository URL passed to clone-subdir.sh, not curl credentials"
+targetRules = ["curl-auth-user"]
+regexTarget = "secret"
+regexes = ['''^"?https://github\.com/''']
+
+# The crypto examples in node/ hardcode a key so the sample runs as written; the
+# line carries `// process.env.ENCRYPTION_KEY` right next to it to say where a
+# real one belongs. The literal is self-describing and matched exactly, so an
+# actual key assigned to the same variable is still a finding.
+[[allowlists]]
+description = "Placeholder key in the node crypto examples"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+regexes = ['''^a-key-with-exactly-32-characters$''']

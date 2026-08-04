@@ -1,0 +1,89 @@
+name: Scan images
+
+on:
+  schedule:
+  # Weekly on Monday at 03:00 UTC. Published images are scanned on a schedule
+  # rather than only at build time because a CVE is usually disclosed long
+  # after the image that carries it was built - a build-time scan alone says
+  # nothing about what is running today.
+  - cron: '0 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      IMAGES:
+        description: Comma separated list of images to scan (leave empty for all active images)
+        required: false
+        type: string
+      INCLUDE_DEPRECATED:
+        description: Also scan deprecated images (still pullable, no longer released)
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: scan-images
+  cancel-in-progress: true
+
+jobs:
+  matrix:
+    name: Resolve scan matrix
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      names: ${{ steps.resolve.outputs.NAMES }}
+    steps:
+    - name: Checks-out repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Resolve images to scan
+      id: resolve
+      env:
+        # Passed through the environment rather than interpolated into the
+        # script: `${{ }}` is substituted before the shell runs, so a crafted
+        # dispatch input would be executed as script rather than read as data.
+        INPUT_IMAGES: ${{ inputs.IMAGES }}
+        INPUT_INCLUDE_DEPRECATED: ${{ inputs.INCLUDE_DEPRECATED }}
+      run: |
+        # Deprecated images are excluded by default but can be opted back in:
+        # they are no longer released, yet remain pullable, so they are exactly
+        # the images most likely to have accumulated unpatched CVEs.
+        if [ "$INPUT_INCLUDE_DEPRECATED" = "true" ]; then
+          SELECTED=$(jq -c '[.[] | .name]' ci/matrix.json)
+        else
+          SELECTED=$(jq -c '[.[] | select(.deprecated != true) | .name]' ci/matrix.json)
+        fi
+
+        if [ -n "$INPUT_IMAGES" ]; then
+          JQ_FILTER=$(echo "$INPUT_IMAGES" | jq -R 'split(",")')
+          SELECTED=$(echo "$SELECTED" | jq -c --argjson names "$JQ_FILTER" '[.[] | select(. | IN($names[]))]')
+        fi
+
+        echo "Images to scan: $SELECTED"
+        echo "NAMES=$SELECTED" >> $GITHUB_OUTPUT
+
+  scan:
+    name: Scan ${{ matrix.name }}
+    needs: matrix
+    if: ${{ needs.matrix.outputs.names != '[]' }}
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@v0
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+      pull-requests: write
+    strategy:
+      # One broken image should not hide the results for the others.
+      fail-fast: false
+      matrix:
+        name: ${{ fromJSON(needs.matrix.outputs.names) }}
+    with:
+      IMAGE: ghcr.io/this-is-tobi/tools/${{ matrix.name }}:latest
+      FORMAT: sarif
+      SEVERITY: CRITICAL,HIGH
+      GITHUB_SECURITY_TAB: true
+      # Distinct per image: uploads sharing a category replace one another, so
+      # without this the Security tab would only show whichever leg finished last.
+      CATEGORY: trivy-${{ matrix.name }}
+      # Reporting, not gating - the blocking check lives in ci.yml, scoped to
+      # CRITICAL findings on the image a PR just built.
+      FAIL_ON_ERROR: false

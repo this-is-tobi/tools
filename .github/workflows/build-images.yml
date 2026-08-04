@@ -16,6 +16,13 @@ on:
         type: boolean
         default: false
 
+# Serialized: cd.yml dispatches this on every push to main, so a burst of
+# merges can otherwise leave several runs pushing the same image:tag at once.
+# Queued rather than cancelled - a cancelled run could drop a release build.
+concurrency:
+  group: build-images
+  cancel-in-progress: false
+
 jobs:
   matrix:
     name: Resolve build matrix
@@ -24,10 +31,10 @@ jobs:
       images: ${{ steps.resolve.outputs.IMAGES }}
     steps:
     - name: Checks-out repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: Login to GitHub Container Registry
-      uses: docker/login-action@v4
+      uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
@@ -36,13 +43,19 @@ jobs:
 
     - name: Resolve images to build
       id: resolve
+      env:
+        # Passed through the environment rather than interpolated into the
+        # script: `${{ }}` is substituted before the shell runs, so a crafted
+        # dispatch input would be executed as script rather than read as data.
+        INPUT_IMAGES: ${{ inputs.IMAGES }}
+        INPUT_FORCE: ${{ inputs.FORCE }}
       run: |
-        if [ "${{ github.ref_type }}" == "tag" ]; then
+        if [ "$GITHUB_REF_TYPE" == "tag" ]; then
           IMAGE_NAME="${GITHUB_REF_NAME%-v*}"
           IMAGES=$(jq -c --arg name "$IMAGE_NAME" '[.[] | select(.name == $name)]' ci/matrix.json)
-        elif [ -n "${{ inputs.IMAGES }}" ]; then
+        elif [ -n "$INPUT_IMAGES" ]; then
           # Explicit selection bypasses the deprecated filter (e.g. to patch a legacy image before removal).
-          JQ_FILTER=$(echo "${{ inputs.IMAGES }}" | jq -R 'split(",")')
+          JQ_FILTER=$(echo "$INPUT_IMAGES" | jq -R 'split(",")')
           IMAGES=$(jq -c --argjson names "$JQ_FILTER" '[.[] | select(.name | IN($names[]))]' ci/matrix.json)
         else
           IMAGES=$(jq -c '[.[] | select(.deprecated != true)]' ci/matrix.json)
@@ -60,7 +73,7 @@ jobs:
 
         # Skip images whose exact tag is already published (e.g. release-please bootstrap
         # tags matching an already-shipped version). --FORCE bypasses this for manual dispatch.
-        if [ "${{ inputs.FORCE }}" != "true" ]; then
+        if [ "$INPUT_FORCE" != "true" ]; then
           FILTERED="[]"
           # `for row in $(...)` would word-split each JSON object's own spaces (e.g. inside
           # "description") instead of just splitting on jq's newline-per-element output -
@@ -91,8 +104,19 @@ jobs:
       id-token: write
       attestations: write
     strategy:
+      # One image failing to build should not cancel the release of the others
+      fail-fast: false
       matrix:
         image: ${{ fromJSON(needs.matrix.outputs.images) }}
+    secrets:
+      # mise resolves every `@latest` through the GitHub API, which is 60
+      # requests/hour when unauthenticated and shared across every runner on the
+      # same egress IP - building the whole matrix at once exhausts it and the
+      # aqua/ubi backends fail with a 403 that mise treats as permanent. Passed
+      # as a build secret rather than a build arg so it never lands in an image
+      # layer; the Dockerfiles mount it at /run/secrets/github_token.
+      BUILD_SECRETS: |
+        github_token=${{ secrets.GITHUB_TOKEN }}
     with:
       IMAGE_NAME: ghcr.io/this-is-tobi/tools/${{ matrix.image.name }}
       IMAGE_TAG: ${{ matrix.image.build.tag }}
@@ -107,3 +131,4 @@ jobs:
       CACHE: true
       PROVENANCE: true
       SBOM: true
+      SIGN: true

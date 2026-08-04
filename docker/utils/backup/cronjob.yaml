@@ -38,6 +38,14 @@ spec:
       backoffLimit: 0
       template:
         spec:
+          # The image runs as uid 1000 with group 0 and group-writable paths, so
+          # it also works unmodified under OpenShift's restricted SCC.
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            fsGroup: 0
+            seccompProfile:
+              type: RuntimeDefault
           containers:
           - name: backup
             image: ghcr.io/this-is-tobi/tools/backup:latest
@@ -48,4 +56,27 @@ spec:
             envFrom:
             - secretRef:
                 name: backup
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            # Backups stream to object storage rather than staging on disk, so
+            # the only writable path needed is a scratch dir. Mount a volume at
+            # LOCAL_PATH as well if you back up to a filesystem instead.
+            volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            # Sized for streaming a dump through rclone. Raise the memory limit
+            # if you enable compression or a larger --s3-chunk-size.
+            resources:
+              requests:
+                cpu: 100m
+                memory: 128Mi
+              limits:
+                memory: 512Mi
+          volumes:
+          - name: tmp
+            emptyDir: {}
           restartPolicy: Never
