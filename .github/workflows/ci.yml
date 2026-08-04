@@ -104,7 +104,9 @@ jobs:
       IMAGE_TARGET: ${{ matrix.image.build.target }}
       BUILD_AMD64: true
       BUILD_ARM64: false
-      CACHE: true
+      # No layer cache - see build-images.yml. Actions caches are additionally
+      # scoped per ref, so nothing a PR build exports is ever visible to main.
+      CACHE: false
 
   build-templates:
     name: Build ${{ matrix.template.name }} (PR check)
@@ -137,7 +139,9 @@ jobs:
       PUSH: false
       BUILD_AMD64: true
       BUILD_ARM64: false
-      CACHE: true
+      # No layer cache - see build-images.yml. Each target gets its own cache
+      # scope, so a template's dev and prod stages cannot share entries either.
+      CACHE: false
 
   test-images:
     name: Test ${{ matrix.image.name }} (PR check)
@@ -264,10 +268,9 @@ jobs:
       actions: write
       packages: write
     with:
-      # Buildx writes a `type=gha,mode=max` cache entry per image per
-      # architecture, so a PR touching every Dockerfile leaves sixteen multi-GB
-      # entries behind. Against the 10 GB repository budget those evict the
-      # caches main actually reuses, so they are freed when the PR closes.
+      # The image builds no longer write layer caches, but the reusable workflows
+      # they call still cache their own tooling per ref. Those entries are dead
+      # once the PR closes and count against the repository budget until evicted.
       CLEAN_GH_CACHE: true
       CLEAN_GHCR_IMAGE: false
       PR_NUMBER: ${{ github.event.pull_request.number }}
