@@ -21,20 +21,22 @@ ENV PATH="$MISE_DATA_DIR/shims:$HOME/.local/bin:$PATH:$HOME/.cargo/bin"
 
 # Install apt packages
 # System utilities only; portable release binaries come from mise below.
+# curl, gpg and sudo are prerequisites for the docker repository step and for
+# workflows that call sudo at runtime; they share this layer with the rest so
+# the package indices are downloaded once rather than fetched, deleted and
+# fetched again.
 RUN apt-get update -y && apt-get install -y \
   curl \
   gpg \
-  sudo \
-  && rm -rf /var/lib/apt/lists/*
-RUN sudo apt-get update -y && sudo apt-get install -y \
   jq \
   make \
   pandoc \
   rsync \
   sed \
+  sudo \
   tar \
   unzip \
-  && sudo rm -rf /var/lib/apt/lists/*
+  && rm -rf /var/lib/apt/lists/*
 
 # Install docker
 RUN sudo mkdir -m 0755 -p /etc/apt/keyrings \
