@@ -21,6 +21,8 @@ ENV PATH="$MISE_DATA_DIR/shims:$HOME/.local/bin:$PATH:$HOME/.cargo/bin"
 
 # Install apt packages
 # System utilities only; portable release binaries come from mise below.
+# libatomic1 is a runtime dependency of the prebuilt node binary mise
+# installs; without it node exits 127 on a missing libatomic.so.1.
 # curl, gpg and sudo are prerequisites for the docker repository step and for
 # workflows that call sudo at runtime; they share this layer with the rest so
 # the package indices are downloaded once rather than fetched, deleted and
@@ -29,6 +31,7 @@ RUN apt-get update -y && apt-get install -y \
   curl \
   gpg \
   jq \
+  libatomic1 \
   make \
   pandoc \
   rsync \
