@@ -20,7 +20,6 @@ This section provides a collection of pre-built Docker images and templates desi
 | `ghcr.io/this-is-tobi/tools/dev-lite:latest`      | Development container with common development tools (lite version, debian based)                                          | Active                | [Dockerfile](../docker/utils/dev-lite/Dockerfile)      | [Versions](https://github.com/this-is-tobi/tools/pkgs/container/tools%2Fdev-lite/versions)      |
 | `ghcr.io/this-is-tobi/tools/gh-runner:latest`     | Self-hosted GitHub Actions runner with common packages (ubuntu based)                                                     | Active                | [Dockerfile](../docker/utils/gh-runner/Dockerfile)     | [Versions](https://github.com/this-is-tobi/tools/pkgs/container/tools%2Fgh-runner/versions)     |
 | `ghcr.io/this-is-tobi/tools/gh-runner-gpu:latest` | Self-hosted GitHub Actions runner with GPU support (ubuntu based)                                                         | Active                | [Dockerfile](../docker/utils/gh-runner-gpu/Dockerfile) | [Versions](https://github.com/this-is-tobi/tools/pkgs/container/tools%2Fgh-runner-gpu/versions) |
-| `ghcr.io/this-is-tobi/tools/mc:latest`            | MinIO Client for S3-compatible storage operations (alpine based)                                                          | Source removed        | -                                                      | [Versions](https://github.com/this-is-tobi/tools/pkgs/container/tools%2Fmc/versions)            |
 | `ghcr.io/this-is-tobi/tools/pg-backup:latest`     | PostgreSQL backup utility with S3 support (postgres based)                                                                | Deprecated *(Legacy)* | [Dockerfile](../docker/utils/pg-backup/Dockerfile)     | [Versions](https://github.com/this-is-tobi/tools/pkgs/container/tools%2Fpg-backup/versions)     |
 | `ghcr.io/this-is-tobi/tools/s3-backup:latest`     | S3 bucket sync and backup utility (debian based)                                                                          | Deprecated *(Legacy)* | [Dockerfile](../docker/utils/s3-backup/Dockerfile)     | [Versions](https://github.com/this-is-tobi/tools/pkgs/container/tools%2Fs3-backup/versions)     |
 | `ghcr.io/this-is-tobi/tools/vault-backup:latest`  | HashiCorp Vault backup utility with S3 support (vault based)                                                              | Deprecated *(Legacy)* | [Dockerfile](../docker/utils/vault-backup/Dockerfile)  | [Versions](https://github.com/this-is-tobi/tools/pkgs/container/tools%2Fvault-backup/versions)  |
@@ -149,14 +148,6 @@ docker run --rm \
 
 > [!NOTE]
 > Legacy backup images (`pg-backup`, `vault-backup`, `s3-backup`) are still available but consider migrating to the unified `backup` image.
-
-### Utility Images
-
-```sh
-# MinIO Client for S3 operations (deprecated - use backup image instead)
-docker run -it ghcr.io/this-is-tobi/tools/mc:latest \
-  mc alias set myminio <endpoint> <access-key> <secret-key>
-```
 
 ## Building Images Locally
 
