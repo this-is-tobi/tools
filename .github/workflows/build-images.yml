@@ -18,7 +18,12 @@ on:
 
 # Serialized: cd.yml dispatches this on every push to main, so a burst of
 # merges can otherwise leave several runs pushing the same image:tag at once.
-# Queued rather than cancelled - a cancelled run could drop a release build.
+# Note GitHub still cancels a *pending* run when a newer one queues, even with
+# cancel-in-progress false - a burst leaves the first and the last, and cancels
+# everything between. That is safe here only because the matrix step above skips
+# images whose <name>:<version> is already published, so the surviving run picks
+# up whatever the cancelled ones would have built. Cancelled runs in a release
+# burst are expected, not a failure.
 concurrency:
   group: build-images
   cancel-in-progress: false
@@ -97,7 +102,7 @@ jobs:
     name: Build ${{ matrix.image.name }}
     needs: matrix
     if: ${{ needs.matrix.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@7bc9d3087bffd691c095427bc8a1aba92e360345 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@ba35447e8357535191e3ef504d6e737c78cc6bdb # v0
     permissions:
       packages: write
       contents: read

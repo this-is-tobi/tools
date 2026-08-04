@@ -58,6 +58,11 @@ RUN sudo mkdir -m 0755 -p /etc/apt/keyrings \
 # on the same egress IP, and the aqua/ubi backends fail with a 403 that mise
 # treats as permanent once it is hit. Optional - a local build without the secret
 # still works, it just gets the anonymous limit.
+
+# Purge the package-manager caches in the same layer that fills them - a later
+# RUN cannot shrink an earlier layer. These are pure build residue: npm's
+# content-addressable store alone runs to gigabytes, and shipping it inflates the
+# image, the SBOM (which has a 16 MiB attestation ceiling) and the Trivy scan.
 RUN --mount=type=secret,id=github_token,mode=0444 \
   export GITHUB_TOKEN="$(cat /run/secrets/github_token 2> /dev/null || true)" \
   && curl -fsSL https://mise.run | sh \
@@ -69,7 +74,9 @@ RUN --mount=type=secret,id=github_token,mode=0444 \
   go@latest \
   rust@latest \
   uv@latest \
-  && mise reshim
+  && mise reshim \
+  && { chmod -R u+w "${HOME}/.cache" "${HOME}/.npm/_cacache" "${MISE_DATA_DIR}/downloads" 2> /dev/null || true; } \
+  && rm -rf "${HOME}/.cache" "${HOME}/.npm/_cacache" "${MISE_DATA_DIR}/downloads"
 
 # Install mise packages
 # chart-testing, kubescape and scw have no short name in mise's registry, so
@@ -105,12 +112,15 @@ RUN --mount=type=secret,id=github_token,mode=0444 \
   aqua:helm/chart-testing@latest \
   aqua:kubescape/kubescape@latest \
   aqua:scaleway/scaleway-cli@latest \
-  && mise reshim
+  && mise reshim \
+  && { chmod -R u+w "${HOME}/.cache" "${HOME}/.npm/_cacache" "${MISE_DATA_DIR}/downloads" 2> /dev/null || true; } \
+  && rm -rf "${HOME}/.cache" "${HOME}/.npm/_cacache" "${MISE_DATA_DIR}/downloads"
 
 # Install python packages
 RUN uv venv ${HOME}/.venv \
   && . ${HOME}/.venv/bin/activate \
-  && uv pip install ansible
+  && uv pip install ansible \
+  && rm -rf "${HOME}/.cache"
 
 # Install NVIDIA Container Toolkit
 RUN curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /etc/apt/keyrings/nvidia-container-toolkit-keyring.gpg \
