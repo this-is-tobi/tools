@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1](https://github.com/this-is-tobi/tools/compare/act-runner-v2.1.0...act-runner-v2.1.1) (2026-08-04)
+
+
+### Dependencies
+
+* **docker:** purge build caches and fix the scan and attestation limits ([3c21260](https://github.com/this-is-tobi/tools/commit/3c21260860cd037a0641281542174a4bc74275c4))
+
 ## [2.1.0](https://github.com/this-is-tobi/tools/compare/act-runner-v2.0.6...act-runner-v2.1.0) (2026-08-04)
 
 
