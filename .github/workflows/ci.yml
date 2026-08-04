@@ -194,6 +194,11 @@ jobs:
       # against what is actually published.
       SEVERITY: CRITICAL,HIGH
       FAIL_ON_ERROR: false
+      # Trivy's default is 5m per scan, not per file, and `dev` spends most of it
+      # on a single large statically linked binary - at 5m it aborts with a
+      # context deadline and writes no report at all, so the image silently goes
+      # unscanned while the faster ones report normally.
+      TIMEOUT: 15m
 
   scan-config:
     name: Scan Dockerfiles (PR check)

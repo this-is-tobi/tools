@@ -48,6 +48,15 @@ ARG DOTFILES_REF=972015d509ce8af4a886b43f91db4d14af60c356
 # mise helper retries five times over 50s, which does not outlast a rate-limit
 # window. Optional: a local `docker build` without the secret still works, it just
 # gets the anonymous limit.
+
+# Purge the package-manager caches in the same layer that fills them - a later
+# RUN cannot shrink an earlier layer. These are pure build residue: npm's
+# content-addressable store alone runs to gigabytes, and shipping it inflates the
+# image, the SBOM (which has a 16 MiB attestation ceiling) and the Trivy scan.
+# `go mod download` writes its cache read-only (files 0444, dirs 0555), so a plain
+# rm -rf fails there even as the owner - hence the chmod. Grouped with `|| true` so
+# only the chmod is forgiving: the surrounding && chain must still fail the build if
+# the install above it failed.
 RUN --mount=type=secret,id=github_token,mode=0444 \
   export GITHUB_TOKEN="$(cat /run/secrets/github_token 2> /dev/null || true)" \
   && git clone https://github.com/this-is-tobi/dotfiles \
@@ -55,7 +64,11 @@ RUN --mount=type=secret,id=github_token,mode=0444 \
   && touch ./.zshrc \
   && DEVOPS_CATEGORIES=k8s ./dotfiles/setup/setup-debian.sh -p "base,devops,secops" -d -c -l \
   && sudo rm -rf /tmp/* \
-  && sudo rm -rf /var/lib/apt/lists/*
+  && sudo rm -rf /var/lib/apt/lists/* \
+  && { chmod -R u+w "${HOME}/.cache" "${HOME}/.npm/_cacache" \
+    "${HOME}/.local/share/mise/downloads" "${HOME}/go/pkg/mod" 2> /dev/null || true; } \
+  && rm -rf "${HOME}/.cache" "${HOME}/.npm/_cacache" \
+    "${HOME}/.local/share/mise/downloads" "${HOME}/go/pkg/mod"
 
 # Verifies the toolbox is actually usable. `echo healthy` cannot fail, so it
 # reported "healthy" even for an image whose tooling never installed.

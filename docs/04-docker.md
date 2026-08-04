@@ -327,6 +327,27 @@ RUN --mount=type=secret,id=github_token,mode=0444 \
 
 `mode=0444` because these `RUN` steps execute as the non-root image user, and the default secret mount is `0400` owned by root. The `|| true` keeps it optional: a local `docker build` with no secret still works, it just gets the anonymous limit.
 
+### Image size and build residue
+
+Package-manager caches are purged in the same layer that fills them — a later `RUN` cannot shrink an earlier layer:
+
+```dockerfile
+&& rm -rf "${HOME}/.cache" "${HOME}/.npm/_cacache" \
+  "${HOME}/.local/share/mise/downloads" "${HOME}/go/pkg/mod"
+```
+
+These are build residue, not image content: `~/.cache` is XDG's disposable-by-definition location, and the npm content store, the mise download dir and the Go module cache are all re-fetchable. Nothing under them is read at runtime — the smoke tests in `ci/tests` resolve every tool through mise shims and `mise which`.
+
+Leaving them in costs more than disk. Three limits sit downstream of image size, and each fails in a way that looks like something else:
+
+| limit | what it does when exceeded |
+|---|---|
+| `actions/attest` SBOM ceiling — **16 MiB** | the SBOM attestation is refused, so the image publishes without one |
+| Trivy scan timeout — **5m** by default | the scan aborts with a context deadline and writes **no report**, so the image looks unscanned rather than slow |
+| `$GITHUB_STEP_SUMMARY` — **1 MiB** | the write is dropped whole, so the job summary comes back empty rather than truncated |
+
+Keep this in mind when adding tooling to an image: anything that runs a package manager during the build should clean up after itself in the same `RUN`.
+
 ### Build cache
 
 Builds use buildx's GitHub Actions cache backend, scoped per image **and** per architecture (`type=gha,scope=<image>-<runner>`), so `dev` and `dev-lite` never share entries and an `arm64` build never restores an `amd64` layer.
@@ -334,6 +355,10 @@ Builds use buildx's GitHub Actions cache backend, scoped per image **and** per a
 Two things keep it from going stale in the wrong direction. A base image digest bump changes `FROM`, which invalidates every layer below it. A scheduled refresh changes the `.refresh` marker each image copies in as its first instruction, which does the same — see the scheduled refresh section above for why that `COPY` is what makes the mechanism work at all.
 
 Cache entries created on a PR branch are not visible to `main`, so a broken PR cannot poison the cache the release builds restore from. They do, however, count against the same 10 GB repository budget: a PR touching every Dockerfile leaves sixteen `mode=max` entries behind (eight images × two architectures), which evicts the entries `main` actually reuses. `ci.yml`'s `cleanup-cache` job frees them when the PR closes, alongside the `pr-<n>` images.
+
+The 10 GB budget is easy to exceed with images this size, and going over fails silently: past the budget GitHub evicts least-recently-used entries, so a build imports a cache manifest, finds nothing behind it, and pays a full cold rebuild while still reporting `CACHE: true`. The tell is `importing cache manifest from gha:...` followed by no `CACHED` steps.
+
+Check usage with `gh api /repos/this-is-tobi/tools/actions/caches`. Two levers if it goes over: the cache purge above (smaller layers, smaller cache) and `build-docker.yml`'s `CACHE_MODE: min`, which exports only the final image's layers instead of every intermediate one. A smaller cache that survives beats a complete one that is always evicted.
 
 > [!NOTE]
 > PRs from forks won't be able to push the check image — `GITHUB_TOKEN` is read-only for `pull_request` events from forks, which GitHub enforces regardless of the `permissions:` requested in the workflow. Not an issue for same-repo branches.
@@ -360,7 +385,7 @@ A missing `ci/tests/<name>.sh` fails the job rather than skipping it, so a new i
 
 Two layers, both through the shared `scan-trivy.yml` workflow:
 
-- **PR report** ([`ci.yml`](../.github/workflows/ci.yml)) — scans the image the PR just built at `CRITICAL,HIGH` and prints the table to the run summary. Reporting, not gating, and the reason is worth recording: every `CRITICAL` these images carry today is a Go stdlib or vendored-dependency CVE inside a **third-party release binary** — krew plugins, `helm-docs`, `mkcert`, `mc`, `kustomize`. There are no `CRITICAL` OS-package findings at all. `ignore-unfixed` does not filter those out, because Go has shipped the fix; what has not shipped is a rebuild by the project that vendored it. Gating would mean permanently red PRs waiting on other people's releases. A second job scans `docker/` with Trivy's config scanner for Dockerfile misconfiguration.
+- **PR report** ([`ci.yml`](../.github/workflows/ci.yml)) — scans the image the PR just built at `CRITICAL,HIGH` and prints the table to the run summary. Reporting, not gating. These images are mostly third-party release binaries, and `ignore-unfixed` filters less than it looks on those: a Go stdlib CVE counts as fixed the moment Go ships the fix, even though the vulnerable artifact is somebody else's prebuilt binary that only a new upstream release can change. Gating on that would mean red PRs waiting on other projects to cut releases, for findings no change here can address. A second job scans `docker/` with Trivy's config scanner for Dockerfile misconfiguration.
 - **Scheduled report** ([`scan-images.yml`](../.github/workflows/scan-images.yml)) — weekly, scans every published `:latest` at `CRITICAL,HIGH` and uploads SARIF to the Security tab. Reporting only, never gating. A build-time scan says nothing about an image published three weeks before a CVE was disclosed, which is the case that actually matters. Deprecated images are excluded by default but can be opted in via the `INCLUDE_DEPRECATED` dispatch input — they are no longer released yet remain pullable, so they are the most likely to have accumulated unpatched CVEs.
 
 Each matrix leg uploads under its own `CATEGORY` (`trivy-<image>`). Uploads sharing a category replace one another, so without this the Security tab would only ever show whichever image finished last.
@@ -375,12 +400,9 @@ The point of the file is that the config scan report reads as zero findings, so 
 
 A third job runs gitleaks over the **full git history** and **fails the PR** on any finding ([`scan-gitleaks.yml`](https://github.com/this-is-tobi/github-workflows/blob/main/.github/workflows/scan-gitleaks.yml), `FAIL_ON_LEAKS: true`).
 
-That gate is only meaningful because the noise is gone. The first full-history run reported eleven findings and not one was a credential:
+A gate is only useful if the report is normally empty, so known false positives are allowlisted in [`.gitleaks.toml`](../.gitleaks.toml) — gitleaks auto-detects it at the scan root, so `ci.yml` passes nothing. Two patterns in this repository trip the default rules: the documented `curl … | bash -s -- -u "https://github.com/…"` one-liners, where the `-u` belongs to the piped script rather than to `curl`, and the placeholder key in the node crypto examples.
 
-- `curl-auth-user` × 7, on the documented `curl -fsSL .../clone-subdir.sh | bash -s -- -u "https://github.com/..."` one-liner. The `-u` belongs to `clone-subdir.sh` on the far side of the pipe, not to `curl`, so what gitleaks extracted as the secret was a **public repository URL**.
-- `generic-api-key` × 4, on `a-key-with-exactly-32-characters` in the node crypto examples — a self-describing placeholder sitting next to a `// process.env.ENCRYPTION_KEY` comment saying where the real one belongs.
-
-Both are allowlisted in [`.gitleaks.toml`](../.gitleaks.toml), **by value rather than by path**, so a genuine credential committed into any of those same files still fails the scan. Gitleaks auto-detects `.gitleaks.toml` at the scan root, so `ci.yml` passes nothing.
+Allowlist **by value, not by path**, so a genuine credential committed into one of those same files still fails the scan.
 
 Prefer this over `.gitleaksignore`: fingerprints there are `<commit>:<file>:<rule>:<line>`, so every edit to a live file mints a new one and the ignore silently stops applying.
 
@@ -390,11 +412,25 @@ Published images are signed with `cosign` keyless signing and carry SBOM and SLS
 
 ```sh
 cosign verify ghcr.io/this-is-tobi/tools/<image>:<tag> \
-  --certificate-identity-regexp '^https://github.com/this-is-tobi/tools/' \
+  --certificate-identity-regexp '^https://github.com/this-is-tobi/github-workflows/.github/workflows/attest-docker.yml@' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 
 gh attestation verify oci://ghcr.io/this-is-tobi/tools/<image>:<tag> --owner this-is-tobi
 ```
+
+The SBOM is a cosign attestation rather than a GitHub one, so `gh attestation verify` above covers the provenance only. Verify the SBOM with:
+
+```sh
+cosign verify-attestation --type spdxjson \
+  --certificate-identity-regexp '^https://github.com/this-is-tobi/github-workflows/.github/workflows/attest-docker.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  ghcr.io/this-is-tobi/tools/<image>@<digest>
+```
+
+> [!IMPORTANT]
+> The certificate identity is **`this-is-tobi/github-workflows`**, not this repository. Signing happens inside the reusable `attest-docker.yml`, and GitHub's OIDC token carries the *called* workflow's path as the certificate SAN. Matching against `^https://github.com/this-is-tobi/tools/` fails — and the tempting reaction, dropping the identity constraint, makes the verification meaningless: it would then accept a signature from anyone.
+
+An SBOM for an image this size runs past the 16 MiB ceiling `actions/attest` imposes, and cutting entries to fit would remove exactly the dependency inventory the SBOM is for. cosign has no such limit and is used for every image's SBOM, so one command works regardless of which image you are checking.
 
 PR check builds are not signed or attested — only release builds are.
 

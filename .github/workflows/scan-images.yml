@@ -84,6 +84,11 @@ jobs:
       # Distinct per image: uploads sharing a category replace one another, so
       # without this the Security tab would only show whichever leg finished last.
       CATEGORY: trivy-${{ matrix.name }}
+      # Trivy's default is 5m per scan, not per file, and `dev` spends most of it
+      # on a single large statically linked binary - at 5m it aborts with a
+      # context deadline and writes no report at all, so the image silently goes
+      # unscanned while the faster ones report normally.
+      TIMEOUT: 15m
       # Reporting, not gating - the blocking check lives in ci.yml, scoped to
       # CRITICAL findings on the image a PR just built.
       FAIL_ON_ERROR: false
