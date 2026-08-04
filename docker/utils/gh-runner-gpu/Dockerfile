@@ -21,8 +21,11 @@ ENV PATH="$MISE_DATA_DIR/shims:$HOME/.local/bin:$PATH:$HOME/.cargo/bin"
 
 # Install apt packages
 # System utilities only; portable release binaries come from mise below.
+# libatomic1 is a runtime dependency of the prebuilt node binary mise
+# installs; without it node exits 127 on a missing libatomic.so.1.
 RUN sudo apt-get update -y && sudo apt-get install -y \
   jq \
+  libatomic1 \
   make \
   pandoc \
   rsync \
