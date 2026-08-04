@@ -8,53 +8,37 @@ ARG TARGETARCH
 ENV DEBIAN_FRONTEND=noninteractive
 ENV USER=runner
 ENV HOME=/home/$USER
-ENV PROTO_HOME="$HOME/.proto"
-ENV PATH="$PATH:$PROTO_HOME/shims:$PROTO_HOME/bin:$HOME/.local/bin:$HOME/.cargo/bin:$PROTO_HOME/shims:$PROTO_HOME/bin"
+# Tools install under $MISE_DATA_DIR and are exposed through shims; `mise
+# activate` is for interactive shells, so the shims directory goes on PATH
+# explicitly. MISE_YES keeps the build non-interactive, MISE_PIN records the
+# exact resolved version of every tool in the image, and disabling the asdf
+# backend keeps installs on backends that verify what they download.
+ENV MISE_DATA_DIR="$HOME/.local/share/mise"
+ENV MISE_YES=1
+ENV MISE_PIN=1
+ENV MISE_DISABLE_BACKENDS=asdf
+ENV PATH="$MISE_DATA_DIR/shims:$HOME/.local/bin:$PATH:$HOME/.cargo/bin"
 
 # Install apt packages
+# System utilities only; portable release binaries come from mise below.
 RUN apt-get update -y && apt-get install -y \
   curl \
   gpg \
   sudo \
   && rm -rf /var/lib/apt/lists/*
-RUN curl -fsSL https://raw.githubusercontent.com/upciti/wakemeops/main/assets/install_repository | sudo bash \
-  && sudo apt-get update -y && sudo apt-get install -y \
-  age \
-  argo \
-  argocd \
-  cosign \
-  dive \
-  github-cli\
-  helm \
-  helm-docs \
+RUN sudo apt-get update -y && sudo apt-get install -y \
   jq \
-  k6 \
-  kind \
-  krew \
-  kubectl \
-  kubescape \
-  kustomize \
-  kyverno \
   make \
-  mc \
-  oc \
   pandoc \
-  rclone \
   rsync \
-  scw \
   sed \
-  sops \
   tar \
-  terraform \
-  trivy \
   unzip \
-  vault \
-  velero \
-  yamllint \
-  yq \
   && sudo rm -rf /var/lib/apt/lists/*
 
 # Install AWS CLI
+# awscli v2 is not a portable single binary: it ships a bundled Python runtime
+# and an installer that lays out /usr/local/aws-cli, so it uses AWS' installer.
 RUN arch=$([ "$TARGETARCH" = "amd64" ] && echo "x86_64" || echo "aarch64") \
     && curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-${arch}.zip" -o /tmp/awscliv2.zip \
     && unzip /tmp/awscliv2.zip -d /tmp \
@@ -71,26 +55,54 @@ RUN sudo mkdir -m 0755 -p /etc/apt/keyrings \
   && sudo apt-get install -y containerd.io docker-buildx-plugin docker-ce docker-ce-cli docker-compose-plugin \
   && sudo rm -rf /var/lib/apt/lists/*
 
-# Install proto packages
-RUN curl -fsSL https://moonrepo.dev/install/proto.sh | bash -s -- --yes \
-  && proto install bun --pin global --yes \
-  && proto install node --pin global --yes \
-  && proto install npm --pin global --yes \
-  && proto install pnpm --pin global --yes \
-  && proto install yarn --pin global --yes \
-  && proto install go --pin global --yes \
-  && proto install uv --pin global --yes \
-  && proto install rust --pin global --yes
+# Install mise and language runtimes
+# npm is not pinned separately: it ships inside the node release.
+RUN curl -fsSL https://mise.run | sh \
+  && mise use --global \
+  node@latest \
+  bun@latest \
+  pnpm@latest \
+  yarn@latest \
+  go@latest \
+  rust@latest \
+  uv@latest \
+  && mise reshim
+
+# Install mise packages
+# chart-testing, kubescape and scw have no short name in mise's registry, so
+# they are addressed through their aqua packages directly. chart-testing
+# provides the `ct` binary.
+RUN mise use --global \
+  age@latest \
+  argo@latest \
+  argocd@latest \
+  cosign@latest \
+  dive@latest \
+  github-cli@latest \
+  helm@latest \
+  helm-docs@latest \
+  k6@latest \
+  kind@latest \
+  krew@latest \
+  kubectl@latest \
+  kustomize@latest \
+  kyverno@latest \
+  mc@latest \
+  oc@latest \
+  rclone@latest \
+  sops@latest \
+  terraform@latest \
+  trivy@latest \
+  vault@latest \
+  velero@latest \
+  yamllint@latest \
+  yq@latest \
+  aqua:helm/chart-testing@latest \
+  aqua:kubescape/kubescape@latest \
+  aqua:scaleway/scaleway-cli@latest \
+  && mise reshim
 
 # Install python packages
 RUN uv venv ${HOME}/.venv \
   && . ${HOME}/.venv/bin/activate \
   && uv pip install ansible
-
-# Install packages with shell
-RUN CT_VERSION=$(curl -fsSL "https://api.github.com/repos/helm/chart-testing/releases/latest" | jq -r '.tag_name' | sed 's/v//g') \
-  && curl -fsSL -o /tmp/chart-testing.tar.gz "https://github.com/helm/chart-testing/releases/latest/download/chart-testing_${CT_VERSION}_linux_${TARGETARCH}.tar.gz" \
-  && tar -xzf /tmp/chart-testing.tar.gz -C /tmp \
-  && sudo mv /tmp/ct /usr/local/bin/ct \
-  && chmod +x /usr/local/bin/ct \
-  && sudo rm /tmp/chart-testing.tar.gz
