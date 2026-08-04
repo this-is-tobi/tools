@@ -24,7 +24,7 @@ A custom act-runner image is available at [`docker/utils/act-runner`](https://gi
 - **Cloud tools**: AWS CLI, Scaleway CLI, Terraform, Ansible
 - **Kubernetes**: kubectl, helm, kind, kustomize, argocd, argo, kyverno, kubescape
 - **CI/CD**: GitHub CLI, trivy, cosign, ct (chart-testing)
-- **Development**: Node.js, Python, Go, Rust, Bun (via proto)
+- **Development**: Node.js, Python, Go, Rust, Bun (via mise)
 - **Utilities**: Docker, jq, yq, sops, age, mc, rclone, pandoc
 
 > [!TIP]
