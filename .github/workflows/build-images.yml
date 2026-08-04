@@ -97,7 +97,7 @@ jobs:
     name: Build ${{ matrix.image.name }}
     needs: matrix
     if: ${{ needs.matrix.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@v0
+    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@7bc9d3087bffd691c095427bc8a1aba92e360345 # v0
     permissions:
       packages: write
       contents: read
