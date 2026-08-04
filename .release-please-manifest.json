@@ -2,7 +2,7 @@
   "docker/utils/act-runner": "2.0.6",
   "docker/utils/backup": "1.4.0",
   "docker/utils/curl": "2.0.3",
-  "docker/utils/debug": "3.0.1",
+  "docker/utils/debug": "3.0.2",
   "docker/utils/dev": "3.0.1",
   "docker/utils/dev-lite": "1.0.1",
   "docker/utils/gh-runner": "1.11.1",
