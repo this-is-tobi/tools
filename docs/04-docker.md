@@ -350,15 +350,18 @@ Keep this in mind when adding tooling to an image: anything that runs a package 
 
 ### Build cache
 
-Builds use buildx's GitHub Actions cache backend, scoped per image **and** per architecture (`type=gha,scope=<image>-<runner>`), so `dev` and `dev-lite` never share entries and an `arm64` build never restores an `amd64` layer.
+Every build here is a cold build. `CACHE: false` is set deliberately, in both the release builds and the PR checks — a layer cache cannot pay for itself in this pipeline, for reasons that are structural rather than a matter of tuning:
 
-Two things keep it from going stale in the wrong direction. A base image digest bump changes `FROM`, which invalidates every layer below it. A scheduled refresh changes the `.refresh` marker each image copies in as its first instruction, which does the same — see the scheduled refresh section above for why that `COPY` is what makes the mechanism work at all.
+- **The trigger is the invalidation.** `build-images.yml` skips any `image:tag` already published, so an image is only ever built when its own Dockerfile changed. The change that causes a build is the same change that busts its layers.
+- **`.refresh` sits above everything.** Each image copies that marker in before its first `RUN`, by design — see the scheduled refresh section above. When it changes, nothing below it can be restored.
+- **There is nothing left to reuse.** These Dockerfiles are two meaningful layers: a package install, then one large setup `RUN`. There is no long tail of cheap layers to fall back on once the second one misses.
+- **Caches are scoped per ref.** A cache written by a PR build is invisible to `main`, so a PR can never warm the cache a release build reads.
 
-Cache entries created on a PR branch are not visible to `main`, so a broken PR cannot poison the cache the release builds restore from. They do, however, count against the same 10 GB repository budget: a PR touching every Dockerfile leaves sixteen `mode=max` entries behind (eight images × two architectures), which evicts the entries `main` actually reuses. `ci.yml`'s `cleanup-cache` job frees them when the PR closes, alongside the `pr-<n>` images.
+Meanwhile the cost is real and unconditional: buildx uploads every layer a second time, to the cache backend on top of the registry. On images this size that is minutes added to the end of each build job, on the critical path, whether or not anything is ever restored.
 
-The 10 GB budget is easy to exceed with images this size, and going over fails silently: past the budget GitHub evicts least-recently-used entries, so a build imports a cache manifest, finds nothing behind it, and pays a full cold rebuild while still reporting `CACHE: true`. The tell is `importing cache manifest from gha:...` followed by no `CACHED` steps.
+Exporting to a registry instead moves the destination without removing the upload. Inline cache metadata (`type=inline`) does make the export free, but records only the final image's layers — and free reuse of layers that never match is still nothing.
 
-Check usage with `gh api /repos/this-is-tobi/tools/actions/caches`. Two levers if it goes over: the cache purge above (smaller layers, smaller cache) and `build-docker.yml`'s `CACHE_MODE: min`, which exports only the final image's layers instead of every intermediate one. A smaller cache that survives beats a complete one that is always evicted.
+Revisit this if the large `RUN` is ever split into finer, independently-changing layers: a dotfiles bump could then restore the toolchain layers beneath it, and the arithmetic changes. `build-docker.yml` keeps its `CACHE` and `CACHE_MODE` inputs for callers whose images are shaped that way.
 
 > [!NOTE]
 > PRs from forks won't be able to push the check image — `GITHUB_TOKEN` is read-only for `pull_request` events from forks, which GitHub enforces regardless of the `permissions:` requested in the workflow. Not an issue for same-repo branches.

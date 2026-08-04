@@ -133,7 +133,14 @@ jobs:
       BUILD_AMD64: true
       BUILD_ARM64: true
       USE_QEMU: false
-      CACHE: true
+      # No layer cache: an image is only ever built when its own Dockerfile changed
+      # (the skip-if-already-published guard in the matrix job above), and every
+      # image copies in a `.refresh` marker before its first RUN. So the layers a
+      # build could restore are exactly the ones its trigger invalidated. Exporting
+      # them anyway re-uploads every layer a second time - the images are large
+      # enough that this tail costs minutes per job for no reuse. Revisit if the
+      # Dockerfiles are ever split into finer, independently-changing layers.
+      CACHE: false
       PROVENANCE: true
       SBOM: true
       SIGN: true
