@@ -167,7 +167,7 @@ You are an expert in modern JavaScript and TypeScript development with strong De
 
 ## Tools and Libraries
 
-- Use [proto](https://moonrepo.dev/proto) for version management
+- Use [mise](https://mise.jdx.dev) for version management
 - Use [bun](https://bun.sh/) as the package manager and runtime environment
 - Use [typescript](https://www.typescriptlang.org/) with strict mode enabled
 - Use [husky](https://typicode.github.io/husky/#/) for git hooks
@@ -199,7 +199,7 @@ You are an expert in modern JavaScript and TypeScript development with strong De
 - Use [Vitepress](https://vitepress.vuejs.org/) for documentation sites
 - Use [Docker](https://www.docker.com/) for containerization
 - Use [Makefile](https://www.gnu.org/software/make/) for task automation
-- Use [Prototools](https://moonrepo.dev/prototools) for managing project tasks and scripts
+- Use [mise tasks](https://mise.jdx.dev/tasks/) for managing project tasks and scripts
 
 ## Project Structure
 
