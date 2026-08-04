@@ -6,6 +6,14 @@ on:
     - main
   workflow_dispatch:
 
+# Serialized: release-please reconciles the state of every release PR on each
+# run, so overlapping runs on a burst of merges fight over the same PRs.
+# Queued rather than cancelled - cancelling could drop the build dispatch that
+# follows a release tag.
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release:
     uses: this-is-tobi/github-workflows/.github/workflows/release-app.yml@v0

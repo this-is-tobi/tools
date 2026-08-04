@@ -1,0 +1,220 @@
+# Trivy misconfiguration findings that are accepted rather than fixed.
+#
+# The config scan in ci.yml is reporting-only, so this file exists to keep that
+# report readable: unfiltered it is ~90 lines of known-and-accepted noise, which
+# means nobody reads it and a real finding goes unnoticed.
+#
+# Two rules for editing this file. Every entry states why, in terms of this
+# repository rather than in the abstract. And if a reason stops being true, the
+# entry gets deleted rather than reworded.
+#
+# Paths are relative to the scan root (`docker`), not the repository root.
+# Trivy auto-detects a plain `.trivyignore`, but not this YAML form - ci.yml
+# names it explicitly through scan-trivy.yml's TRIVYIGNORES input.
+
+misconfigurations:
+- id: DS-0010
+  statement: >-
+    "RUN using sudo". These images deliberately end on a non-root user, so their
+    package installs have to escalate somehow; what Trivy steers toward instead
+    - running as root - is the thing being avoided. act-runner is absent from
+    this list on purpose: it really was running those commands as root, so the
+    sudo there was removed rather than suppressed.
+  paths:
+  - "utils/debug/Dockerfile"
+  - "utils/dev/Dockerfile"
+  - "utils/dev-lite/Dockerfile"
+  - "utils/gh-runner/Dockerfile"
+  - "utils/gh-runner-gpu/Dockerfile"
+
+- id: DS-0026
+  statement: >-
+    "No HEALTHCHECK defined". Kubernetes ignores Docker HEALTHCHECK entirely in
+    favour of its own probes, and these are toolboxes and build images with no
+    long-running process to check. A healthcheck that cannot fail is worse than
+    none - debug shipped `CMD echo "healthy"` and reported healthy for an image
+    whose tooling had never installed. backup keeps a real one because it has
+    something meaningful to assert.
+
+- id: DS-0029
+  statement: >-
+    "apt-get missing --no-install-recommends". Deliberate. These images exist to
+    be broadly useful, and what they contain is verified by the smoke tests in
+    ci/tests rather than by trimming. Removing packages from these apt lines is
+    what dropped libatomic1 and shipped a runner whose node exited 127; the size
+    saving does not justify re-running that experiment.
+
+- id: KSV-0011
+  statement: >-
+    "CPU not limited". Deliberately omitted while the memory limit is set. A CPU
+    limit throttles rather than protects: a backup that briefly wants more CPU
+    finishes sooner and releases it, whereas throttling just stretches the job
+    and holds the resources longer. Memory is limited because exceeding it is
+    what actually endangers the node.
+  paths:
+  - "utils/backup/cronjob.yaml"
+
+- id: KSV-0013
+  statement: >-
+    'Image tag ":latest" used'. The sample manifests reference :latest to match
+    how the images are documented - docs/04-docker.md links to each image's live
+    tag list rather than naming a version that would drift. Pin it in a real
+    deployment.
+  paths:
+  - "utils/backup/cronjob.yaml"
+
+- id: KSV-0020
+  statement: >-
+    "Runs with UID <= 10000". The image builds its user at uid 1000, which is
+    also what lets it run under OpenShift's restricted SCC with an arbitrary uid
+    and gid 0. Changing it would break more than it protects.
+  paths:
+  - "utils/backup/cronjob.yaml"
+
+- id: KSV-0021
+  statement: >-
+    "Runs with GID <= 10000".
+  paths:
+  - "utils/backup/cronjob.yaml"
+
+- id: KSV-0116
+  statement: >-
+    "Runs with a root primary or supplementary GID". Group 0 with group-writable
+    paths is exactly what makes the image work under OpenShift's restricted SCC,
+    where the uid is arbitrary but the gid is always 0.
+  paths:
+  - "utils/backup/cronjob.yaml"
+
+- id: KSV-0125
+  statement: >-
+    "Restrict container images to trusted registries". Depends on a
+    cluster-specific registry allowlist that a sample manifest cannot know.
+  paths:
+  - "utils/backup/cronjob.yaml"
+
+# The three legacy backup images are deprecated - excluded from Renovate, from
+# the scheduled refresh and from release-please, kept only until their consumers
+# move to the unified `backup` image. Their sample manifests are accepted as-is
+# rather than hardened: their base images differ and their runtime uids are not
+# verified here, so adding a securityContext risks publishing an example that
+# does not run. Harden from utils/backup/cronjob.yaml instead, which is the
+# supported one. These entries go away with the images.
+
+- id: KSV-0001
+  statement: Deprecated image, retained unchanged pending removal.
+  paths:
+  - "utils/pg-backup/**"
+  - "utils/s3-backup/**"
+  - "utils/vault-backup/**"
+
+- id: KSV-0003
+  statement: Deprecated image, retained unchanged pending removal.
+  paths:
+  - "utils/pg-backup/**"
+  - "utils/s3-backup/**"
+  - "utils/vault-backup/**"
+
+- id: KSV-0004
+  statement: Deprecated image, retained unchanged pending removal.
+  paths:
+  - "utils/pg-backup/**"
+  - "utils/s3-backup/**"
+  - "utils/vault-backup/**"
+
+- id: KSV-0011
+  statement: Deprecated image, retained unchanged pending removal.
+  paths:
+  - "utils/pg-backup/**"
+  - "utils/s3-backup/**"
+  - "utils/vault-backup/**"
+
+- id: KSV-0012
+  statement: Deprecated image, retained unchanged pending removal.
+  paths:
+  - "utils/pg-backup/**"
+  - "utils/s3-backup/**"
+  - "utils/vault-backup/**"
+
+- id: KSV-0013
+  statement: Deprecated image, retained unchanged pending removal.
+  paths:
+  - "utils/pg-backup/**"
+  - "utils/s3-backup/**"
+  - "utils/vault-backup/**"
+
+- id: KSV-0014
+  statement: Deprecated image, retained unchanged pending removal.
+  paths:
+  - "utils/pg-backup/**"
+  - "utils/s3-backup/**"
+  - "utils/vault-backup/**"
+
+- id: KSV-0015
+  statement: Deprecated image, retained unchanged pending removal.
+  paths:
+  - "utils/pg-backup/**"
+  - "utils/s3-backup/**"
+  - "utils/vault-backup/**"
+
+- id: KSV-0016
+  statement: Deprecated image, retained unchanged pending removal.
+  paths:
+  - "utils/pg-backup/**"
+  - "utils/s3-backup/**"
+  - "utils/vault-backup/**"
+
+- id: KSV-0018
+  statement: Deprecated image, retained unchanged pending removal.
+  paths:
+  - "utils/pg-backup/**"
+  - "utils/s3-backup/**"
+  - "utils/vault-backup/**"
+
+- id: KSV-0020
+  statement: Deprecated image, retained unchanged pending removal.
+  paths:
+  - "utils/pg-backup/**"
+  - "utils/s3-backup/**"
+  - "utils/vault-backup/**"
+
+- id: KSV-0021
+  statement: Deprecated image, retained unchanged pending removal.
+  paths:
+  - "utils/pg-backup/**"
+  - "utils/s3-backup/**"
+  - "utils/vault-backup/**"
+
+- id: KSV-0030
+  statement: Deprecated image, retained unchanged pending removal.
+  paths:
+  - "utils/pg-backup/**"
+  - "utils/s3-backup/**"
+  - "utils/vault-backup/**"
+
+- id: KSV-0104
+  statement: Deprecated image, retained unchanged pending removal.
+  paths:
+  - "utils/pg-backup/**"
+  - "utils/s3-backup/**"
+  - "utils/vault-backup/**"
+
+- id: KSV-0106
+  statement: Deprecated image, retained unchanged pending removal.
+  paths:
+  - "utils/pg-backup/**"
+  - "utils/s3-backup/**"
+  - "utils/vault-backup/**"
+
+- id: KSV-0118
+  statement: Deprecated image, retained unchanged pending removal.
+  paths:
+  - "utils/pg-backup/**"
+  - "utils/s3-backup/**"
+  - "utils/vault-backup/**"
+
+- id: KSV-0125
+  statement: Deprecated image, retained unchanged pending removal.
+  paths:
+  - "utils/pg-backup/**"
+  - "utils/s3-backup/**"
+  - "utils/vault-backup/**"

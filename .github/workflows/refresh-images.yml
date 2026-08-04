@@ -2,8 +2,11 @@ name: Refresh images
 
 on:
   schedule:
-  # Monthly on the 1st at 00:00 UTC - catches floating apt/apk package
-  # updates that a pinned base-image bump alone would never trigger.
+  # Monthly on the 1st at 00:00 UTC - catches package updates that a pinned
+  # base-image bump alone would never trigger: third-party apt repositories
+  # (docker.com, nvidia), the mise tools installed at @latest, and the window
+  # between upstream rebuilds of a base image where the distro repositories are
+  # already ahead of it.
   - cron: '0 0 1 * *'
   workflow_dispatch:
     inputs:
@@ -11,6 +14,23 @@ on:
         description: Comma separated list of images to refresh (leave empty for all active images)
         required: false
         type: string
+      MAX_AGE_DAYS:
+        description: Skip images whose published :latest is younger than this many days
+        required: false
+        type: number
+        default: 30
+      FORCE:
+        description: Refresh every selected image regardless of how recently it was published
+        required: false
+        type: boolean
+        default: false
+
+# Serialized: two runs would race to commit the same marker files, and the
+# loser's push is rejected. Queued rather than cancelled so a manual refresh
+# started behind the monthly one still lands.
+concurrency:
+  group: refresh-images
+  cancel-in-progress: false
 
 jobs:
   refresh:
@@ -18,23 +38,89 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      packages: read
     steps:
     - name: Checks-out repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: Touch refresh markers
       id: touch
+      env:
+        # Passed through the environment rather than interpolated into the
+        # script: `${{ }}` is substituted before the shell runs, so a crafted
+        # dispatch input would be executed as script rather than read as data.
+        IMAGES: ${{ inputs.IMAGES }}
+        # `inputs` is empty on a schedule event, so the defaults are restated here
+        MAX_AGE_DAYS: ${{ inputs.MAX_AGE_DAYS || 30 }}
+        FORCE: ${{ inputs.FORCE || false }}
+        GH_TOKEN: ${{ github.token }}
+        OWNER: ${{ github.repository_owner }}
       run: |
-        if [ -n "${{ inputs.IMAGES }}" ]; then
-          JQ_FILTER=$(echo "${{ inputs.IMAGES }}" | jq -R 'split(",")')
-          CONTEXTS=$(jq -r --argjson names "$JQ_FILTER" '.[] | select(.name | IN($names[])) | select(.deprecated != true) | .build.context' ci/matrix.json | sort -u)
+        set -euo pipefail
+
+        if [ -n "$IMAGES" ]; then
+          JQ_FILTER=$(echo "$IMAGES" | jq -R 'split(",")')
+          SELECTED=$(jq -c --argjson names "$JQ_FILTER" '[.[] | select(.name | IN($names[])) | select(.deprecated != true)]' ci/matrix.json)
         else
-          CONTEXTS=$(jq -r '.[] | select(.deprecated != true) | .build.context' ci/matrix.json | sort -u)
+          SELECTED=$(jq -c '[.[] | select(.deprecated != true)]' ci/matrix.json)
         fi
 
-        for CTX in $CONTEXTS; do
-          date -u +%Y-%m-%dT%H:%M:%SZ > "$CTX/.refresh"
-        done
+        CUTOFF=$(date -u -d "${MAX_AGE_DAYS} days ago" +%s)
+        echo "Refreshing images whose :latest predates $(date -u -d "@${CUTOFF}" +%Y-%m-%dT%H:%M:%SZ)"
+        echo
+
+        REFRESHED=0
+        SKIPPED=0
+
+        {
+          echo "## Scheduled dependency refresh"
+          echo
+          echo "| Image | Published | Action |"
+          echo "| --- | --- | --- |"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        while IFS= read -r ROW; do
+          NAME=$(echo "$ROW" | jq -r '.name')
+          CTX=$(echo "$ROW" | jq -r '.build.context')
+          PUBLISHED=""
+
+          if [ "$FORCE" != "true" ]; then
+            # Renovate rebuilds an image within hours of its base image moving,
+            # and that rebuild reinstalls everything (a changed FROM invalidates
+            # every layer). Refreshing an image that was just rebuilt only cuts a
+            # release whose contents are identical - which is what filled the
+            # changelogs with duplicate-looking entries.
+            #
+            # Fail open: any lookup that does not produce a usable timestamp
+            # falls through to refreshing. An unnecessary rebuild is cheap, an
+            # image silently skipped for months is not.
+            PUBLISHED=$(gh api "/users/${OWNER}/packages/container/tools%2F${NAME}/versions" \
+              --jq 'map(select((.metadata.container.tags // []) | index("latest"))) | first | .created_at' \
+              2>/dev/null || true)
+
+            if [ -n "$PUBLISHED" ] && [ "$PUBLISHED" != "null" ]; then
+              PUBLISHED_TS=$(date -u -d "$PUBLISHED" +%s 2>/dev/null || true)
+              if [ -n "$PUBLISHED_TS" ] && [ "$PUBLISHED_TS" -gt "$CUTOFF" ]; then
+                echo "skip     ${NAME} (published ${PUBLISHED})"
+                echo "| \`${NAME}\` | ${PUBLISHED} | skipped, rebuilt within ${MAX_AGE_DAYS} days |" >> "$GITHUB_STEP_SUMMARY"
+                SKIPPED=$((SKIPPED + 1))
+                continue
+              fi
+            fi
+          fi
+
+          echo "refresh  ${NAME}"
+          echo "| \`${NAME}\` | ${PUBLISHED:-unknown} | refreshed |" >> "$GITHUB_STEP_SUMMARY"
+          date -u +%Y-%m-%dT%H:%M:%SZ > "${CTX}/.refresh"
+          REFRESHED=$((REFRESHED + 1))
+        done < <(echo "$SELECTED" | jq -c '.[]')
+
+        echo
+        echo "${REFRESHED} refreshed, ${SKIPPED} skipped"
+        {
+          echo
+          echo "${REFRESHED} refreshed, ${SKIPPED} skipped (threshold: ${MAX_AGE_DAYS} days)."
+        } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Commit and push
       run: |

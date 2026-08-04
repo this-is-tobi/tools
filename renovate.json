@@ -1,10 +1,37 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
   ],
   "semanticCommits": "enabled",
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Track the pinned dotfiles commit that the debug/dev/dev-lite images clone. Without a pin the image content depends on whatever dotfiles HEAD is at build time, so builds aren't reproducible and a bad dotfiles push reaches every image built after it.",
+      "fileMatch": ["/^docker/utils/[^/]+/Dockerfile$/"],
+      "matchStrings": ["ARG DOTFILES_REF=(?<currentDigest>[0-9a-f]{40})"],
+      "currentValueTemplate": "main",
+      "depNameTemplate": "this-is-tobi/dotfiles",
+      "packageNameTemplate": "https://github.com/this-is-tobi/dotfiles",
+      "datasourceTemplate": "git-refs"
+    },
+    {
+      "customType": "regex",
+      "description": "Track version pins declared as build args. Renovate's dockerfile manager only reads FROM lines, so an ARG <NAME>_VERSION is invisible to it and would never move. Each pin declares its own datasource in a preceding '# renovate:' comment.",
+      "fileMatch": ["/^docker/utils/[^/]+/Dockerfile$/"],
+      "matchStrings": [
+        "#\\s*renovate:\\s*datasource=(?<datasource>[a-z-]+?)\\s+depName=(?<depName>[^\\s]+?)(?:\\s+versioning=(?<versioning>[^\\s]+?))?(?:\\s+extractVersion=(?<extractVersion>[^\\s]+?))?\\s+ARG\\s+[A-Z_]+?_VERSION=(?<currentValue>[^\\s]+)"
+      ]
+    }
+  ],
   "packageRules": [
+    {
+      "description": "Everything the customManagers pick up out of an active image's Dockerfile lands as 'build', matching how base image bumps are committed, so release-please cuts a patch release for the affected image. Listed first so the more specific rules below can refine it.",
+      "matchManagers": ["custom.regex"],
+      "matchFileNames": ["docker/utils/**"],
+      "semanticCommitType": "build"
+    },
     {
       "description": "Base image bumps for released images land as 'build' so release-please cuts a patch release for the affected image. Digests are pinned (index/manifest-list digest, so multi-arch builds still resolve per-platform) - upstream rebuilds a floating tag like debian:13 without changing the tag string, and only a digest bump catches that.",
       "matchManagers": ["dockerfile"],
@@ -19,6 +46,13 @@
       "matchFileNames": ["docker/templates/**"],
       "semanticCommitType": "chore",
       "commitMessageTopic": "{{depName}} base image"
+    },
+    {
+      "description": "Every image cloning dotfiles moves together in a single PR - the pin exists to make builds reproducible, not to let images drift apart from one another. 'build' so each affected image still gets its patch release. Run shell/bump-dotfiles-ref.sh to do the same bump by hand.",
+      "matchDepNames": ["this-is-tobi/dotfiles"],
+      "groupName": "dotfiles pin",
+      "commitMessageTopic": "dotfiles pin",
+      "semanticCommitType": "build"
     },
     {
       "description": "Deprecated legacy images are not released anymore, skip churn.",

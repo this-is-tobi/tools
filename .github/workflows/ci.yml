@@ -12,6 +12,12 @@ on:
     - main
   workflow_dispatch:
 
+# One CI run per PR - a rapid push sequence otherwise leaves several runs
+# racing to push the same <image>:pr-<n> tag.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint-commits:
     if: ${{ github.event.action != 'closed' && !github.event.pull_request.draft }}
@@ -29,7 +35,7 @@ jobs:
       templates: ${{ steps.resolve.outputs.TEMPLATES }}
     steps:
     - name: Checks-out repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         fetch-depth: 0
 
@@ -78,8 +84,18 @@ jobs:
       id-token: write
       attestations: write
     strategy:
+      # GHCR intermittently 403s the pull token that `imagetools create` needs to
+      # merge the per-arch digests. Left to fail-fast, one such flake cancels
+      # every other image mid-build and the whole matrix has to be re-run.
+      fail-fast: false
       matrix:
         image: ${{ fromJSON(needs.resolve-affected.outputs.images) }}
+    secrets:
+      # Raises mise's GitHub API limit during the build - see build-images.yml.
+      # Without it a matrix of eight exhausts the 60/hour anonymous limit and the
+      # aqua backend 403s, which mise treats as permanent.
+      BUILD_SECRETS: |
+        github_token=${{ secrets.GITHUB_TOKEN }}
     with:
       IMAGE_NAME: ghcr.io/this-is-tobi/tools/${{ matrix.image.name }}
       IMAGE_TAG: pr-${{ github.event.pull_request.number }}
@@ -94,20 +110,128 @@ jobs:
     name: Build ${{ matrix.template.name }} (PR check)
     needs: resolve-affected
     if: ${{ needs.resolve-affected.outputs.templates != '[]' }}
-    runs-on: ubuntu-24.04
+    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@v0
+    permissions:
+      contents: read
+      packages: write
+      # Granted even though nothing here is attested: GitHub validates
+      # permissions statically against every job the called workflow declares,
+      # including its `attest` job, which is skipped at runtime under PUSH:
+      # false. Without these the workflow fails before any job starts.
+      id-token: write
+      attestations: write
     strategy:
+      # See build-images: one leg's failure should not cancel the others
+      fail-fast: false
       matrix:
         template: ${{ fromJSON(needs.resolve-affected.outputs.templates) }}
-    steps:
-    - name: Checks-out repository
-      uses: actions/checkout@v7
+    with:
+      # Templates are never published - PUSH is false, so this is a build check
+      # that exports a short-lived tarball artifact instead of pushing. The
+      # image name is only used to label that artifact.
+      IMAGE_NAME: ghcr.io/this-is-tobi/tools/${{ matrix.template.name }}
+      IMAGE_TAG: pr-${{ github.event.pull_request.number }}
+      IMAGE_CONTEXT: ${{ matrix.template.context }}
+      IMAGE_DOCKERFILE: ${{ matrix.template.dockerfile }}
+      IMAGE_TARGET: ${{ matrix.template.target }}
+      PUSH: false
+      BUILD_AMD64: true
+      BUILD_ARM64: false
+      CACHE: true
 
-    - name: Build ${{ matrix.template.name }}
-      run: |
-        docker build \
-          --target ${{ matrix.template.target }} \
-          -f ${{ matrix.template.dockerfile }} \
-          ${{ matrix.template.context }}
+  test-images:
+    name: Test ${{ matrix.image.name }} (PR check)
+    needs:
+    - resolve-affected
+    - build-images
+    if: ${{ needs.resolve-affected.outputs.images != '[]' }}
+    uses: this-is-tobi/github-workflows/.github/workflows/test-docker.yml@v0
+    permissions:
+      contents: read
+      packages: read
+    strategy:
+      # One broken image should not hide the results for the others.
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(needs.resolve-affected.outputs.images) }}
+    with:
+      IMAGE: ghcr.io/this-is-tobi/tools/${{ matrix.image.name }}:pr-${{ github.event.pull_request.number }}
+      # Several images declare an entrypoint (a shell, or the backup entrypoint
+      # script) that would otherwise swallow the test command.
+      ENTRYPOINT: bash
+      WORKSPACE_PATH: ci/tests
+      WORKSPACE_MOUNT: /tests
+      COMMAND: /tests/${{ matrix.image.name }}.sh
+
+  scan-images:
+    name: Scan ${{ matrix.image.name }} (PR check)
+    needs:
+    - resolve-affected
+    - build-images
+    if: ${{ needs.resolve-affected.outputs.images != '[]' }}
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@v0
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(needs.resolve-affected.outputs.images) }}
+    with:
+      IMAGE: ghcr.io/this-is-tobi/tools/${{ matrix.image.name }}:pr-${{ github.event.pull_request.number }}
+      FORMAT: table
+      # Reporting, not gating. Every CRITICAL these images carry today is a Go
+      # stdlib or vendored-dependency CVE inside a third-party release binary -
+      # krew plugins, helm-docs, mkcert, mc, kustomize - and none is fixable
+      # here: `ignore-unfixed` does not filter them because Go shipped the fix,
+      # but the vulnerable artifact is somebody else's prebuilt binary that only
+      # a new upstream release can change. There are no CRITICAL OS-package
+      # findings at all. Gating on that would mean permanently red PRs waiting
+      # on other projects to cut releases, so the full table goes to the run
+      # summary instead and scan-images.yml carries the same picture weekly
+      # against what is actually published.
+      SEVERITY: CRITICAL,HIGH
+      FAIL_ON_ERROR: false
+
+  scan-config:
+    name: Scan Dockerfiles (PR check)
+    if: ${{ github.event.action != 'closed' && !github.event.pull_request.draft }}
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@v0
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+      # Nothing here pulls an image, but an explicit permissions block sets every
+      # unlisted scope to none, and GitHub validates against every job the called
+      # workflow declares - including its image-scan job, which is skipped at
+      # runtime because no IMAGE is passed.
+      packages: read
+    with:
+      PATH: docker
+      FORMAT: table
+      # Named explicitly because Trivy only auto-detects a plain `.trivyignore`,
+      # and the YAML form is the one that supports per-path scoping and a
+      # documented reason per entry. Without it this report is ~90 lines of
+      # accepted noise, which means nobody reads it and a real finding is missed.
+      TRIVYIGNORES: .trivyignore.yaml
+
+  scan-secrets:
+    name: Scan for leaked secrets (PR check)
+    if: ${{ github.event.action != 'closed' && !github.event.pull_request.draft }}
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-gitleaks.yml@v0
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+    with:
+      # Gating. The first full-history run reported eleven findings, none of them
+      # a credential - a public repository URL that gitleaks read as `curl -u`,
+      # and the self-describing placeholder key in the node crypto examples. Both
+      # are allowlisted by value in .gitleaks.toml, so the scan is clean and a
+      # twelfth finding means something.
+      FAIL_ON_LEAKS: true
 
   resolve-active:
     name: Resolve active images
@@ -117,13 +241,31 @@ jobs:
       names: ${{ steps.list.outputs.NAMES }}
     steps:
     - name: Checks-out repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: List active images
       id: list
       run: |
         NAMES=$(jq -c '[.[] | select(.deprecated != true) | .name]' ci/matrix.json)
         echo "NAMES=$NAMES" >> $GITHUB_OUTPUT
+
+  cleanup-cache:
+    name: Delete PR build caches
+    if: ${{ github.event.action == 'closed' }}
+    uses: this-is-tobi/github-workflows/.github/workflows/clean-cache.yml@v0
+    permissions:
+      # The union of every job the called workflow declares, not just the one
+      # that runs here - GitHub validates permissions statically.
+      actions: write
+      packages: write
+    with:
+      # Buildx writes a `type=gha,mode=max` cache entry per image per
+      # architecture, so a PR touching every Dockerfile leaves sixteen multi-GB
+      # entries behind. Against the 10 GB repository budget those evict the
+      # caches main actually reuses, so they are freed when the PR closes.
+      CLEAN_GH_CACHE: true
+      CLEAN_GHCR_IMAGE: false
+      PR_NUMBER: ${{ github.event.pull_request.number }}
 
   cleanup-images:
     name: Delete ${{ matrix.name }}:pr-${{ github.event.pull_request.number }}
@@ -134,6 +276,8 @@ jobs:
       packages: write
       actions: write
     strategy:
+      # A tag that fails to delete should not leave the remaining ones behind
+      fail-fast: false
       matrix:
         name: ${{ fromJSON(needs.resolve-active.outputs.names) }}
     with:

@@ -201,13 +201,80 @@ The pinned digest is always the **index (manifest-list) digest**, not a per-arch
 
 ### Scheduled dependency refresh
 
-None of these Dockerfiles pin `apt`/`apk` package versions, so a base image bump alone won't catch newer package versions between base image releases. [`refresh-images.yml`](../.github/workflows/refresh-images.yml) runs monthly, touches a `.refresh` marker file inside each active image's directory, and pushes one `build(docker): scheduled dependency refresh` commit. That's a real, path-scoped commit, so release-please cuts a genuine patch release from it — this is the mechanism that keeps floating packages current without hand-tracking every dependency. Trigger it manually via `workflow_dispatch` with a comma-separated `IMAGES` input to refresh specific images on demand.
+Digest pinning covers the base OS packages, but not everything in these images comes from the base. [`refresh-images.yml`](../.github/workflows/refresh-images.yml) runs monthly, touches a `.refresh` marker file inside each active image's directory, and pushes one `build(docker): scheduled dependency refresh` commit. That's a real, path-scoped commit, so release-please cuts a genuine patch release from it.
+
+What it still covers that a digest bump does not:
+
+| image                                      | drifts outside the base image digest                                                                             |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `curl`, `backup`                           | only the window between upstream rebuilds of the Alpine base, where the apk repositories are already ahead of it |
+| `debug`, `dev`, `dev-lite`                 | the mise tools and bat-extras installed at `@latest` by the dotfiles setup scripts                               |
+| `act-runner`, `gh-runner`, `gh-runner-gpu` | the docker.com and nvidia apt repositories, ~30 mise tools at `@latest`, and `uv pip install ansible`            |
+
+**Recency guard.** Renovate rebuilds an image within hours of its base moving, and because a changed `FROM` invalidates every layer, that rebuild already reinstalls everything else too. Refreshing an image that was just rebuilt only publishes a version whose contents are identical — which is what made the changelogs read as though the same change had landed twice. So the workflow reads each image's published `:latest` date from the GitHub Packages API and skips anything younger than `MAX_AGE_DAYS` (default 30). The lookup **fails open**: any result it cannot turn into a timestamp falls through to refreshing, since a redundant rebuild is cheap and an image silently skipped for months is not.
+
+Both are overridable on manual dispatch: `IMAGES` (comma-separated) narrows the selection, `MAX_AGE_DAYS` changes the threshold, and `FORCE` refreshes everything selected regardless of age. Each run writes a table to the job summary showing what was refreshed, what was skipped, and why.
+
+Every Dockerfile **copies its marker in** as its first instruction after `FROM`:
+
+```dockerfile
+COPY .refresh /etc/.image-refresh
+```
+
+This line is what makes the refresh do anything. BuildKit's cache key for a `RUN` is its parent layer plus the command string; a file sitting in the build context that no instruction ever reads never enters a cache key at all. Without the `COPY`, a refresh commit changes nothing BuildKit can see, `cache-from: type=gha` serves every package layer from cache, and the "refreshed" image is published with byte-identical contents. The monthly cron mostly escaped this because GitHub's Actions cache evicts entries after 7 days, so a 30-day-old cache was usually cold anyway — but the on-demand `workflow_dispatch` path, run soon after a build, hit a warm cache and silently did nothing.
+
+> [!NOTE]
+> A new image needs this `COPY` and a `.refresh` file in its directory, otherwise it is silently excluded from the refresh mechanism while still appearing in the refresh commit's diff.
+
+### Pinned dotfiles revision
+
+`debug`, `dev` and `dev-lite` build themselves by cloning [dotfiles](https://github.com/this-is-tobi/dotfiles) and running its setup scripts. That clone is pinned to an explicit commit:
+
+```dockerfile
+ARG DOTFILES_REF=<40-char sha>
+RUN git clone https://github.com/this-is-tobi/dotfiles \
+  && git -C dotfiles checkout --quiet "${DOTFILES_REF}" \
+  ...
+```
+
+Unpinned, these three images would be defined by whatever dotfiles `main` happened to be at build time: two builds of the same commit produce different images, and a bad dotfiles push silently reaches every image built after it with nothing in this repository's history to show for it.
+
+Keeping the pin current takes no manual work in the normal case — a `customManager` in [`renovate.json`](../renovate.json) tracks the branch head and opens a **single grouped PR** bumping all three images together (`groupName: dotfiles pin`), committed as `build` so each affected image still gets its patch release. They deliberately move in lockstep; the pin exists for reproducibility, not to let the images drift apart.
+
+To bump immediately instead of waiting for Renovate, [`shell/bump-dotfiles-ref.sh`](../shell/bump-dotfiles-ref.sh) rewrites every occurrence in one pass:
+
+```sh
+./shell/bump-dotfiles-ref.sh              # pin to current dotfiles main
+./shell/bump-dotfiles-ref.sh -n           # dry run, show what would change
+./shell/bump-dotfiles-ref.sh -r <sha>     # pin to a specific commit
+./shell/bump-dotfiles-ref.sh -b develop   # pin to another branch's head
+```
+
+It discovers targets by grepping for the `ARG DOTFILES_REF=` line, so an image that adopts the pattern later is picked up with no change to the script.
+
+### Version pins in build args
+
+Renovate's dockerfile manager only reads `FROM` lines, so a version pinned as a build arg is invisible to it and would sit unchanged forever. A second `customManager` in [`renovate.json`](../renovate.json) picks these up, with each pin declaring its own datasource in a preceding comment:
+
+```dockerfile
+# renovate: datasource=github-releases depName=hashicorp/vault extractVersion=^v(?<version>.+)$
+ARG VAULT_VERSION=2.0.3
+# renovate: datasource=docker depName=postgres versioning=docker
+ARG PG_VERSION=18
+```
+
+The comment is the whole configuration — adding a tracked pin to any active image needs nothing more than the `# renovate:` line above an `ARG <NAME>_VERSION=`, no change to `renovate.json`.
+
+`PG_VERSION` is the major that alpine's `postgresql<major>-client` package name is built from, tracked through the `postgres` image rather than the apk index. A major bump there depends on alpine having published the matching client package; the PR build and smoke test are what catch it if not.
 
 ### Versioning (release-please)
 
 [`release-please-config.json`](../release-please-config.json) + [`.release-please-manifest.json`](../.release-please-manifest.json) define one [release-please](https://github.com/googleapis/release-please) "package" per active image directory (`docker/utils/<name>`), each with:
 - `component`: the image name, used to build the `<name>-v<version>` tag.
 - `initial-version`: where that image's version counter starts.
+> [!WARNING]
+> `release-please-config.json`'s `changelog-sections` entry for `build` must stay `"hidden": false`. Release-please skips a release PR when the generated notes come out empty, and its notes only include commit types mapped to a **visible** section — the version bump itself then falls through to a patch. `build` is the type used by every Renovate base-image bump *and* by the scheduled refresh, so hiding that section would leave both silently producing no release and therefore no rebuild. JSON takes no comments, hence the note here.
+
 - `bootstrap-sha`: the commit this system was introduced at — release-please only considers commits *after* this SHA for that path. This repo had real unreleased `feat:`/`fix:` history predating this pipeline; without `bootstrap-sha` release-please would walk that entire history on its first run and could bump several images unexpectedly. **Don't remove this field** unless you specifically want release-please to re-scan full history for a package.
 
 `ci/matrix.json` deliberately has **no `tag` field** for actively-released images, and `release-please-config.json` deliberately has **no `extra-files`** pointing back into it. `build-images.yml` resolves each active image's version straight from `.release-please-manifest.json` at build time instead (deprecated images, which aren't release-please-managed, keep a static hand-set `tag` in `matrix.json` as their only source).
@@ -219,10 +286,11 @@ Release PRs are **not auto-merged** (`AUTOMERGE_RELEASE: false` in `cd.yml`) —
 
 ### Adding a new image
 
-1. Add its Dockerfile under `docker/utils/<name>/` with `ARG BASE_IMAGE=...` + `FROM ${BASE_IMAGE}` (needed for Renovate to detect it).
+1. Add its Dockerfile under `docker/utils/<name>/` with `ARG BASE_IMAGE=...` + `FROM ${BASE_IMAGE}` (needed for Renovate to detect it), followed by `COPY .refresh /etc/.image-refresh`, and create an empty `docker/utils/<name>/.refresh` alongside it (see the scheduled refresh above — without both the image is silently excluded from it).
 2. Add an entry to `ci/matrix.json` (`name`, `description`, `build.context`, `build.dockerfile`, `build.target`, `build.latest`) — **no `build.tag` field**, that's resolved at build time from the manifest.
 3. Add a matching package to `release-please-config.json` (`component`, `initial-version` = its starting version, `bootstrap-sha` = current `HEAD` — **no `extra-files`**, see the warning above) and a matching entry to `.release-please-manifest.json` (same starting version).
-4. Add its row to the table above and to `docs/04-docker.md`'s docs.
+4. Add a smoke test at `ci/tests/<name>.sh` (see image testing below) — a missing one fails CI rather than being skipped.
+5. Add its row to the table above and to `docs/04-docker.md`'s docs.
 
 > [!NOTE]
 > If an image shares a directory with another (like `dev`/`dev-lite` used to), release-please can't version them independently — a change to either one's Dockerfile bumps both. Give each image its own directory unless you deliberately want lockstep versioning.
@@ -239,13 +307,96 @@ Set `"deprecated": true` on its `ci/matrix.json` entry. This excludes it from Re
 
 `ci.yml` verifies buildability before anything merges, not just commit message format. On every non-draft PR it diffs changed files against `ci/matrix.json`'s `build.context` fields and builds (AMD64 only, no attestation) just the images actually touched, tagged `<image>:pr-<number>` and pushed to ghcr.io — a PR touching only docs or a single Dockerfile builds nothing or exactly that one image. `docker/templates/**` changes get a local `docker build` for both the `dev` and `prod` stages instead (no push — templates were never published by this pipeline, they're copy-paste starting points). PR-tagged images are deleted from ghcr.io once the PR closes (merged or not), via the shared `clean-cache.yml` workflow.
 
+### GitHub API rate limit during builds
+
+Six of the eight images install their tooling through `mise`, which resolves every `@latest` against the GitHub API. Unauthenticated that is **60 requests/hour, shared across every runner on the same egress IP** — building the matrix exhausts it, and the `aqua`/`ubi` backends then fail with a `403` that mise treats as permanent rather than retryable. The dotfiles `mise_use` helper retries five times over 50s, which does not outlast a rate-limit window that resets in minutes.
+
+So the build passes a token. It goes in as a **BuildKit build secret**, never a build arg, so it never reaches an image layer or `docker history`:
+
+```yaml
+secrets:
+  BUILD_SECRETS: |
+    github_token=${{ secrets.GITHUB_TOKEN }}
+```
+
+```dockerfile
+RUN --mount=type=secret,id=github_token,mode=0444 \
+  export GITHUB_TOKEN="$(cat /run/secrets/github_token 2> /dev/null || true)" \
+  && ...
+```
+
+`mode=0444` because these `RUN` steps execute as the non-root image user, and the default secret mount is `0400` owned by root. The `|| true` keeps it optional: a local `docker build` with no secret still works, it just gets the anonymous limit.
+
+### Build cache
+
+Builds use buildx's GitHub Actions cache backend, scoped per image **and** per architecture (`type=gha,scope=<image>-<runner>`), so `dev` and `dev-lite` never share entries and an `arm64` build never restores an `amd64` layer.
+
+Two things keep it from going stale in the wrong direction. A base image digest bump changes `FROM`, which invalidates every layer below it. A scheduled refresh changes the `.refresh` marker each image copies in as its first instruction, which does the same — see the scheduled refresh section above for why that `COPY` is what makes the mechanism work at all.
+
+Cache entries created on a PR branch are not visible to `main`, so a broken PR cannot poison the cache the release builds restore from. They do, however, count against the same 10 GB repository budget: a PR touching every Dockerfile leaves sixteen `mode=max` entries behind (eight images × two architectures), which evicts the entries `main` actually reuses. `ci.yml`'s `cleanup-cache` job frees them when the PR closes, alongside the `pr-<n>` images.
+
 > [!NOTE]
 > PRs from forks won't be able to push the check image — `GITHUB_TOKEN` is read-only for `pull_request` events from forks, which GitHub enforces regardless of the `permissions:` requested in the workflow. Not an issue for same-repo branches.
 
-### Known limitations
+### Image testing
 
-- **No cosign keyless signing.** The old pipeline signed every published tag with `cosign sign`; the shared `build-docker.yml` workflow's built-in attestation step only forwards SBOM and SLSA provenance, not signing. SBOM/provenance attestations are still generated.
-- **No automated image testing yet.** Builds aren't smoke-tested before being tagged `latest`. Options were scoped (post-publish smoke test, a true pre-push gate, or a `TEST_COMMAND` hook proposed upstream in `build-docker.yml`) but deferred.
+Every active image has a smoke test in [`ci/tests/`](../ci/tests/), run on each PR against the `pr-<n>` image that was just built, via the shared `test-docker.yml` workflow. The tests run *inside* the image, so they catch the class of breakage a successful `docker build` cannot: a tool that installed but doesn't execute, a binary that never made it onto `PATH`, a missing shared library. That last one is not hypothetical — trimming the runner images' apt list once dropped `libatomic1`, and `node` shipped exiting 127 on a missing `libatomic.so.1`.
+
+The tests are split in two deliberately, so that routine changes to a Dockerfile or to the dotfiles setup scripts do not require touching them:
+
+**Inventory — derived, never edited.** `probe_mise_shims` enumerates the mise shims directory *inside the image* and, for every binary found, resolves it through `mise which` and checks the dynamic loader can link it. Whatever a Dockerfile or the dotfiles scripts install today is what gets probed today. Adding a tool anywhere needs no edit here.
+
+The linkage check is the important half. It is what catches `node` exiting 127 on a missing `libatomic.so.1` — and it catches it for *every* binary at once, without executing any of them, so there are no per-tool version flags to guess at and nothing interactive to hang on. A static binary (most Go tools) makes `ldd` exit non-zero with "not a dynamic executable", which is correctly not treated as a failure.
+
+**Contract — declared, and small.** Each `ci/tests/<image>.sh` lists only the tools the image exists to provide. These should fail loudly when removed, because dropping one is a breaking change for consumers and deserves a deliberate decision rather than silent absorption. Everything else is the probe's job — keep these lists short.
+
+The three CI runner images share their contract through [`ci/tests/lib-runner.sh`](../ci/tests/lib-runner.sh), so it is stated once rather than three times. `backup` delegates entirely to the healthcheck script it already ships, so the healthcheck and the test cannot disagree. `curl` and `backup` have no mise at all and pass `optional` to the probe.
+
+`lib.sh` puts the mise shims directory on `PATH` explicitly. The runner images export it via `ENV`, but the dotfiles-based images (`debug`, `dev`, `dev-lite`) rely on shell init, which a non-interactive test shell never reads.
+
+A missing `ci/tests/<name>.sh` fails the job rather than skipping it, so a new image cannot be published with no verification at all.
+
+### Vulnerability scanning
+
+Two layers, both through the shared `scan-trivy.yml` workflow:
+
+- **PR report** ([`ci.yml`](../.github/workflows/ci.yml)) — scans the image the PR just built at `CRITICAL,HIGH` and prints the table to the run summary. Reporting, not gating, and the reason is worth recording: every `CRITICAL` these images carry today is a Go stdlib or vendored-dependency CVE inside a **third-party release binary** — krew plugins, `helm-docs`, `mkcert`, `mc`, `kustomize`. There are no `CRITICAL` OS-package findings at all. `ignore-unfixed` does not filter those out, because Go has shipped the fix; what has not shipped is a rebuild by the project that vendored it. Gating would mean permanently red PRs waiting on other people's releases. A second job scans `docker/` with Trivy's config scanner for Dockerfile misconfiguration.
+- **Scheduled report** ([`scan-images.yml`](../.github/workflows/scan-images.yml)) — weekly, scans every published `:latest` at `CRITICAL,HIGH` and uploads SARIF to the Security tab. Reporting only, never gating. A build-time scan says nothing about an image published three weeks before a CVE was disclosed, which is the case that actually matters. Deprecated images are excluded by default but can be opted in via the `INCLUDE_DEPRECATED` dispatch input — they are no longer released yet remain pullable, so they are the most likely to have accumulated unpatched CVEs.
+
+Each matrix leg uploads under its own `CATEGORY` (`trivy-<image>`). Uploads sharing a category replace one another, so without this the Security tab would only ever show whichever image finished last.
+
+The scan legs each emit a `Cache save failed` warning (`another job may be creating this cache`). That is `actions/cache` inside `aquasecurity/setup-trivy`: all eight legs start together and race to save the same `trivy-binary-<version>-Linux-X64` key, so one wins and the rest warn. It is cosmetic — the losers already have the binary they just downloaded, and the next run restores from the entry the winner wrote. Silencing it means disabling the Trivy cache entirely and re-downloading the binary and the vulnerability database on every leg, which is a worse trade than a warning.
+
+**Accepted findings** live in [`.trivyignore.yaml`](../.trivyignore.yaml), named explicitly via `TRIVYIGNORES` because Trivy only auto-detects the plain `.trivyignore` format, which carries bare rule IDs with nowhere to record a reason. Paths there are relative to the **scan root** (`docker`), not the repository root — the natural guess is wrong and fails silently.
+
+The point of the file is that the config scan report reads as zero findings, so the next real one is visible. Unfiltered it is ~90 lines of deliberate decisions: images that must `sudo` because they run non-root, apt lines not trimmed with `--no-install-recommends`, and sample manifests for the deprecated backup images. Every entry states why in terms of this repository, and an entry whose reason stops being true should be deleted rather than reworded.
+
+### Secret scanning
+
+A third job runs gitleaks over the **full git history** and **fails the PR** on any finding ([`scan-gitleaks.yml`](https://github.com/this-is-tobi/github-workflows/blob/main/.github/workflows/scan-gitleaks.yml), `FAIL_ON_LEAKS: true`).
+
+That gate is only meaningful because the noise is gone. The first full-history run reported eleven findings and not one was a credential:
+
+- `curl-auth-user` × 7, on the documented `curl -fsSL .../clone-subdir.sh | bash -s -- -u "https://github.com/..."` one-liner. The `-u` belongs to `clone-subdir.sh` on the far side of the pipe, not to `curl`, so what gitleaks extracted as the secret was a **public repository URL**.
+- `generic-api-key` × 4, on `a-key-with-exactly-32-characters` in the node crypto examples — a self-describing placeholder sitting next to a `// process.env.ENCRYPTION_KEY` comment saying where the real one belongs.
+
+Both are allowlisted in [`.gitleaks.toml`](../.gitleaks.toml), **by value rather than by path**, so a genuine credential committed into any of those same files still fails the scan. Gitleaks auto-detects `.gitleaks.toml` at the scan root, so `ci.yml` passes nothing.
+
+Prefer this over `.gitleaksignore`: fingerprints there are `<commit>:<file>:<rule>:<line>`, so every edit to a live file mints a new one and the ignore silently stops applying.
+
+### Signing and attestation
+
+Published images are signed with `cosign` keyless signing and carry SBOM and SLSA provenance attestations, all pushed to the registry (`SIGN`, `SBOM`, `PROVENANCE` in [`build-images.yml`](../.github/workflows/build-images.yml)). Verify a published image with:
+
+```sh
+cosign verify ghcr.io/this-is-tobi/tools/<image>:<tag> \
+  --certificate-identity-regexp '^https://github.com/this-is-tobi/tools/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+gh attestation verify oci://ghcr.io/this-is-tobi/tools/<image>:<tag> --owner this-is-tobi
+```
+
+PR check builds are not signed or attested — only release builds are.
 
 ## Template Images
 

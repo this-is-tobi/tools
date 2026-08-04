@@ -2,6 +2,12 @@ ARG BASE_IMAGE=docker.io/ubuntu:26.04@sha256:678c6550cc43645e08669028bc177f50be4
 
 FROM ${BASE_IMAGE} AS build
 
+# Cache-busting marker, rewritten by refresh-images.yml. It has to be copied in
+# for the refresh to mean anything: a context file no instruction reads never
+# enters a layer's cache key, so every RUN below would be served from the build
+# cache and the "refreshed" image would ship the exact same packages.
+COPY .refresh /etc/.image-refresh
+
 # Set system env
 ARG TARGETOS
 ARG TARGETARCH
@@ -42,18 +48,48 @@ RUN apt-get update -y && apt-get install -y \
   && rm -rf /var/lib/apt/lists/*
 
 # Install docker
-RUN sudo mkdir -m 0755 -p /etc/apt/keyrings \
-  && sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc \
-  && sudo chmod a+r /etc/apt/keyrings/docker.asc \
+# No sudo here: this stage still runs as root (the runner account is created
+# below), so every sudo call was a no-op wrapper around a command that already
+# had the privileges it needed.
+RUN mkdir -m 0755 -p /etc/apt/keyrings \
+  && curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc \
+  && chmod a+r /etc/apt/keyrings/docker.asc \
   && echo "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null \
-  && sudo apt-get update \
-  && sudo apt-get install -y containerd.io docker-buildx-plugin docker-ce docker-ce-cli docker-compose-plugin \
-  && sudo rm -rf /var/lib/apt/lists/*
+  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" > /etc/apt/sources.list.d/docker.list \
+  && apt-get update \
+  && apt-get install -y containerd.io docker-buildx-plugin docker-ce docker-ce-cli docker-compose-plugin \
+  && rm -rf /var/lib/apt/lists/*
+
+# Create the runner user
+# Every other published image in this repo ends on a non-root USER; this one
+# declared USER/HOME as env vars but never created the account, so it ran as
+# root out of a home directory that only existed because mise's installer made
+# it. The account is created after the docker install so the `docker` group
+# already exists to join, keeps passwordless sudo (workflow steps routinely
+# call it) and owns everything installed below.
+# The ubuntu base ships a default `ubuntu` account already holding UID 1000, so
+# it is removed first rather than letting useradd fail on a duplicate UID.
+ARG USER_UID=1000
+RUN if id -u ${USER_UID} > /dev/null 2>&1; then userdel -r "$(id -un ${USER_UID})" > /dev/null 2>&1 || true; fi \
+  && useradd -m -u ${USER_UID} -s /bin/bash ${USER} \
+  && usermod -aG docker ${USER} \
+  && echo "${USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER} \
+  && chmod 440 /etc/sudoers.d/${USER}
+
+USER ${USER}
+WORKDIR ${HOME}
 
 # Install mise and language runtimes
 # npm is not pinned separately: it ships inside the node release.
-RUN curl -fsSL https://mise.run | sh \
+# GITHUB_TOKEN comes from a build secret, never a build arg, so it stays out of
+# the image layers and `docker history`. mise resolves `@latest` through the
+# GitHub API; unauthenticated that is 60 requests/hour shared across every runner
+# on the same egress IP, and the aqua/ubi backends fail with a 403 that mise
+# treats as permanent once it is hit. Optional - a local build without the secret
+# still works, it just gets the anonymous limit.
+RUN --mount=type=secret,id=github_token,mode=0444 \
+  export GITHUB_TOKEN="$(cat /run/secrets/github_token 2> /dev/null || true)" \
+  && curl -fsSL https://mise.run | sh \
   && mise use --global \
   node@latest \
   bun@latest \
@@ -68,7 +104,9 @@ RUN curl -fsSL https://mise.run | sh \
 # chart-testing, kubescape and scw have no short name in mise's registry, so
 # they are addressed through their aqua packages directly. chart-testing
 # provides the `ct` binary.
-RUN mise use --global \
+RUN --mount=type=secret,id=github_token,mode=0444 \
+  export GITHUB_TOKEN="$(cat /run/secrets/github_token 2> /dev/null || true)" \
+  && mise use --global \
   age@latest \
   argo@latest \
   argocd@latest \

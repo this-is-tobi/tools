@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Smoke test for the `dev` image.
+#
+# Built with the dotfiles `base,devops,secops,go,js` profiles in full mode.
+#
+# The declared checks below are a contract - the tools this image exists to
+# provide. The rest of what the dotfiles setup scripts install is covered
+# automatically by probe_mise_shims, so a tool added there needs no edit here.
+. "$(dirname "$0")/lib.sh"
+
+echo "dev: system tools (apt)"
+for bin in git ssh openssl zsh; do
+  require_cmd "$bin"
+done
+
+echo "dev: kubernetes tooling"
+for bin in helm kubectl; do
+  require_cmd "$bin"
+done
+
+echo "dev: language runtimes"
+# The go/js profiles are the reason these images differ from debug.
+for bin in go node; do
+  require_cmd "$bin"
+done
+
+echo "dev: mise inventory"
+probe_mise_shims
+probe_mise_consistency
+
+echo "dev: execution"
+require_run kubectl kubectl version --client
+require_run helm helm version
+
+echo "dev: user"
+require_non_root
+
+report
