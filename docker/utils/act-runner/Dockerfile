@@ -36,15 +36,6 @@ RUN sudo apt-get update -y && sudo apt-get install -y \
   unzip \
   && sudo rm -rf /var/lib/apt/lists/*
 
-# Install AWS CLI
-# awscli v2 is not a portable single binary: it ships a bundled Python runtime
-# and an installer that lays out /usr/local/aws-cli, so it uses AWS' installer.
-RUN arch=$([ "$TARGETARCH" = "amd64" ] && echo "x86_64" || echo "aarch64") \
-    && curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-${arch}.zip" -o /tmp/awscliv2.zip \
-    && unzip /tmp/awscliv2.zip -d /tmp \
-    && /tmp/aws/install \
-    && rm -rf /tmp/awscliv2.zip /tmp/aws
-
 # Install docker
 RUN sudo mkdir -m 0755 -p /etc/apt/keyrings \
   && sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc \

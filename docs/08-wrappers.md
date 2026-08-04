@@ -21,7 +21,7 @@ Test GitHub Actions workflows locally before pushing to remote. The wrapper prov
 - Artifact collection and analysis
 
 A custom act-runner image is available at [`docker/utils/act-runner`](https://github.com/this-is-tobi/tools/tree/main/docker/utils/act-runner), pre-loaded with:
-- **Cloud tools**: AWS CLI, Scaleway CLI, Terraform, Ansible
+- **Cloud tools**: Scaleway CLI, Terraform, Ansible
 - **Kubernetes**: kubectl, helm, kind, kustomize, argocd, argo, kyverno, kubescape
 - **CI/CD**: GitHub CLI, trivy, cosign, ct (chart-testing)
 - **Development**: Node.js, Python, Go, Rust, Bun (via mise)
