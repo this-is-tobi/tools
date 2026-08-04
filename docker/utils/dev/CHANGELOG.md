@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.3](https://github.com/this-is-tobi/tools/compare/dev-v3.0.2...dev-v3.0.3) (2026-08-04)
+
+
+### Dependencies
+
+* **docker:** purge build caches and fix the scan and attestation limits ([3c21260](https://github.com/this-is-tobi/tools/commit/3c21260860cd037a0641281542174a4bc74275c4))
+
 ## [3.0.2](https://github.com/this-is-tobi/tools/compare/dev-v3.0.1...dev-v3.0.2) (2026-08-04)
 
 
