@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   release:
-    uses: this-is-tobi/github-workflows/.github/workflows/release-app.yml@ba35447e8357535191e3ef504d6e737c78cc6bdb # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/release-app.yml@dd5a0cfaad806ee7ad9d0888f8ff6c83a5c02404 # v0
     permissions:
       contents: write
       issues: write
@@ -25,6 +25,9 @@ jobs:
       ENABLE_PRERELEASE: false
       TAG_MAJOR_AND_MINOR: false
       AUTOMERGE_RELEASE: false
+    secrets:
+      APP_CLIENT_ID: ${{ secrets.APP_CLIENT_ID }}
+      APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
 
   trigger-build:
     name: Trigger image builds
@@ -44,4 +47,9 @@ jobs:
         # instead. No need to know which package(s) actually released: build-images.yml's own
         # skip-if-already-published guard makes an unconditional "build every active image"
         # dispatch a safe no-op for whichever images didn't just get a new version.
+        #
+        # Once APP_CLIENT_ID/APP_PRIVATE_KEY are populated on this repository, release-please's
+        # tag pushes stop going through GITHUB_TOKEN and start firing build-images.yml's own
+        # `push: tags:` trigger too - this dispatch becomes redundant, not wrong. Remove it only
+        # after confirming the native trigger actually fires on a release.
         gh workflow run build-images.yml --repo ${{ github.repository }} --ref ${{ github.ref_name }}
