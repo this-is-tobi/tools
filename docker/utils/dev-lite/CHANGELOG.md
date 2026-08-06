@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.4](https://github.com/this-is-tobi/tools/compare/dev-lite-v1.0.3...dev-lite-v1.0.4) (2026-08-06)
+
+
+### Dependencies
+
+* **deps:** update docker.io/debian base image to 34cd9e9 ([dd7a043](https://github.com/this-is-tobi/tools/commit/dd7a04368789affc9bc1edf57bcb93ba83d09242))
+
 ## [1.0.3](https://github.com/this-is-tobi/tools/compare/dev-lite-v1.0.2...dev-lite-v1.0.3) (2026-08-04)
 
 
