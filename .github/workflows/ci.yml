@@ -21,7 +21,7 @@ concurrency:
 jobs:
   lint-commits:
     if: ${{ github.event.action != 'closed' && !github.event.pull_request.draft }}
-    uses: this-is-tobi/github-workflows/.github/workflows/lint-commits.yml@ba35447e8357535191e3ef504d6e737c78cc6bdb # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/lint-commits.yml@dd5a0cfaad806ee7ad9d0888f8ff6c83a5c02404 # v0
     permissions:
       contents: read
       pull-requests: read
@@ -77,7 +77,7 @@ jobs:
     name: Build ${{ matrix.image.name }} (PR check)
     needs: resolve-affected
     if: ${{ needs.resolve-affected.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@ba35447e8357535191e3ef504d6e737c78cc6bdb # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@dd5a0cfaad806ee7ad9d0888f8ff6c83a5c02404 # v0
     permissions:
       packages: write
       contents: read
@@ -112,7 +112,7 @@ jobs:
     name: Build ${{ matrix.template.name }} (PR check)
     needs: resolve-affected
     if: ${{ needs.resolve-affected.outputs.templates != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@ba35447e8357535191e3ef504d6e737c78cc6bdb # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@dd5a0cfaad806ee7ad9d0888f8ff6c83a5c02404 # v0
     permissions:
       contents: read
       packages: write
@@ -149,7 +149,7 @@ jobs:
     - resolve-affected
     - build-images
     if: ${{ needs.resolve-affected.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/test-docker.yml@ba35447e8357535191e3ef504d6e737c78cc6bdb # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/test-docker.yml@dd5a0cfaad806ee7ad9d0888f8ff6c83a5c02404 # v0
     permissions:
       contents: read
       packages: read
@@ -173,7 +173,7 @@ jobs:
     - resolve-affected
     - build-images
     if: ${{ needs.resolve-affected.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@ba35447e8357535191e3ef504d6e737c78cc6bdb # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@dd5a0cfaad806ee7ad9d0888f8ff6c83a5c02404 # v0
     permissions:
       contents: read
       packages: read
@@ -207,7 +207,7 @@ jobs:
   scan-config:
     name: Scan Dockerfiles (PR check)
     if: ${{ github.event.action != 'closed' && !github.event.pull_request.draft }}
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@ba35447e8357535191e3ef504d6e737c78cc6bdb # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@dd5a0cfaad806ee7ad9d0888f8ff6c83a5c02404 # v0
     permissions:
       contents: read
       security-events: write
@@ -229,7 +229,7 @@ jobs:
   scan-secrets:
     name: Scan for leaked secrets (PR check)
     if: ${{ github.event.action != 'closed' && !github.event.pull_request.draft }}
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-gitleaks.yml@ba35447e8357535191e3ef504d6e737c78cc6bdb # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-gitleaks.yml@dd5a0cfaad806ee7ad9d0888f8ff6c83a5c02404 # v0
     permissions:
       contents: read
       security-events: write
@@ -261,7 +261,7 @@ jobs:
   cleanup-cache:
     name: Delete PR build caches
     if: ${{ github.event.action == 'closed' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/clean-cache.yml@ba35447e8357535191e3ef504d6e737c78cc6bdb # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/clean-cache.yml@dd5a0cfaad806ee7ad9d0888f8ff6c83a5c02404 # v0
     permissions:
       # The union of every job the called workflow declares, not just the one
       # that runs here - GitHub validates permissions statically.
@@ -279,7 +279,7 @@ jobs:
     name: Delete ${{ matrix.name }}:pr-${{ github.event.pull_request.number }}
     needs: resolve-active
     if: ${{ github.event.action == 'closed' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/clean-cache.yml@ba35447e8357535191e3ef504d6e737c78cc6bdb # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/clean-cache.yml@dd5a0cfaad806ee7ad9d0888f8ff6c83a5c02404 # v0
     permissions:
       packages: write
       actions: write
