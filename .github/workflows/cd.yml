@@ -8,8 +8,8 @@ on:
 
 # Serialized: release-please reconciles the state of every release PR on each
 # run, so overlapping runs on a burst of merges fight over the same PRs.
-# Queued rather than cancelled - cancelling could drop the build dispatch that
-# follows a release tag.
+# Queued rather than cancelled - cancelling could drop the fallback build dispatch
+# that follows a release tag.
 concurrency:
   group: cd-${{ github.ref }}
   cancel-in-progress: false
@@ -35,21 +35,19 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       actions: write
+    env:
+      # `secrets` is not available in a step-level `if`, so the presence check is
+      # hoisted here and the step tests `env` - same pattern release-app.yml uses.
+      HAS_APP_AUTH: ${{ secrets.APP_CLIENT_ID != '' && secrets.APP_PRIVATE_KEY != '' }}
     steps:
+    # With an App token, release-please's tag pushes trigger build-images.yml's own
+    # `push: tags:` natively, making this dispatch redundant - so it only runs as a
+    # fallback for whatever GITHUB_TOKEN can't trigger on its own. If the App is ever
+    # removed or its credentials expire without anyone noticing, this is what keeps
+    # images building instead of silently stopping.
     - name: Dispatch build-images.yml
+      if: ${{ env.HAS_APP_AUTH != 'true' }}
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        # release-please-action creates release tags using GITHUB_TOKEN, and tags pushed by
-        # GITHUB_TOKEN don't trigger other workflows' `push: tags:` events (GitHub's built-in
-        # anti-recursion guard) - so build-images.yml's tag trigger never fires on its own.
-        # workflow_dispatch is explicitly exempt from that restriction, so dispatch it here
-        # instead. No need to know which package(s) actually released: build-images.yml's own
-        # skip-if-already-published guard makes an unconditional "build every active image"
-        # dispatch a safe no-op for whichever images didn't just get a new version.
-        #
-        # Once APP_CLIENT_ID/APP_PRIVATE_KEY are populated on this repository, release-please's
-        # tag pushes stop going through GITHUB_TOKEN and start firing build-images.yml's own
-        # `push: tags:` trigger too - this dispatch becomes redundant, not wrong. Remove it only
-        # after confirming the native trigger actually fires on a release.
         gh workflow run build-images.yml --repo ${{ github.repository }} --ref ${{ github.ref_name }}
