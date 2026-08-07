@@ -1,0 +1,126 @@
+name: Build and attest image
+
+# build-docker.yml no longer runs attestation internally - callers that want it
+# compose attest-docker.yml as an explicit second job fed by build-docker's
+# digest/image outputs. build-images.yml calls this wrapper from a matrix
+# strategy, and a matrixed build job can't feed a matrixed attest job directly:
+# needs.<job>.outputs.<name> collapses to one value across all matrix
+# combinations (GitHub's documented last-write-wins behavior). Wrapping the
+# build/attest pair in its own reusable workflow keeps each matrix leg an
+# independent invocation, so there is no cross-matrix output collapse.
+
+on:
+  workflow_call:
+    inputs:
+      IMAGE_NAME:
+        description: Name of the image to build (eg. 'ghcr.io/my-org/my-image')
+        required: true
+        type: string
+      IMAGE_TAG:
+        description: Tag used to build image
+        required: true
+        type: string
+      IMAGE_CONTEXT:
+        description: Path of the context to build image
+        required: true
+        type: string
+      IMAGE_DOCKERFILE:
+        description: Path of the dockerfile to build image
+        required: true
+        type: string
+      IMAGE_TARGET:
+        description: Target stage to build in the Dockerfile (optional, builds the last stage if not set)
+        required: false
+        type: string
+      LATEST_TAG:
+        description: Whether to tag the image with 'latest'
+        required: false
+        default: false
+        type: boolean
+      TAG_MAJOR_AND_MINOR:
+        description: Whether to tag with only major and minor tags (e.g. '1.2.3' -> '1.2' & '1')
+        required: false
+        default: false
+        type: boolean
+      BUILD_AMD64:
+        description: Build for amd64
+        required: false
+        default: true
+        type: boolean
+      BUILD_ARM64:
+        description: Build for arm64
+        required: false
+        default: true
+        type: boolean
+      USE_QEMU:
+        description: Use QEMU emulator for arm64
+        required: false
+        default: false
+        type: boolean
+      CACHE:
+        description: Enable Docker build cache (uses GitHub Actions cache backend)
+        required: false
+        default: false
+        type: boolean
+      PROVENANCE:
+        description: Generate SLSA provenance attestation for the image
+        required: false
+        default: false
+        type: boolean
+      SBOM:
+        description: Generate SBOM attestation for the image
+        required: false
+        default: false
+        type: boolean
+      SIGN:
+        description: Sign the image digest with cosign keyless signing
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      BUILD_SECRETS:
+        description: Newline-separated list of build secrets in KEY=VALUE form, forwarded to build-docker.yml
+        required: false
+    outputs:
+      digest:
+        description: Digest of the built image (sha256:...)
+        value: ${{ jobs.build.outputs.digest }}
+      image:
+        description: Normalized image name (lowercase, registry-compatible)
+        value: ${{ jobs.build.outputs.image }}
+
+jobs:
+  build:
+    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@db3e78734bfc277530438c34ea8ccbcb4ea96ad6 # v0
+    permissions:
+      packages: write
+      contents: read
+    secrets:
+      BUILD_SECRETS: ${{ secrets.BUILD_SECRETS }}
+    with:
+      IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
+      IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
+      IMAGE_CONTEXT: ${{ inputs.IMAGE_CONTEXT }}
+      IMAGE_DOCKERFILE: ${{ inputs.IMAGE_DOCKERFILE }}
+      IMAGE_TARGET: ${{ inputs.IMAGE_TARGET }}
+      LATEST_TAG: ${{ inputs.LATEST_TAG }}
+      TAG_MAJOR_AND_MINOR: ${{ inputs.TAG_MAJOR_AND_MINOR }}
+      BUILD_AMD64: ${{ inputs.BUILD_AMD64 }}
+      BUILD_ARM64: ${{ inputs.BUILD_ARM64 }}
+      USE_QEMU: ${{ inputs.USE_QEMU }}
+      CACHE: ${{ inputs.CACHE }}
+
+  attest:
+    needs: build
+    if: ${{ inputs.PROVENANCE || inputs.SBOM || inputs.SIGN }}
+    uses: this-is-tobi/github-workflows/.github/workflows/attest-docker.yml@db3e78734bfc277530438c34ea8ccbcb4ea96ad6 # v0
+    permissions:
+      packages: write
+      id-token: write
+      attestations: write
+    with:
+      IMAGE_NAME: ${{ needs.build.outputs.image }}
+      DIGEST: ${{ needs.build.outputs.digest }}
+      PROVENANCE: ${{ inputs.PROVENANCE }}
+      SBOM: ${{ inputs.SBOM }}
+      SIGN: ${{ inputs.SIGN }}
