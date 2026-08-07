@@ -21,7 +21,7 @@ concurrency:
 jobs:
   lint-commits:
     if: ${{ github.event.action != 'closed' && !github.event.pull_request.draft }}
-    uses: this-is-tobi/github-workflows/.github/workflows/lint-commits.yml@dd5a0cfaad806ee7ad9d0888f8ff6c83a5c02404 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/lint-commits.yml@db3e78734bfc277530438c34ea8ccbcb4ea96ad6 # v0
     permissions:
       contents: read
       pull-requests: read
@@ -77,12 +77,10 @@ jobs:
     name: Build ${{ matrix.image.name }} (PR check)
     needs: resolve-affected
     if: ${{ needs.resolve-affected.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@dd5a0cfaad806ee7ad9d0888f8ff6c83a5c02404 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@db3e78734bfc277530438c34ea8ccbcb4ea96ad6 # v0
     permissions:
       packages: write
       contents: read
-      id-token: write
-      attestations: write
     strategy:
       # GHCR intermittently 403s the pull token that `imagetools create` needs to
       # merge the per-arch digests. Left to fail-fast, one such flake cancels
@@ -112,16 +110,10 @@ jobs:
     name: Build ${{ matrix.template.name }} (PR check)
     needs: resolve-affected
     if: ${{ needs.resolve-affected.outputs.templates != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@dd5a0cfaad806ee7ad9d0888f8ff6c83a5c02404 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@db3e78734bfc277530438c34ea8ccbcb4ea96ad6 # v0
     permissions:
       contents: read
       packages: write
-      # Granted even though nothing here is attested: GitHub validates
-      # permissions statically against every job the called workflow declares,
-      # including its `attest` job, which is skipped at runtime under PUSH:
-      # false. Without these the workflow fails before any job starts.
-      id-token: write
-      attestations: write
     strategy:
       # See build-images: one leg's failure should not cancel the others
       fail-fast: false
@@ -149,7 +141,7 @@ jobs:
     - resolve-affected
     - build-images
     if: ${{ needs.resolve-affected.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/test-docker.yml@dd5a0cfaad806ee7ad9d0888f8ff6c83a5c02404 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/test-docker.yml@db3e78734bfc277530438c34ea8ccbcb4ea96ad6 # v0
     permissions:
       contents: read
       packages: read
@@ -173,7 +165,7 @@ jobs:
     - resolve-affected
     - build-images
     if: ${{ needs.resolve-affected.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@dd5a0cfaad806ee7ad9d0888f8ff6c83a5c02404 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@db3e78734bfc277530438c34ea8ccbcb4ea96ad6 # v0
     permissions:
       contents: read
       packages: read
@@ -207,7 +199,7 @@ jobs:
   scan-config:
     name: Scan Dockerfiles (PR check)
     if: ${{ github.event.action != 'closed' && !github.event.pull_request.draft }}
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@dd5a0cfaad806ee7ad9d0888f8ff6c83a5c02404 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@db3e78734bfc277530438c34ea8ccbcb4ea96ad6 # v0
     permissions:
       contents: read
       security-events: write
@@ -229,7 +221,7 @@ jobs:
   scan-secrets:
     name: Scan for leaked secrets (PR check)
     if: ${{ github.event.action != 'closed' && !github.event.pull_request.draft }}
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-gitleaks.yml@dd5a0cfaad806ee7ad9d0888f8ff6c83a5c02404 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-gitleaks.yml@db3e78734bfc277530438c34ea8ccbcb4ea96ad6 # v0
     permissions:
       contents: read
       security-events: write
@@ -261,7 +253,7 @@ jobs:
   cleanup-cache:
     name: Delete PR build caches
     if: ${{ github.event.action == 'closed' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/clean-cache.yml@dd5a0cfaad806ee7ad9d0888f8ff6c83a5c02404 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/clean-cache.yml@db3e78734bfc277530438c34ea8ccbcb4ea96ad6 # v0
     permissions:
       # The union of every job the called workflow declares, not just the one
       # that runs here - GitHub validates permissions statically.
@@ -279,7 +271,7 @@ jobs:
     name: Delete ${{ matrix.name }}:pr-${{ github.event.pull_request.number }}
     needs: resolve-active
     if: ${{ github.event.action == 'closed' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/clean-cache.yml@dd5a0cfaad806ee7ad9d0888f8ff6c83a5c02404 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/clean-cache.yml@db3e78734bfc277530438c34ea8ccbcb4ea96ad6 # v0
     permissions:
       packages: write
       actions: write
