@@ -91,7 +91,7 @@ on:
 
 jobs:
   build:
-    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@aea69bf403eeb0afcceeb83091f7ec9504d5cdc2 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@f24e5efaa49770953f5a527a46b73e0cc2e1599c # v0
     permissions:
       packages: write
       contents: read
@@ -113,7 +113,7 @@ jobs:
   attest:
     needs: build
     if: ${{ inputs.PROVENANCE || inputs.SBOM || inputs.SIGN }}
-    uses: this-is-tobi/github-workflows/.github/workflows/attest-docker.yml@aea69bf403eeb0afcceeb83091f7ec9504d5cdc2 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/attest-docker.yml@f24e5efaa49770953f5a527a46b73e0cc2e1599c # v0
     permissions:
       packages: write
       id-token: write
