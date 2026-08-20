@@ -460,7 +460,8 @@ docker run -p 8080:8080 -e SERVER=my-backend:3000 my-frontend:latest
 **Notes:**
 - Three stages: `dev` (Vite/similar dev server via `bun run dev -- --host`), `build` (`bun run build` -> `dist`), `prod` (served by rootless nginx).
 - `dev` and `build` run as the image's built-in non-root `bun` user (uid/gid 1000), not root. With the bind-mount workflow above, if your host UID isn't 1000, either `chown` your project to `1000:1000` or add `--user "$(id -u):$(id -g)"` to the `docker run` so `bun` can write to it.
-- `SERVER` sets the `/api` reverse-proxy upstream (`host:port`). It defaults to a harmless loopback placeholder so the container still starts if you don't use `/api`.
+- `SERVER` sets the `/api` reverse-proxy upstream (`host:port`). It defaults to a harmless placeholder so the container still starts if you don't use `/api`.
+- `PORT` sets the port nginx listens on (default `8080`) — match your `-p` mapping to it if you override it. Must stay above 1024 since the image runs as non-root.
 - To inject runtime env vars into built JS files (values not baked in at build time), set `VARIABLES="MY_VAR OTHER_VAR"` plus the corresponding `MY_VAR=...` env vars at `docker run` time — see the comments in `entrypoint.sh`.
 - The prod image runs as a non-root user with group `0`, and all files it needs to read/write are group-owned and group-writable, so it works unmodified under OpenShift's restricted SCC (arbitrary UID, GID `0`).
 - For a `readOnlyRootFilesystem: true` security context, mount writable `emptyDir` volumes at `/tmp` and `/etc/nginx/conf.d` (nginx needs to write its pid/temp files and the templated config at startup).

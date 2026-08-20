@@ -38,14 +38,20 @@ RUN bun run build
 FROM ${NGINX_IMAGE} AS prod
 
 # Backend proxied at /api (see default.conf.template). Defaults to a
-# harmless loopback so the container still starts if /api isn't used.
-ENV SERVER=127.0.0.1:0
+# harmless placeholder so the container still starts if /api isn't used -
+# port 0 looks equally harmless but nginx rejects it as an invalid upstream
+# port at config-load time and refuses to start at all.
+ENV SERVER=127.0.0.1:1
+# Must stay >1024 - the image runs as non-root, which can't bind a privileged
+# port. Substituted into default.conf.template's "listen" directive by
+# nginx's own envsubst-on-templates entrypoint step, same mechanism as SERVER.
+ENV PORT=8080
 USER 0
 COPY --chown=1001:0 --chmod=770 --from=build /app/dist /usr/share/nginx/html/
 # --chmod is also applied to the auto-created /etc/nginx/templates dir, so it needs the execute bit to stay traversable.
 COPY --chown=1001:0 --chmod=750 ./default.conf.template /etc/nginx/templates/default.conf.template
 COPY --chown=1001:0 --chmod=750 ./entrypoint.sh /docker-entrypoint.d/90-runtime-env.sh
 USER 1001
-EXPOSE 8080
+EXPOSE ${PORT}
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget -q -O- http://127.0.0.1:8080/healthz || exit 1
+  CMD wget -q -O- http://127.0.0.1:${PORT}/healthz || exit 1
