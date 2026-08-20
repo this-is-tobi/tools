@@ -1,0 +1,9 @@
+{
+  "name": "ci-fixture",
+  "private": true,
+  "description": "Minimal app used only by ci.yml's build-templates check to actually exercise this Dockerfile's install/build stages. Not part of what a consumer copies out - see docs/04-docker.md.",
+  "scripts": {
+    "dev": "true",
+    "build": "mkdir -p dist && cp index.html dist/index.html"
+  }
+}
