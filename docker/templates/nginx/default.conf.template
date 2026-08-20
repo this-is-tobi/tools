@@ -12,7 +12,7 @@ upstream backend {
 }
 
 server {
-  listen 8080;
+  listen ${PORT};
   server_name frontend;
   root /usr/share/nginx/html;
   index index.html;
