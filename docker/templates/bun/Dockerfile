@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 
 # Adjust entrypoints below if your app doesn't use src/index.ts -> dist/index.js.
-ARG BUN_IMAGE=docker.io/oven/bun:1.3.14-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0
-ARG BUN_IMAGE_PROD=docker.io/oven/bun:1.3.14-distroless@sha256:c28c51287af70bab8e0b66fc4b6a30cfb92a727ebc88045223adc9f4c9d09307
+ARG BUN_IMAGE=docker.io/oven/bun:1.4.0-alpine@sha256:07235578f79ef8c6f97d94aee7938e76f5cdba5f21ae5dbfdd3d3d38058437eb
+ARG BUN_IMAGE_PROD=docker.io/oven/bun:1.4.0-distroless@sha256:a8919d4a092a234f7184ac6d3960a2d860fea73e034709e1752a7d0de09913f8
 
 # ---- Base: install dependencies (cached separately from source) ----
 FROM ${BUN_IMAGE} AS base
