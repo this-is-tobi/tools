@@ -459,6 +459,7 @@ docker run -p 8080:8080 -e SERVER=my-backend:3000 my-frontend:latest
 
 **Notes:**
 - Three stages: `dev` (Vite/similar dev server via `bun run dev -- --host`), `build` (`bun run build` -> `dist`), `prod` (served by rootless nginx).
+- `dev` and `build` run as the image's built-in non-root `bun` user (uid/gid 1000), not root. With the bind-mount workflow above, if your host UID isn't 1000, either `chown` your project to `1000:1000` or add `--user "$(id -u):$(id -g)"` to the `docker run` so `bun` can write to it.
 - `SERVER` sets the `/api` reverse-proxy upstream (`host:port`). It defaults to a harmless loopback placeholder so the container still starts if you don't use `/api`.
 - To inject runtime env vars into built JS files (values not baked in at build time), set `VARIABLES="MY_VAR OTHER_VAR"` plus the corresponding `MY_VAR=...` env vars at `docker run` time — see the comments in `entrypoint.sh`.
 - The prod image runs as a non-root user with group `0`, and all files it needs to read/write are group-owned and group-writable, so it works unmodified under OpenShift's restricted SCC (arbitrary UID, GID `0`).
@@ -484,6 +485,7 @@ docker run -p 3000:3000 my-api:latest
 
 **Notes:**
 - Three stages: `dev` (hot reload via `bun --watch`), `build` (bundles and prunes to production-only dependencies), `prod` (minimal `distroless` runtime, no shell/package manager).
+- `dev` and `build` run as the image's built-in non-root `bun` user (uid/gid 1000), not root. With the bind-mount workflow above, if your host UID isn't 1000, either `chown` your project to `1000:1000` or add `--user "$(id -u):$(id -g)"` to the `docker run` so `bun` can write to it.
 - The prod image runs as a non-root user with group `0` (OpenShift restricted SCC compatible) and needs no writable volumes even under `readOnlyRootFilesystem: true`.
 - The `distroless` prod image has no shell or `wget`/`curl`, so there's no Docker `HEALTHCHECK`; wire an HTTP liveness/readiness probe (e.g. `/healthz`) at the orchestrator level instead.
 - `NODE_ENV` is set to `production` before the `build` stage runs, not just at runtime, since bundlers inline `process.env.NODE_ENV` at build time.

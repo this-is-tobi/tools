@@ -2,21 +2,27 @@
 
 # Adjust the build command / output dir below to match your frontend
 # toolchain if it isn't a plain Vite-style "bun run build" -> dist.
-ARG BUN_IMAGE=docker.io/oven/bun:1.3.14-alpine
-ARG NGINX_IMAGE=docker.io/nginxinc/nginx-unprivileged:1.31.3-alpine
+ARG BUN_IMAGE=docker.io/oven/bun:1.3.14-alpine@sha256:5acc90a93e91ff07bf72aa90a7c9f0fa189765aec90b47bdbf2152d2196383c0
+ARG NGINX_IMAGE=docker.io/nginxinc/nginx-unprivileged:1.31.3-alpine@sha256:f972e5322b9797dc2a6b830030094426437b1ae7032e4644496395336ac6fdac
 
 # ---- Base: install dependencies (cached separately from source) ----
 FROM ${BUN_IMAGE} AS base
+# "bun" (uid/gid 1000) is the image's built-in non-root user - installing and
+# building as root isn't needed here and only widens what a compromised
+# dependency's install/build script could touch.
+USER bun
 WORKDIR /app
-COPY package.json bun.lock* ./
+COPY --chown=bun:bun package.json bun.lock* ./
 RUN bun install --frozen-lockfile
 
 # ---- Dev stage ----
 # Meant to be run with your source bind-mounted over /app for hot reload.
 # "--host" is needed for most dev servers (e.g. Vite) to be reachable from
-# outside the container.
+# outside the container. If your host UID isn't 1000, either chown your
+# project to 1000:1000 or run with `docker run --user "$(id -u):$(id -g)" ...`
+# so bun can write to it.
 FROM base AS dev
-COPY . .
+COPY --chown=bun:bun . .
 EXPOSE 5173
 CMD ["bun", "run", "dev", "--", "--host"]
 
@@ -25,7 +31,7 @@ FROM base AS build
 # Some bundlers inline process.env.NODE_ENV at build time, so this has to be
 # set before building, not just at runtime.
 ENV NODE_ENV=production
-COPY . .
+COPY --chown=bun:bun . .
 RUN bun run build
 
 # ---- Prod stage ----
