@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.5](https://github.com/this-is-tobi/tools/compare/dev-v3.0.4...dev-v3.0.5) (2026-08-25)
+
+
+### Dependencies
+
+* **deps:** update docker.io/debian base image to f324c7f ([0728b0c](https://github.com/this-is-tobi/tools/commit/0728b0caeacc4280abed1f38a87e79dc300f27e3))
+
 ## [3.0.4](https://github.com/this-is-tobi/tools/compare/dev-v3.0.3...dev-v3.0.4) (2026-08-06)
 
 
