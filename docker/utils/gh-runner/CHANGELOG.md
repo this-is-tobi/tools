@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.2](https://github.com/this-is-tobi/tools/compare/gh-runner-v1.12.1...gh-runner-v1.12.2) (2026-08-27)
+
+
+### Dependencies
+
+* **deps:** update ghcr.io/actions/actions-runner base image to v2.337.0 ([0c27a11](https://github.com/this-is-tobi/tools/commit/0c27a11f8c545a20f6d972940e218eb4b5caf245))
+
 ## [1.12.1](https://github.com/this-is-tobi/tools/compare/gh-runner-v1.12.0...gh-runner-v1.12.1) (2026-08-04)
 
 
