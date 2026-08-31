@@ -21,7 +21,7 @@ RTK_MERGE=0
 COPILOT_CLI_FILE="${HOME}/.copilot/copilot-instructions.md"
 CLAUDE_MARKETPLACE="claude-plugins-official"
 CLAUDE_MARKETPLACE_SOURCE="anthropics/claude-plugins-official"
-CLAUDE_PLUGINS="claude-security"
+CLAUDE_PLUGINS="claude-security superpowers"
 
 # Script helper
 TEXT_HELPER="
@@ -138,6 +138,8 @@ setup_claude() {
     mkdir -p "${skills_dir}/${skill}"
     curl -fsSL "${RAW_BASE}/ai/common/skills/${skill}/SKILL.md" -o "${skills_dir}/${skill}/SKILL.md"
   done
+  mkdir -p "${skills_dir}/systematic-debugging"
+  curl -fsSL "${RAW_BASE}/ai/claude/skills/systematic-debugging/SKILL.md" -o "${skills_dir}/systematic-debugging/SKILL.md"
 
   if [ "$WITH_AGENTS" = "1" ]; then
     local agents_dir="${HOME}/.claude/agents"
