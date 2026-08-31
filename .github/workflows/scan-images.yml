@@ -65,7 +65,7 @@ jobs:
     name: Scan ${{ matrix.name }}
     needs: matrix
     if: ${{ needs.matrix.outputs.names != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@69d42e86cc54810f2a7b9a90d8bd7c96f6f9a5f6 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@6651c770bf2a0fd26b833170a72b5a95104eda8f # v0
     permissions:
       contents: read
       packages: read
