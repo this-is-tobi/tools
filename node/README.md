@@ -19,11 +19,16 @@ packages/
 │       ├── scrypt-benchmark.ts  # Performance benchmarking
 │       ├── scrypt-options.ts    # Options testing
 │       └── SCRYPT-PARAMETERS.md # Detailed documentation
-└── worker/          # Worker thread utilities
-    ├── manager.ts   # Pool management
-    ├── worker.ts    # Worker implementation
-    ├── tasks.ts     # Task definitions
-    └── main.ts      # Example usage
+├── worker/          # Worker thread utilities
+│   ├── manager.ts   # Pool management
+│   ├── worker.ts    # Worker implementation
+│   ├── tasks.ts     # Task definitions
+│   └── main.ts      # Example usage
+└── quorum/          # Multi-agent security-review pipeline
+    ├── types.ts     # Shared interfaces
+    ├── client.ts    # OpenAI-compatible chat completion client
+    ├── pipeline.ts  # Research -> dedup -> panel -> quorum orchestration
+    └── main.ts      # CLI entry point
 ```
 
 ## Modules
@@ -232,4 +237,62 @@ console.log(results) // Array of TaskResult objects
 
 // Clean up worker pool when done
 await cleanup()
+```
+
+### Quorum Module (`./packages/quorum/`)
+
+A multi-agent security-review pipeline: an LLM proposes candidate vulnerabilities in a diff, then three independent voters — blind to each other's reasoning — each judge the same candidate from a different fixed angle before it's reported. Talks to any OpenAI-compatible `/chat/completions` endpoint, zero third-party dependencies.
+
+**Status**: early / under active iteration. Currently implements the finder + independent panel + code-computed quorum (roughly Phase 0-1 of the design). Escalation on marginal (2/3) splits, cross-model verification, and the patch-generation loop are documented as later phases, not yet built here.
+
+#### Why a panel instead of "ask a second model"
+
+Letting verifiers see each other's reasoning measurably converges results toward agreement rather than correctness, and a verifying model is worse at judging its own confidence than a proposing one is. So the three votes here run fully independently — no shared context between them — and the keep/discard decision plus its confidence ceiling (`3/3` -> `high`, `2/3` -> `medium`, otherwise discarded) is ordinary arithmetic in `pipeline.ts`, never a number a model reports about itself. Three voters is close to the cost-effective floor, not a placeholder for more: self-consistency research shows most of the achievable gain from repeated sampling arrives within a handful of samples, and each additional parallel call has a real latency cost.
+
+This is expected to disagree with itself between runs sometimes — that's inherent to the approach, not a bug. A `2/3` split today is a real, still-open design gap: without the escalation phase, it lands as `medium` confidence and stops there rather than triggering a repanel and a dedicated adversarial pass.
+
+#### Key Features
+
+- Zero dependencies — plain `fetch`, works under Bun or Node
+- Model-agnostic per role: point the finder and the panel at different backends (`RESEARCH_*` / `VOTER_*` env vars, `VOTER_*` falls back to `RESEARCH_*`)
+- Compiles to a standalone binary via Bun (`bun run quorum:compile`) — no runtime dependency to distribute
+- Defensive JSON extraction rather than trusting `response_format` schema enforcement, since OpenAI-compatible servers vary in how much of the real API surface they implement
+
+#### Usage
+
+```bash
+# Run against a diff file
+RESEARCH_MODEL=qwen3.6:27b bun run quorum ./my.diff
+
+# Or pipe a diff on stdin
+git diff origin/main...HEAD | RESEARCH_MODEL=qwen3.6:27b bun run quorum
+
+# Compile to a standalone binary
+bun run quorum:compile
+./quorum ./my.diff
+```
+
+```bash
+# Configuration (env vars)
+export RESEARCH_BASE_URL="http://localhost:11434/v1"  # default: that (Ollama)
+export RESEARCH_API_KEY="not-needed"                   # omit entirely for endpoints with no auth
+export RESEARCH_MODEL="qwen3.6:27b"                    # required
+
+# Optional - point the panel at a different backend than the finder
+export VOTER_MODEL="gpt-5.4"
+export VOTER_BASE_URL="https://api.openai.com/v1"
+export VOTER_API_KEY="sk-..."
+```
+
+#### API
+
+```typescript
+import { runQuorum } from './packages/quorum/pipeline.ts'
+
+const diff = await Bun.file('./my.diff').text()
+const { kept, discarded } = await runQuorum(diff, (message) => console.error(message))
+
+for (const finding of kept) {
+  console.log(`${finding.file}:${finding.line} [${finding.confidence}] ${finding.summary}`)
+}
 ```
