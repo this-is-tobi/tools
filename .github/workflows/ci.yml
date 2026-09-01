@@ -21,7 +21,7 @@ concurrency:
 jobs:
   lint-commits:
     if: ${{ github.event.action != 'closed' && !github.event.pull_request.draft }}
-    uses: this-is-tobi/github-workflows/.github/workflows/lint-commits.yml@cde4ddd4c33f37f52b73a3c5b2955344c2c64086 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/lint-commits.yml@1598b89932a485921deb7530e83e0d959edb00f3 # v0
     permissions:
       contents: read
       pull-requests: read
@@ -77,7 +77,7 @@ jobs:
     name: Build ${{ matrix.image.name }} (PR check)
     needs: resolve-affected
     if: ${{ needs.resolve-affected.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@cde4ddd4c33f37f52b73a3c5b2955344c2c64086 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@1598b89932a485921deb7530e83e0d959edb00f3 # v0
     permissions:
       packages: write
       contents: read
@@ -110,7 +110,7 @@ jobs:
     name: Build ${{ matrix.template.name }} (PR check)
     needs: resolve-affected
     if: ${{ needs.resolve-affected.outputs.templates != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@cde4ddd4c33f37f52b73a3c5b2955344c2c64086 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@1598b89932a485921deb7530e83e0d959edb00f3 # v0
     permissions:
       contents: read
       packages: write
@@ -141,7 +141,7 @@ jobs:
     - resolve-affected
     - build-images
     if: ${{ needs.resolve-affected.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/test-docker.yml@cde4ddd4c33f37f52b73a3c5b2955344c2c64086 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/test-docker.yml@1598b89932a485921deb7530e83e0d959edb00f3 # v0
     permissions:
       contents: read
       packages: read
@@ -165,7 +165,7 @@ jobs:
     - resolve-affected
     - build-images
     if: ${{ needs.resolve-affected.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@cde4ddd4c33f37f52b73a3c5b2955344c2c64086 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@1598b89932a485921deb7530e83e0d959edb00f3 # v0
     permissions:
       contents: read
       packages: read
@@ -199,7 +199,7 @@ jobs:
   scan-config:
     name: Scan Dockerfiles (PR check)
     if: ${{ github.event.action != 'closed' && !github.event.pull_request.draft }}
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@cde4ddd4c33f37f52b73a3c5b2955344c2c64086 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@1598b89932a485921deb7530e83e0d959edb00f3 # v0
     permissions:
       contents: read
       security-events: write
@@ -221,7 +221,7 @@ jobs:
   scan-secrets:
     name: Scan for leaked secrets (PR check)
     if: ${{ github.event.action != 'closed' && !github.event.pull_request.draft }}
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-gitleaks.yml@cde4ddd4c33f37f52b73a3c5b2955344c2c64086 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-gitleaks.yml@1598b89932a485921deb7530e83e0d959edb00f3 # v0
     permissions:
       contents: read
       security-events: write
@@ -253,7 +253,7 @@ jobs:
   cleanup-cache:
     name: Delete PR build caches
     if: ${{ github.event.action == 'closed' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/clean-cache.yml@cde4ddd4c33f37f52b73a3c5b2955344c2c64086 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/clean-cache.yml@1598b89932a485921deb7530e83e0d959edb00f3 # v0
     permissions:
       actions: write
     with:
@@ -266,7 +266,7 @@ jobs:
     name: Delete ${{ matrix.name }}:pr-${{ github.event.pull_request.number }}
     needs: resolve-active
     if: ${{ github.event.action == 'closed' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/clean-images.yml@cde4ddd4c33f37f52b73a3c5b2955344c2c64086 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/clean-images.yml@1598b89932a485921deb7530e83e0d959edb00f3 # v0
     permissions:
       packages: write
     strategy:
