@@ -2,7 +2,7 @@
 
 # Adjust the build command / output dir below to match your frontend
 # toolchain if it isn't a plain Vite-style "bun run build" -> dist.
-ARG BUN_IMAGE=docker.io/oven/bun:1.4.0-alpine@sha256:07235578f79ef8c6f97d94aee7938e76f5cdba5f21ae5dbfdd3d3d38058437eb
+ARG BUN_IMAGE=docker.io/oven/bun:1.4.1-alpine@sha256:2ef545220f7a886f22fcb3f2309bbd6bcf1c0aa04b7d79c31765c7aa4a13aac1
 ARG NGINX_IMAGE=docker.io/nginxinc/nginx-unprivileged:1.31.5-alpine@sha256:aa8c9087d36d93e9d650c5365f883b421e8214aedbad24ade52b844c583358f1
 
 # ---- Base: install dependencies (cached separately from source) ----
