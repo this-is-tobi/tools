@@ -29,7 +29,7 @@ jobs:
   resolve-affected:
     name: Resolve affected images and templates
     if: ${{ github.event.action != 'closed' && !github.event.pull_request.draft }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       images: ${{ steps.resolve.outputs.IMAGES }}
       templates: ${{ steps.resolve.outputs.TEMPLATES }}
@@ -237,7 +237,7 @@ jobs:
   resolve-active:
     name: Resolve active images
     if: ${{ github.event.action == 'closed' }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       names: ${{ steps.list.outputs.NAMES }}
     steps:
