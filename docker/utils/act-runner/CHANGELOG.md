@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.7](https://github.com/this-is-tobi/tools/compare/act-runner-v2.1.6...act-runner-v2.1.7) (2026-09-21)
+
+
+### Dependencies
+
+* **deps:** update docker.io/ubuntu base image to da6fc2b ([9077a8d](https://github.com/this-is-tobi/tools/commit/9077a8d028c2fbc7bc6cb020374903bb9b6dfe29))
+
 ## [2.1.6](https://github.com/this-is-tobi/tools/compare/act-runner-v2.1.5...act-runner-v2.1.6) (2026-09-18)
 
 
