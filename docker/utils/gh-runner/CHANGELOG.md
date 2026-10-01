@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.3](https://github.com/this-is-tobi/tools/compare/gh-runner-v1.12.2...gh-runner-v1.12.3) (2026-10-01)
+
+
+### Dependencies
+
+* **docker:** scheduled dependency refresh ([feb3c00](https://github.com/this-is-tobi/tools/commit/feb3c00a474ae501ba46dd1920ad959529b2ef30))
+
 ## [1.12.2](https://github.com/this-is-tobi/tools/compare/gh-runner-v1.12.1...gh-runner-v1.12.2) (2026-08-27)
 
 
