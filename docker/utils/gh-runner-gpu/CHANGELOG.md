@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.3](https://github.com/this-is-tobi/tools/compare/gh-runner-gpu-v1.10.2...gh-runner-gpu-v1.10.3) (2026-10-01)
+
+
+### Dependencies
+
+* **docker:** scheduled dependency refresh ([feb3c00](https://github.com/this-is-tobi/tools/commit/feb3c00a474ae501ba46dd1920ad959529b2ef30))
+
 ## [1.10.2](https://github.com/this-is-tobi/tools/compare/gh-runner-gpu-v1.10.1...gh-runner-gpu-v1.10.2) (2026-08-27)
 
 
