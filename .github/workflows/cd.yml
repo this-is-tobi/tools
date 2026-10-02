@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   release:
-    uses: this-is-tobi/github-workflows/.github/workflows/release-app.yml@5369bbcdfcb8d7f260beb463a828421cfe1d8db2 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/release-app.yml@c593a2612d0cc036ee49e185cdf051670b667ab2 # v0
     permissions:
       contents: write
       issues: write
