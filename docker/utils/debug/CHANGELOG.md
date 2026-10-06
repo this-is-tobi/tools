@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.7](https://github.com/this-is-tobi/tools/compare/debug-v3.0.6...debug-v3.0.7) (2026-10-06)
+
+
+### Dependencies
+
+* **deps:** update docker.io/debian base image to 913f670 ([cfb50a6](https://github.com/this-is-tobi/tools/commit/cfb50a627e720d81f91638e0805631615c476231))
+
 ## [3.0.6](https://github.com/this-is-tobi/tools/compare/debug-v3.0.5...debug-v3.0.6) (2026-09-19)
 
 
