@@ -9,7 +9,9 @@ COLOR_RED='\033[0;31m'
 COLOR_GREEN='\033[0;32m'
 
 # Defaults
-RAW_BASE="https://raw.githubusercontent.com/this-is-tobi/tools/main"
+# Follows main by default; set TOOLS_REF to a tag or commit SHA to pin what gets installed,
+# or RAW_BASE to read from another location (a mirror, a local checkout via file://).
+RAW_BASE="${RAW_BASE:-https://raw.githubusercontent.com/this-is-tobi/tools/${TOOLS_REF:-main}}"
 TOOL="both"
 PRESET="general"
 CUSTOM_INSTRUCTIONS=""
@@ -40,15 +42,21 @@ Available flags:
         regardless of -g. Claude Code-only — ignored with -t copilot. Skipped with a warning when the
         'claude' binary isn't on PATH. Idempotent: re-running re-checks the marketplace and updates
         already-installed plugins.
-  -g    Personal/global setup (~/.claude, ~/.copilot) instead of repo-level.
+  -g    Personal/global setup (~/.claude, ~/.copilot) instead of repo-level. Claude Code gets only
+        'general' in this mode (one personal file, no scoping), whatever -p/-i say.
   -c    Also populate Copilot CLI's personal file (~/.copilot/copilot-instructions.md), always just
         'general' regardless of -p/-i (matches how Copilot CLI's personal setup works — one always-loaded
-        file, no per-repo scoping). Only applies with -g and -t copilot/both; ignored otherwise.
+        file, no per-repo scoping). The instructions go in a marked block that is replaced on re-runs;
+        everything else in the file (rtk's block, your own content) is left untouched. Only applies with
+        -g and -t copilot/both; ignored otherwise.
   -r    Run 'rtk init -g --copilot' safely instead of setting anything up: backs up whatever is already in
         '${COPILOT_CLI_FILE}', lets rtk regenerate its block, then merges the two back together (rtk's own
         installer overwrites that file entirely otherwise). Safe to re-run — never duplicates the block.
         Standalone action, ignores every other flag except -h.
   -h    Print script help.
+
+Files this script replaces (instruction files, CLAUDE.md) are first kept next to the original as
+'<name>.bak.<timestamp>' when their content differs. Set TOOLS_REF=<tag|sha> to pin the source.
 
 Examples:
   ./setup-ai-agent.sh -t claude
@@ -61,7 +69,51 @@ Examples:
 
 # Functions
 print_help() {
-  printf "$TEXT_HELPER"
+  printf '%s\n' "$TEXT_HELPER"
+}
+
+# Drop a leading YAML frontmatter block (Copilot's applyTo/description): it is meaningless
+# once the text is inlined into a Claude Code file.
+strip_frontmatter() {
+  awk 'NR == 1 && $0 == "---" { skip = 1; next } skip && $0 == "---" { skip = 0; next } !skip { print }'
+}
+
+# place <tmp> <dest> <backup>: move a finished temporary file to its destination (mode 644).
+# With backup=1, an existing destination whose content differs is kept as <dest>.bak.<timestamp>.
+place() {
+  local tmp="$1" dest="$2" backup="${3:-0}" saved
+  if [ "$backup" = "1" ] && [ -f "$dest" ] && ! cmp -s "$tmp" "$dest"; then
+    saved="${dest}.bak.$(date +%Y%m%d%H%M%S)"
+    cp -p "$dest" "$saved"
+    printf "${COLOR_BLUE}Note${COLOR_OFF}: kept your previous '%s' as '%s'.\n" "$dest" "$saved"
+  fi
+  chmod 644 "$tmp"
+  mv "$tmp" "$dest"
+}
+
+# fetch <path under RAW_BASE> <dest> [--strip] [--backup]
+# Downloads to a temporary file in the destination directory and renames it, so an
+# interrupted download never leaves a truncated file behind.
+fetch() {
+  local path="$1" dest="$2" strip=0 backup=0 tmp
+  shift 2
+  for option in "$@"; do
+    case "$option" in
+      --strip) strip=1;;
+      --backup) backup=1;;
+    esac
+  done
+  tmp="$(mktemp "${dest}.XXXXXX")"
+  if ! curl -fsSL "${RAW_BASE}/${path}" -o "$tmp"; then
+    rm -f "$tmp"
+    printf "${COLOR_RED}Error${COLOR_OFF}: could not download %s\n" "${RAW_BASE}/${path}" >&2
+    return 1
+  fi
+  if [ "$strip" = "1" ]; then
+    strip_frontmatter < "$tmp" > "${tmp}.body"
+    mv "${tmp}.body" "$tmp"
+  fi
+  place "$tmp" "$dest" "$backup"
 }
 
 resolve_instructions() {
@@ -115,38 +167,40 @@ setup_claude() {
 
   if [ "$GLOBAL" = "1" ]; then
     mkdir -p "${HOME}/.claude"
-    curl -fsSL "${RAW_BASE}/ai/common/instructions/general.instructions.md" \
-      -o "${HOME}/.claude/general-instructions.md"
+    fetch "ai/common/instructions/general.instructions.md" "${HOME}/.claude/general-instructions.md" --strip --backup
     touch "${HOME}/.claude/CLAUDE.md"
     grep -qxF '@general-instructions.md' "${HOME}/.claude/CLAUDE.md" || \
       echo '@general-instructions.md' >> "${HOME}/.claude/CLAUDE.md"
   else
-    local first=1
+    # Every selected instruction goes into one CLAUDE.md; applyTo scoping is Copilot-only, so
+    # the frontmatter is dropped. The file is only replaced once all the downloads succeeded.
+    local tmp name
+    tmp="$(mktemp "CLAUDE.md.XXXXXX")"
     for name in $instructions; do
-      if [ "$first" = "1" ]; then
-        curl -fsSL "${RAW_BASE}/ai/common/instructions/${name}.instructions.md" -o "CLAUDE.md"
-        first=0
-      else
-        curl -fsSL "${RAW_BASE}/ai/common/instructions/${name}.instructions.md" >> "CLAUDE.md"
+      if ! { curl -fsSL "${RAW_BASE}/ai/common/instructions/${name}.instructions.md" | strip_frontmatter >> "$tmp"; printf '\n' >> "$tmp"; }; then
+        rm -f "$tmp"
+        printf "${COLOR_RED}Error${COLOR_OFF}: could not download the '%s' instructions.\n" "$name" >&2
+        return 1
       fi
     done
+    place "$tmp" "CLAUDE.md" 1
   fi
 
   local skills_dir="${HOME}/.claude/skills"
   [ "$GLOBAL" = "1" ] || skills_dir=".claude/skills"
   for skill in code-review repository-audit commit-message pull-request; do
     mkdir -p "${skills_dir}/${skill}"
-    curl -fsSL "${RAW_BASE}/ai/common/skills/${skill}/SKILL.md" -o "${skills_dir}/${skill}/SKILL.md"
+    fetch "ai/common/skills/${skill}/SKILL.md" "${skills_dir}/${skill}/SKILL.md"
   done
   mkdir -p "${skills_dir}/systematic-debugging"
-  curl -fsSL "${RAW_BASE}/ai/claude/skills/systematic-debugging/SKILL.md" -o "${skills_dir}/systematic-debugging/SKILL.md"
+  fetch "ai/claude/skills/systematic-debugging/SKILL.md" "${skills_dir}/systematic-debugging/SKILL.md"
 
   if [ "$WITH_AGENTS" = "1" ]; then
     local agents_dir="${HOME}/.claude/agents"
     [ "$GLOBAL" = "1" ] || agents_dir=".claude/agents"
     mkdir -p "$agents_dir"
     for agent in code-reviewer security-auditor refactorer test-writer doc-writer migration-assistant iac-reviewer; do
-      curl -fsSL "${RAW_BASE}/ai/claude/agents/${agent}.md" -o "${agents_dir}/${agent}.md"
+      fetch "ai/claude/agents/${agent}.md" "${agents_dir}/${agent}.md"
     done
   fi
 
@@ -172,6 +226,33 @@ setup_claude_plugins() {
   printf "${COLOR_BLUE}Note${COLOR_OFF}: plugin state lives in '~/.claude/settings.json' (enabledPlugins + extraKnownMarketplaces) — anything that overwrites that file wholesale drops it. Run '/reload-plugins' to activate in an already-open session.\n"
 }
 
+# Put the general instructions into Copilot CLI's personal file as a marked block. A previous
+# block is replaced; everything outside it (rtk's block, your own content) is preserved.
+write_copilot_cli_block() {
+  local begin='<!-- general-instructions -->' end='<!-- /general-instructions -->' body custom tmp
+  body="$(curl -fsSL "${RAW_BASE}/ai/common/instructions/general.instructions.md" | strip_frontmatter)" || {
+    printf "${COLOR_RED}Error${COLOR_OFF}: could not download the general instructions.\n" >&2
+    return 1
+  }
+
+  custom=""
+  if [ -f "$COPILOT_CLI_FILE" ]; then
+    custom="$(sed "\#${begin}#,\#${end}#d" "$COPILOT_CLI_FILE")"
+    if [ -z "$(grep -F "$begin" "$COPILOT_CLI_FILE")" ] && grep -q '^# General Development Instructions' "$COPILOT_CLI_FILE"; then
+      printf "${COLOR_RED}Warning${COLOR_OFF}: '%s' already holds an unmarked copy of the general instructions from an older run; remove it by hand so it is not loaded twice.\n" "$COPILOT_CLI_FILE"
+    fi
+  fi
+
+  tmp="$(mktemp "${COPILOT_CLI_FILE}.XXXXXX")"
+  {
+    if [ -n "$(printf '%s' "$custom" | tr -d '[:space:]')" ]; then
+      printf '%s\n\n' "$custom"
+    fi
+    printf '%s\n%s\n%s\n' "$begin" "$body" "$end"
+  } > "$tmp"
+  place "$tmp" "$COPILOT_CLI_FILE" 1
+}
+
 setup_copilot() {
   local instructions="$1"
   printf "${COLOR_BLUE}Setting up GitHub Copilot${COLOR_OFF} (%s)...\n" "$([ "$GLOBAL" = "1" ] && echo personal || echo repo)"
@@ -180,15 +261,14 @@ setup_copilot() {
   [ "$GLOBAL" = "1" ] && instructions_dir="${HOME}/.copilot/instructions"
   mkdir -p "$instructions_dir"
   for name in $instructions; do
-    curl -fsSL "${RAW_BASE}/ai/common/instructions/${name}.instructions.md" \
-      -o "${instructions_dir}/${name}.instructions.md"
+    fetch "ai/common/instructions/${name}.instructions.md" "${instructions_dir}/${name}.instructions.md" --backup
   done
 
   local skills_dir=".github/skills"
   [ "$GLOBAL" = "1" ] && skills_dir="${HOME}/.copilot/skills"
   for skill in code-review repository-audit commit-message pull-request; do
     mkdir -p "${skills_dir}/${skill}"
-    curl -fsSL "${RAW_BASE}/ai/common/skills/${skill}/SKILL.md" -o "${skills_dir}/${skill}/SKILL.md"
+    fetch "ai/common/skills/${skill}/SKILL.md" "${skills_dir}/${skill}/SKILL.md"
   done
 
   if [ "$WITH_AGENTS" = "1" ]; then
@@ -196,7 +276,7 @@ setup_copilot() {
     [ "$GLOBAL" = "1" ] && agents_dir="${HOME}/.copilot/agents"
     mkdir -p "$agents_dir"
     for agent in code-reviewer security-auditor refactorer test-writer doc-writer migration-assistant iac-reviewer; do
-      curl -fsSL "${RAW_BASE}/ai/copilot/agents/${agent}.md" -o "${agents_dir}/${agent}.md"
+      fetch "ai/copilot/agents/${agent}.md" "${agents_dir}/${agent}.md"
     done
   fi
 
@@ -205,72 +285,77 @@ setup_copilot() {
 
     if [ "$WITH_CLI" = "1" ]; then
       mkdir -p "${HOME}/.copilot"
-      curl -fsSL "${RAW_BASE}/ai/common/instructions/general.instructions.md" \
-        -o "$COPILOT_CLI_FILE"
-      printf "${COLOR_BLUE}Note${COLOR_OFF}: populated Copilot CLI's personal file too (%s). If you later run 'rtk init -g --copilot', use this script's -r flag instead of running it raw, or it'll wipe this file.\n" "$COPILOT_CLI_FILE"
+      write_copilot_cli_block
+      printf "${COLOR_BLUE}Note${COLOR_OFF}: added the general instructions to Copilot CLI's personal file (%s) as a marked block; rtk's block and your own content are untouched.\n" "$COPILOT_CLI_FILE"
     fi
   fi
   printf "${COLOR_GREEN}GitHub Copilot setup done.${COLOR_OFF}\n"
 }
 
-# Parse options
-while getopts t:p:i:acgPrh flag
-do
-  case "${flag}" in
-    t)
-      TOOL="${OPTARG}";;
-    p)
-      PRESET="${OPTARG}";;
-    i)
-      CUSTOM_INSTRUCTIONS="${OPTARG}";;
-    a)
-      WITH_AGENTS=1;;
-    P)
-      WITH_PLUGINS=1;;
-    c)
-      WITH_CLI=1;;
-    g)
-      GLOBAL=1;;
-    r)
-      RTK_MERGE=1;;
-    h | *)
-      print_help
-      exit 0;;
-  esac
-done
+main() {
+  # Parse options
+  local OPTIND=1
+  while getopts t:p:i:acgPrh flag "$@"
+  do
+    case "${flag}" in
+      t)
+        TOOL="${OPTARG}";;
+      p)
+        PRESET="${OPTARG}";;
+      i)
+        CUSTOM_INSTRUCTIONS="${OPTARG}";;
+      a)
+        WITH_AGENTS=1;;
+      P)
+        WITH_PLUGINS=1;;
+      c)
+        WITH_CLI=1;;
+      g)
+        GLOBAL=1;;
+      r)
+        RTK_MERGE=1;;
+      h)
+        print_help
+        exit 0;;
+      *)
+        print_help >&2
+        exit 1;;
+    esac
+  done
 
-if [ "$RTK_MERGE" = "1" ]; then
-  merge_rtk_copilot
-  exit 0
-fi
-
-case "$TOOL" in
-  claude|copilot|both) ;;
-  *)
-    printf "${COLOR_RED}Error${COLOR_OFF}: invalid -t value '%s' (expected 'claude', 'copilot', or 'both').\n" "$TOOL"
-    exit 1;;
-esac
-
-if [ "$WITH_CLI" = "1" ] && [ "$GLOBAL" = "0" ]; then
-  printf "${COLOR_RED}Warning${COLOR_OFF}: -c only applies with -g (personal setup) — ignoring it for this repo-level run.\n"
-  WITH_CLI=0
-fi
-
-if [ "$WITH_PLUGINS" = "1" ] && [ "$TOOL" = "copilot" ]; then
-  printf "${COLOR_RED}Warning${COLOR_OFF}: -P is Claude Code-only — ignoring it for this '-t copilot' run.\n"
-  WITH_PLUGINS=0
-fi
-
-INSTRUCTIONS="$(resolve_instructions)"
-
-if [ "$TOOL" = "claude" ] || [ "$TOOL" = "both" ]; then
-  setup_claude "$INSTRUCTIONS"
-  if [ "$WITH_PLUGINS" = "1" ]; then
-    setup_claude_plugins
+  if [ "$RTK_MERGE" = "1" ]; then
+    merge_rtk_copilot
+    exit 0
   fi
-fi
-if [ "$TOOL" = "copilot" ] || [ "$TOOL" = "both" ]; then
-  setup_copilot "$INSTRUCTIONS"
-fi
 
-exit 0
+  case "$TOOL" in
+    claude|copilot|both) ;;
+    *)
+      printf "${COLOR_RED}Error${COLOR_OFF}: invalid -t value '%s' (expected 'claude', 'copilot', or 'both').\n" "$TOOL"
+      exit 1;;
+  esac
+
+  if [ "$WITH_CLI" = "1" ] && [ "$GLOBAL" = "0" ]; then
+    printf "${COLOR_RED}Warning${COLOR_OFF}: -c only applies with -g (personal setup) — ignoring it for this repo-level run.\n"
+    WITH_CLI=0
+  fi
+
+  if [ "$WITH_PLUGINS" = "1" ] && [ "$TOOL" = "copilot" ]; then
+    printf "${COLOR_RED}Warning${COLOR_OFF}: -P is Claude Code-only — ignoring it for this '-t copilot' run.\n"
+    WITH_PLUGINS=0
+  fi
+
+  INSTRUCTIONS="$(resolve_instructions)"
+
+  if [ "$TOOL" = "claude" ] || [ "$TOOL" = "both" ]; then
+    setup_claude "$INSTRUCTIONS"
+    if [ "$WITH_PLUGINS" = "1" ]; then
+      setup_claude_plugins
+    fi
+  fi
+  if [ "$TOOL" = "copilot" ] || [ "$TOOL" = "both" ]; then
+    setup_copilot "$INSTRUCTIONS"
+  fi
+}
+
+main "$@"
