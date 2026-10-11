@@ -15,23 +15,26 @@ Put this directory in your git project, then start using the script :
 
 ```sh
 # Start kind cluster
-sh ./run.sh -c create
+./run.sh -c create
 
 # Build and load docker-compose images into the cluster
-sh ./run.sh -c build
+./run.sh -c build
 
 # Stop kind cluster
-sh ./run.sh -c delete
+./run.sh -c delete
 
 # Start kind cluster, build and load images and deploy app
-sh ./run.sh -c dev
+./run.sh -c dev
 ```
 
 > [!TIP]
-> See script helper by running `sh ./run.sh -h`
+> See script helper by running `./run.sh -h`
 
 ## Cluster
 
-One single node is deployed but it can be customized in `./configs/kind-config.yml`. The cluster comes with [Traefik](https://doc.traefik.io/traefik/providers/kubernetes-ingress/) or [Nginx](https://kind.sigs.k8s.io/docs/user/ingress/#ingress-nginx) ingress controller installed with port mapping on both ports `80` and `443`.
+One single node is deployed but it can be customized in `./configs/kind-config.yml`. The cluster comes with [Traefik](https://doc.traefik.io/traefik/providers/kubernetes-ingress/) (default) or [Nginx](https://kind.sigs.k8s.io/docs/user/ingress/#ingress-nginx) (`-i nginx`) ingress controller installed, exposed on node ports `30080` and `30443` which are mapped to the host ports `80` and `443`.
+
+> [!WARNING]
+> The ingress-nginx project was [retired in March 2026](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) and receives no more releases or security fixes. `run.sh` pins it to its last release (`controller-v1.15.1`); prefer Traefik.
 
 The node is using `extraMounts` to provide a volume binding between host working directory and `/app` to give the ability to bind mount volumes into containers during development.

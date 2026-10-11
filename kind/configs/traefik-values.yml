@@ -9,11 +9,13 @@ providers:
     - default
     - ingress-traefik
 
+# Node ports must be in the 30000-32767 range; kind-config.yml maps them to
+# host ports 80 and 443.
 ports:
   web:
-    nodePort: 80
+    nodePort: 30080
   websecure:
-    nodePort: 443
+    nodePort: 30443
 
 service:
   type: NodePort
