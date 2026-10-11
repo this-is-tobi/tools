@@ -128,6 +128,18 @@ if [ ! -e "$SOURCE" ]; then
   printf "\n${COLOR_RED}Error.${COLOR_OFF} '%s' does not exist on branch '%s' of '%s'.\n" "$SUB_DIR" "$GIT_BRANCH" "$REPO_URL" >&2
   exit 1
 fi
+# A symbolic link in the repository may point anywhere on this machine: the path
+# (and every directory leading to it) must resolve inside the clone.
+REPO_REAL="$(cd "$CLONE_DIR/repo" && pwd -P)"
+SOURCE_PARENT_REAL="$(cd "$(dirname "$SOURCE")" && pwd -P)"
+case "$SOURCE_PARENT_REAL/" in
+  "$REPO_REAL"/*) INSIDE="true";;
+  *) INSIDE="false";;
+esac
+if [ -L "$SOURCE" ] || [ "$INSIDE" = "false" ]; then
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} '%s' goes through a symbolic link, refusing to copy it.\n" "$SUB_DIR" >&2
+  exit 1
+fi
 
 # Copy the subdirectory into the output directory
 printf "\n\n${COLOR_RED}[clone subdir]${COLOR_OFF} Copy '%s' into '%s'\n\n" "$SUB_DIR" "$OUTPUT_DIR"
