@@ -69,6 +69,14 @@ while getopts he:rw: flag; do
   esac
 done
 
+# Anything left after the flags is a mistake (getopts stops at the first non-option)
+shift $((OPTIND - 1))
+if [ $# -gt 0 ]; then
+  printf "Unexpected argument: '%s'.\n" "$1" >&2
+  print_help >&2
+  exit 1
+fi
+
 # utils
 sha256() {
   if command -v sha256sum > /dev/null 2>&1; then

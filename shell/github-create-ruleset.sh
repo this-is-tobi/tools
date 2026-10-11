@@ -186,6 +186,14 @@ while getopts "ho:r:t:m:n:b:a:p:A:c:l:f:d:s:" flag; do
   esac
 done
 
+# Anything left after the flags is a mistake (getopts stops at the first non-option)
+shift $((OPTIND - 1))
+if [ $# -gt 0 ]; then
+  printf "Unexpected argument: '%s'.\n" "$1" >&2
+  print_help >&2
+  exit 1
+fi
+
 if [ "$MODE" = "ruleset" ] && [ "$BRANCH_SET" = "false" ]; then
   BRANCH_DISPLAY="default branch"
 else

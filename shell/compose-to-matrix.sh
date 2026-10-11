@@ -73,6 +73,14 @@ while getopts hacf:n:p:r:t: flag; do
   esac
 done
 
+# Anything left after the flags is a mistake (getopts stops at the first non-option)
+shift $((OPTIND - 1))
+if [ $# -gt 0 ]; then
+  printf "Unexpected argument: '%s'.\n" "$1" >&2
+  print_help >&2
+  exit 1
+fi
+
 
 # Options validation
 if [ -z "$COMPOSE_FILE" ] || [ ! -f "$COMPOSE_FILE" ]; then
