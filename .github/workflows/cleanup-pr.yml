@@ -1,0 +1,72 @@
+name: PR cleanup
+
+on:
+  pull_request:
+    types:
+    - closed
+    branches:
+    - main
+
+# Nothing inherits the repository's default token permissions: every job names
+# the scopes it uses, so widening the default never silently reaches a job.
+permissions: {}
+
+# The same group as ci.yml: closing a pull request cancels its CI run if one is
+# still going, which could otherwise push <image>:pr-<n> after the cleanup
+# below deleted it.
+#
+# Kept out of ci.yml on purpose. A run there on `closed` would post a skipped
+# `CI status` for the pull request's head commit, and a skipped check passes
+# main's ruleset - closing a failed pull request would make its commit
+# pushable.
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  resolve-active:
+    name: Resolve active images
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    outputs:
+      names: ${{ steps.list.outputs.NAMES }}
+    steps:
+    - name: Checks-out repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+
+    - name: List active images
+      id: list
+      run: |
+        NAMES=$(jq -c '[.[] | select(.deprecated != true) | .name]' ci/matrix.json)
+        echo "NAMES=$NAMES" >> "$GITHUB_OUTPUT"
+
+  cleanup-cache:
+    name: Delete PR build caches
+    uses: this-is-tobi/github-workflows/.github/workflows/clean-cache.yml@80dd0214fc1657cfb8740fc93d89ce935ca27404 # v0
+    permissions:
+      actions: write
+    with:
+      # The image builds no longer write layer caches, but the reusable workflows
+      # they call still cache their own tooling per ref. Those entries are dead
+      # once the PR closes and count against the repository budget until evicted.
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+
+  cleanup-images:
+    name: Delete ${{ matrix.name }}:pr-${{ github.event.pull_request.number }}
+    needs: resolve-active
+    uses: this-is-tobi/github-workflows/.github/workflows/clean-images.yml@80dd0214fc1657cfb8740fc93d89ce935ca27404 # v0
+    permissions:
+      packages: write
+    strategy:
+      # A tag that fails to delete should not leave the remaining ones behind
+      fail-fast: false
+      matrix:
+        name: ${{ fromJSON(needs.resolve-active.outputs.names) }}
+    with:
+      # CLEAN_TAGGED deletes exactly this tag and defaults to true; CLEAN_ORPHANED
+      # sweeps SHA-only leftovers repository-wide and stays off - a PR close is
+      # the wrong trigger for it.
+      IMAGE: ghcr.io/this-is-tobi/tools/${{ matrix.name }}:pr-${{ github.event.pull_request.number }}
