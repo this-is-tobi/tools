@@ -20,16 +20,29 @@ on:
 # the scopes it uses, so widening the default never silently reaches a job.
 permissions: {}
 
-# Serialized: cd.yml dispatches this on every push to main, so a burst of
-# merges can otherwise leave several runs pushing the same image:tag at once.
-# Note GitHub still cancels a *pending* run when a newer one queues, even with
-# cancel-in-progress false - a burst leaves the first and the last, and cancels
-# everything between. That is safe here only because the matrix step above skips
-# images whose <name>:<version> is already published, so the surviving run picks
-# up whatever the cancelled ones would have built. Cancelled runs in a release
-# burst are expected, not a failure.
+# One group per ref. GitHub keeps at most one *pending* run per group and
+# cancels it when a newer one queues, even with cancel-in-progress false - a
+# burst leaves the first and the last, and cancels everything between.
+#
+# A tag run builds only the image its tag names, at the tagged commit, so a
+# cancelled tag run is a release that never gets an image: with a single group
+# for every ref, three release tags pushed together built two images. Each tag
+# therefore gets its own group and every release builds, each from exactly the
+# commit it was tagged at. (Resolving "everything not yet published" on tag runs
+# would also survive the cancellations, but would build one release's image from
+# another release's commit, so its provenance would name the wrong source.)
+#
+# Runs on main - cd.yml's fallback dispatch, manual dispatches - still share one
+# group, and dropping the ones between is safe there: they resolve every image
+# whose <name>:<version> is not published yet, so the surviving run picks up
+# whatever the cancelled ones would have built.
+#
+# Trade-off: two releases of the same image pushed within one build of each
+# other now build side by side, and the floating tags (latest, <major>,
+# <major>.<minor>) end on whichever finishes last. If an older one wins, dispatch
+# this workflow from the newer release tag with FORCE.
 concurrency:
-  group: build-images
+  group: build-images-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
