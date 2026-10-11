@@ -45,7 +45,7 @@ Available flags:
   -c    Callback URL.
   -w    Webhook URL (webhooks stay inactive without it).
   -p    Permissions (JSON string).
-  -e    Events (comma-separated); GitHub only delivers them to an active webhook (-w).
+  -e    Events (comma-separated); requires -w, GitHub only delivers them to a webhook.
   -P    Make the app public (installable by any account).
         Default: '$PUBLIC'.
   -f    File where the app credentials are saved.
@@ -144,6 +144,9 @@ if [ -z "$APP_NAME" ]; then
 elif [ -z "$OWNER" ]; then
   printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: owner (flag -o).\n" >&2
   exit 1
+elif [ -n "$EVENTS" ] && [ -z "$WEBHOOK_URL" ]; then
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Events (flag -e) are only delivered to a webhook: set its URL with -w.\n" >&2
+  exit 1
 elif [ -n "$PERMISSIONS" ] && ! jq -e 'type == "object"' > /dev/null 2>&1 <<< "$PERMISSIONS"; then
   printf "\n${COLOR_RED}Error.${COLOR_OFF} Permissions (flag -p) must be a JSON object.\n" >&2
   exit 1
@@ -229,7 +232,8 @@ fi
 # Exchange the code for the app credentials. The one-time code goes through
 # curl's config on stdin rather than its arguments.
 printf "\nRetrieving the app credentials...\n"
-CREDENTIALS="$(printf 'url = "https://api.github.com/app-manifests/%s/conversions"\n' "$CODE" | curl -fsSL -K - \
+# No '-f': on an expired or reused code, GitHub's message is shown below.
+CREDENTIALS="$(printf 'url = "https://api.github.com/app-manifests/%s/conversions"\n' "$CODE" | curl -sSL -K - \
   -X POST \
   -H "Accept: application/vnd.github+json" \
   -H "X-GitHub-Api-Version: 2022-11-28")"
@@ -242,8 +246,9 @@ if [ -z "$APP_SLUG" ]; then
 fi
 
 OUTPUT_FILE="${OUTPUT_FILE:-github-app-$APP_SLUG.json}"
+# A new file is created so the umask applies: an existing one (or a link) is replaced, not reused.
+rm -f -- "$OUTPUT_FILE"
 (umask 077 && printf '%s\n' "$CREDENTIALS" > "$OUTPUT_FILE")
-chmod 600 "$OUTPUT_FILE"
 
 printf "\n${COLOR_GREEN}GitHub App created successfully.${COLOR_OFF}\n"
 jq '{id, slug, client_id, html_url}' <<< "$CREDENTIALS"
