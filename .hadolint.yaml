@@ -1,0 +1,29 @@
+# hadolint configuration for every Dockerfile under docker/.
+#
+# A rule is ignored here only when the decision holds for every image. A
+# decision about a single instruction is an inline `# hadolint ignore=` right
+# above it, with its reason. As in .trivyignore.yaml: when a reason stops being
+# true, delete the entry rather than reword it.
+
+# Info-level findings (DL3066 for named users, DL3059 for consecutive RUNs)
+# are still printed, but only warnings and errors fail.
+failure-threshold: warning
+
+# Every FROM must come from one of these. On top of that, active images pin
+# each reference by digest, which Renovate keeps current.
+trustedRegistries:
+  - docker.io
+  - ghcr.io
+
+ignored:
+  # DL3008/DL3018 - pin versions in apt-get/apk install. Package versions are
+  # already fixed by the base image digest, and an exact pin breaks the build
+  # as soon as the archive drops that version, which Debian, Ubuntu and Alpine
+  # all do on point releases. Renovate's digest bumps and the monthly refresh
+  # are what move them.
+  - DL3008
+  - DL3018
+  # DL3015 - apt-get without --no-install-recommends. Deliberate, as for
+  # Trivy's DS-0029 in .trivyignore.yaml: trimming these apt lines is what once
+  # dropped libatomic1 and shipped a runner whose node exited 127.
+  - DL3015
