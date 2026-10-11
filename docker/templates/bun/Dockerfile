@@ -38,9 +38,14 @@ RUN bun run build \
 FROM ${BUN_IMAGE_PROD} AS prod
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --chown=1001:0 --chmod=750 --from=build /app/node_modules ./node_modules
-COPY --chown=1001:0 --chmod=750 --from=build /app/dist ./dist
-COPY --chown=1001:0 --chmod=640 --from=build /app/package.json ./
+# The app runs as 1001 but owns none of its code: everything is root-owned and
+# read-only (`a=rX`: directories 555, files 444, executables keep their x bit),
+# so a compromised process cannot rewrite what it runs, and an arbitrary
+# OpenShift uid can still read it. Nothing under /app is written at runtime;
+# give anything that must be (uploads, caches) a volume of its own.
+COPY --chown=0:0 --chmod=a=rX --from=build /app/node_modules ./node_modules
+COPY --chown=0:0 --chmod=a=rX --from=build /app/dist ./dist
+COPY --chown=0:0 --chmod=a=rX --from=build /app/package.json ./
 USER 1001
 EXPOSE 3000
 # No shell/wget in this distroless image for a HEALTHCHECK; wire an HTTP
