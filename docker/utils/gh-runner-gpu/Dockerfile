@@ -1,4 +1,11 @@
-ARG BASE_IMAGE=ghcr.io/actions/actions-runner:2.338.0@sha256:4ffadc0002b2581327e06101fc8c06cd189232baf79fe561fac9caeb76f5e807
+# syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+
+# This image is gh-runner plus the NVIDIA Container Toolkit, so it builds on the
+# published gh-runner rather than repeating its Dockerfile, which drifted the
+# moment one copy was edited without the other. Pinned by digest like any other
+# base: Renovate opens the bump once a new gh-runner is released, and that bump
+# is what releases this image with it.
+ARG BASE_IMAGE=ghcr.io/this-is-tobi/tools/gh-runner:1.12.4@sha256:a1cfcca311ee26ee35062e2507d6634111fd84d7abc10f0cdfd3e808d31bf0b9
 
 FROM ${BASE_IMAGE} AS build
 
@@ -8,132 +15,32 @@ FROM ${BASE_IMAGE} AS build
 # cache and the "refreshed" image would ship the exact same packages.
 COPY .refresh /etc/.image-refresh
 
-# Set system env
-ARG TARGETOS
-ARG TARGETARCH
-ENV DEBIAN_FRONTEND=noninteractive
-ENV USER=runner
-ENV HOME=/home/$USER
-# Tools install under $MISE_DATA_DIR and are exposed through shims; `mise
-# activate` is for interactive shells, so the shims directory goes on PATH
-# explicitly. MISE_YES keeps the build non-interactive, MISE_PIN records the
-# exact resolved version of every tool in the image, and disabling the asdf
-# backend keeps installs on backends that verify what they download.
-ENV MISE_DATA_DIR="$HOME/.local/share/mise"
-ENV MISE_YES=1
-ENV MISE_PIN=1
-ENV MISE_DISABLE_BACKENDS=asdf
-ENV PATH="$MISE_DATA_DIR/shims:$HOME/.local/bin:$PATH:$HOME/.cargo/bin"
+# A pipe otherwise reports only its last command, so a failed download feeding
+# it would go unnoticed.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Install apt packages
-# System utilities only; portable release binaries come from mise below.
-# libatomic1 is a runtime dependency of the prebuilt node binary mise
-# installs; without it node exits 127 on a missing libatomic.so.1.
-RUN sudo apt-get update -y && sudo apt-get install -y \
-  jq \
-  libatomic1 \
-  make \
-  pandoc \
-  rsync \
-  sed \
-  tar \
-  unzip \
-  && sudo rm -rf /var/lib/apt/lists/*
-
-# Install docker
-RUN sudo mkdir -m 0755 -p /etc/apt/keyrings \
-  && sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc \
-  && sudo chmod a+r /etc/apt/keyrings/docker.asc \
-  && echo "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null \
-  && sudo apt-get update \
-  && sudo apt-get install -y containerd.io docker-buildx-plugin docker-ce docker-ce-cli docker-compose-plugin \
-  && sudo rm -rf /var/lib/apt/lists/*
-
-# Install mise and language runtimes
-# npm is not pinned separately: it ships inside the node release.
-# GITHUB_TOKEN comes from a build secret, never a build arg, so it stays out of
-# the image layers and `docker history`. mise resolves `@latest` through the
-# GitHub API; unauthenticated that is 60 requests/hour shared across every runner
-# on the same egress IP, and the aqua/ubi backends fail with a 403 that mise
-# treats as permanent once it is hit. Optional - a local build without the secret
-# still works, it just gets the anonymous limit.
-
-# Purge the package-manager caches in the same layer that fills them - a later
-# RUN cannot shrink an earlier layer. These are pure build residue: npm's
-# content-addressable store alone runs to gigabytes, and shipping it inflates the
-# image, the SBOM (which has a 16 MiB attestation ceiling) and the Trivy scan.
-RUN --mount=type=secret,id=github_token,mode=0444 \
-  export GITHUB_TOKEN="$(cat /run/secrets/github_token 2> /dev/null || true)" \
-  && curl -fsSL https://mise.run | sh \
-  && mise use --global \
-  node@latest \
-  bun@latest \
-  pnpm@latest \
-  yarn@latest \
-  go@latest \
-  rust@latest \
-  uv@latest \
-  && mise reshim \
-  && { chmod -R u+w "${HOME}/.cache" "${HOME}/.npm/_cacache" "${MISE_DATA_DIR}/downloads" 2> /dev/null || true; } \
-  && rm -rf "${HOME}/.cache" "${HOME}/.npm/_cacache" "${MISE_DATA_DIR}/downloads"
-
-# Install mise packages
-# chart-testing, kubescape and scw have no short name in mise's registry, so
-# they are addressed through their aqua packages directly. chart-testing
-# provides the `ct` binary.
-RUN --mount=type=secret,id=github_token,mode=0444 \
-  export GITHUB_TOKEN="$(cat /run/secrets/github_token 2> /dev/null || true)" \
-  && mise use --global \
-  age@latest \
-  argo@latest \
-  argocd@latest \
-  cosign@latest \
-  dive@latest \
-  github-cli@latest \
-  helm@latest \
-  helm-docs@latest \
-  k6@latest \
-  kind@latest \
-  krew@latest \
-  kubectl@latest \
-  kustomize@latest \
-  kyverno@latest \
-  mc@latest \
-  oc@latest \
-  rclone@latest \
-  sops@latest \
-  terraform@latest \
-  trivy@latest \
-  vault@latest \
-  velero@latest \
-  yamllint@latest \
-  yq@latest \
-  aqua:helm/chart-testing@latest \
-  aqua:kubescape/kubescape@latest \
-  aqua:scaleway/scaleway-cli@latest \
-  && mise reshim \
-  && { chmod -R u+w "${HOME}/.cache" "${HOME}/.npm/_cacache" "${MISE_DATA_DIR}/downloads" 2> /dev/null || true; } \
-  && rm -rf "${HOME}/.cache" "${HOME}/.npm/_cacache" "${MISE_DATA_DIR}/downloads"
-
-# Install python packages
-RUN uv venv ${HOME}/.venv \
-  && . ${HOME}/.venv/bin/activate \
-  && uv pip install ansible \
-  && rm -rf "${HOME}/.cache"
+# Installed as root rather than through sudo: the runner account exists to run
+# workflows, and a build step gains nothing from going through it.
+USER root
 
 # Install NVIDIA Container Toolkit
-RUN curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /etc/apt/keyrings/nvidia-container-toolkit-keyring.gpg \
-  && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-    sed 's#deb https://#deb [signed-by=/etc/apt/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list \
-  && sudo chmod a+r /etc/apt/keyrings/nvidia-container-toolkit-keyring.gpg \
-  && sudo apt-get update \
-  && sudo apt-get install -y nvidia-container-toolkit \
-  && sudo rm -rf /var/lib/apt/lists/*
+# The signing key is the trust root for every package from this repository, so
+# it is checked against the fingerprint NVIDIA publishes before apt uses it.
+RUN install -d -m 0755 /etc/apt/keyrings \
+  && curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey -o /tmp/nvidia-container-toolkit.asc \
+  && GNUPG_TMP="$(mktemp -d)" \
+  && gpg --homedir "${GNUPG_TMP}" --batch --show-keys --with-colons /tmp/nvidia-container-toolkit.asc \
+    | grep -x 'fpr:::::::::C95B321B61E88C1809C4F759DDCAE044F796ECB0:' > /dev/null \
+  && gpg --homedir "${GNUPG_TMP}" --batch --dearmor \
+    -o /etc/apt/keyrings/nvidia-container-toolkit-keyring.gpg /tmp/nvidia-container-toolkit.asc \
+  && rm -rf "${GNUPG_TMP}" /tmp/nvidia-container-toolkit.asc \
+  && chmod a+r /etc/apt/keyrings/nvidia-container-toolkit-keyring.gpg \
+  && curl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
+    | sed 's#deb https://#deb [signed-by=/etc/apt/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
+    > /etc/apt/sources.list.d/nvidia-container-toolkit.list \
+  && apt-get update \
+  && apt-get install -y nvidia-container-toolkit \
+  && rm -rf /var/lib/apt/lists/*
 
-# Stated explicitly rather than left to the base image. It changes nothing at
-# runtime - the actions-runner base already ends on this user, which the smoke
-# test asserts - but a Dockerfile that never names a USER reads as root to any
-# static analysis, and to anyone skimming it.
+# Back to the account gh-runner ends on, which is the user the image runs as.
 USER runner
