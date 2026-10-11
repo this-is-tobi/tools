@@ -45,7 +45,7 @@ Available flags:
   -c    Callback URL.
   -w    Webhook URL (webhooks stay inactive without it).
   -p    Permissions (JSON string).
-  -e    Events (comma-separated).
+  -e    Events (comma-separated); GitHub only delivers them to an active webhook (-w).
   -P    Make the app public (installable by any account).
         Default: '$PUBLIC'.
   -f    File where the app credentials are saved.
@@ -61,6 +61,7 @@ Example:
     -d 'My app desc' \\
     -u 'https://example.com' \\
     -c 'https://example.com/callback' \\
+    -w 'https://example.com/webhook' \\
     -p '{\"contents\":\"read\",\"issues\":\"write\"}' \\
     -e 'push,pull_request'
 "

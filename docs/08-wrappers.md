@@ -50,7 +50,7 @@ cp env/.env-example env/.env
 ./scripts/run-ci-locally.sh
 
 # Run specific workflow
-./scripts/run-ci-locally.sh -w .github/workflows/test.yml
+./scripts/run-ci-locally.sh -w ../.github/workflows/test.yml
 
 # Use specific event template
 ./scripts/run-ci-locally.sh -e ./events/pr_base_main.json

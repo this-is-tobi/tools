@@ -126,7 +126,7 @@ The GitHub scripts read the token from `GH_TOKEN`, then `GITHUB_TOKEN`, then `gh
 ./github-create-ruleset.sh -o owner -r repo -m ruleset -c 'ci / lint,ci / test' -A 0 -a false
 
 # Register a GitHub App (manifest flow: the browser opens, paste back the address GitHub redirects to)
-./github-create-app.sh -n my-app -o owner -p '{"contents":"read"}' -e push
+./github-create-app.sh -n my-app -o owner -p '{"contents":"read"}' -w https://example.com/webhook -e push
 ```
 
 `github-configure-repo.sh` leaves Dependabot security pull requests off by default (`-x true` turns them on when Renovate does not handle vulnerabilities). With `-H true` (the default), every action and reusable workflow must be referenced by a full commit SHA; it is not documented whether GitHub also enforces this for actions called from inside a composite action, so turn it off with `-H false` if a run fails on such an action. Both scripts update existing rulesets in place, so they can be run again.
