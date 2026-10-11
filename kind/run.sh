@@ -260,7 +260,7 @@ if [ -n "$DOMAIN_LIST" ]; then
   MISSING_DOMAINS=""
   for DOMAIN in $DOMAIN_LIST; do
     # Whole-name match on non-comment lines only
-    if ! awk -v d="$DOMAIN" '!/^[[:space:]]*#/ { for (i = 2; i <= NF; i++) if ($i == d) found = 1 } END { exit !found }' /etc/hosts; then
+    if ! awk -v d="$DOMAIN" '!/^[ \t]*#/ { for (i = 2; i <= NF; i++) if ($i == d) found = 1 } END { exit !found }' /etc/hosts; then
       MISSING_DOMAINS="${MISSING_DOMAINS:+$MISSING_DOMAINS }$DOMAIN"
     fi
   done
