@@ -1,0 +1,60 @@
+# Toolchain of the act-runner image.
+#
+# Every version is exact so two builds of the same commit ship the same tools,
+# and Renovate's mise manager can bump them. The Dockerfile copies this file to
+# ~/.config/mise/config.toml and installs it with `mise install --locked`,
+# which takes each download URL and checksum from mise.lock (and the npm/PyPI
+# dependency graphs from .mise/locks/) instead of resolving anything at build
+# time. After editing a version by hand, refresh the lock from this directory:
+#
+#   mise lock --platform linux-x64,linux-arm64
+#
+# gh-runner/mise.toml carries the same list: keep the two in step.
+
+[tools]
+# Language runtimes. npm ships inside the node release.
+node = "26.11.1"
+bun = "1.4.3"
+pnpm = "12.11.2"
+# The registry's default yarn backend is a vfox plugin cloned from its default
+# branch at install time, which nothing pins; the npm package is versioned and
+# integrity-checked like any other npm dependency.
+"npm:@yarnpkg/cli-dist" = "4.18.1"
+go = "1.27.2"
+rust = "1.99.0"
+uv = "0.13.0"
+# A locked PyPI install (yamllint below) needs an interpreter mise manages
+# rather than one uv downloads on the fly. Held on the newest release
+# ansible-core supports, since the ansible venv uses it too.
+python = "3.14.8"
+
+# CI tooling.
+age = "1.3.2"
+argo = "4.1.5"
+argocd = "3.5.4"
+cosign = "3.1.3"
+dive = "0.13.1"
+github-cli = "2.102.0"
+helm = "4.3.0"
+helm-docs = "1.14.2"
+k6 = "2.3.0"
+kind = "0.33.0"
+krew = "0.5.0"
+kubectl = "1.37.1"
+kustomize = "5.8.3"
+kyverno = "1.19.1"
+mc = "RELEASE.2025-08-13T08-35-41Z"
+oc = "4.22.18"
+rclone = "1.75.2"
+sops = "3.13.3"
+terraform = "1.16.5"
+trivy = "0.75.0"
+vault = "2.1.2"
+velero = "1.18.4"
+yamllint = "1.38.0"
+yq = "4.54.1"
+# No short name in mise's registry, so addressed through their aqua packages.
+# chart-testing provides the `ct` binary.
+"aqua:helm/chart-testing" = "3.15.0"
+"aqua:kubescape/kubescape" = "4.0.15"
+"aqua:scaleway/scaleway-cli" = "2.65.1"

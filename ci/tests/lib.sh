@@ -174,6 +174,37 @@ probe_mise_consistency() {
     "$total" "$missing"
 }
 
+# Every tool the image's global mise config pins must be installed. The runner
+# images install that config with `mise install --locked`, so this is the
+# check that a pinned tool cannot quietly drop out of the image: the shims
+# probe only sees what did install, and the declared contract only names a few.
+# Scoped to the global config so a mise.toml in the working directory cannot
+# add or hide anything.
+probe_mise_config_installed() {
+  command -v mise > /dev/null 2>&1 || {
+    printf '  FAILED   mise not installed\n'
+    FAILURES=$((FAILURES + 1))
+    return 1
+  }
+
+  local missing total
+  total=$(mise ls --global 2>/dev/null | awk 'NF' | wc -l | tr -d ' ')
+  missing=$(mise ls --global --missing 2>/dev/null | awk 'NF {print $1 "@" $2}')
+  if [ "$total" -eq 0 ]; then
+    printf '  FAILED   the global mise config pins no tools\n'
+    FAILURES=$((FAILURES + 1))
+    return 1
+  fi
+  if [ -n "$missing" ]; then
+    while read -r tool; do
+      printf '  MISSING  %s (pinned in the mise config, not installed)\n' "$tool"
+      FAILURES=$((FAILURES + 1))
+    done <<< "$missing"
+    return 1
+  fi
+  printf '  ok       all %s tools pinned in the mise config are installed\n' "$total"
+}
+
 report() {
   echo
   if [ "$FAILURES" -gt 0 ]; then

@@ -1,4 +1,13 @@
+# syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+
 ARG BASE_IMAGE=docker.io/ubuntu:26.04@sha256:f144425ff09be612d6d9ad965196e9cdc23dae1f42110a8a11a3e9a8198759f7
+# mise's own distroless release image: the static binary built from its signed
+# release assets, nothing else. Pinned by digest, so the binary is fixed by
+# this file rather than by whatever an install script serves at build time,
+# and Renovate moves tag and digest together like any other base image.
+ARG MISE_IMAGE=ghcr.io/jdx/mise:2026.10.8@sha256:b720f506c21a6bf5f733a3b1cd04361617ac461a597e44f513aa3976dcd71e57
+
+FROM ${MISE_IMAGE} AS mise
 
 FROM ${BASE_IMAGE} AS build
 
@@ -8,6 +17,10 @@ FROM ${BASE_IMAGE} AS build
 # cache and the "refreshed" image would ship the exact same packages.
 COPY .refresh /etc/.image-refresh
 
+# A pipe otherwise reports only its last command, so a failed download feeding
+# it would go unnoticed.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # Set system env
 ARG TARGETOS
 ARG TARGETARCH
@@ -16,12 +29,10 @@ ENV USER=runner
 ENV HOME=/home/$USER
 # Tools install under $MISE_DATA_DIR and are exposed through shims; `mise
 # activate` is for interactive shells, so the shims directory goes on PATH
-# explicitly. MISE_YES keeps the build non-interactive, MISE_PIN records the
-# exact resolved version of every tool in the image, and disabling the asdf
+# explicitly. MISE_YES keeps the build non-interactive, and disabling the asdf
 # backend keeps installs on backends that verify what they download.
 ENV MISE_DATA_DIR="$HOME/.local/share/mise"
 ENV MISE_YES=1
-ENV MISE_PIN=1
 ENV MISE_DISABLE_BACKENDS=asdf
 ENV PATH="$MISE_DATA_DIR/shims:$HOME/.local/bin:$PATH:$HOME/.cargo/bin"
 
@@ -51,11 +62,17 @@ RUN apt-get update -y && apt-get install -y \
 # No sudo here: this stage still runs as root (the runner account is created
 # below), so every sudo call was a no-op wrapper around a command that already
 # had the privileges it needed.
-RUN mkdir -m 0755 -p /etc/apt/keyrings \
+# The signing key is the trust root for every package from this repository, so
+# it is checked against the fingerprint Docker publishes before apt uses it.
+RUN install -d -m 0755 /etc/apt/keyrings \
   && curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc \
+  && GNUPG_TMP="$(mktemp -d)" \
+  && gpg --homedir "${GNUPG_TMP}" --batch --show-keys --with-colons /etc/apt/keyrings/docker.asc \
+    | grep -x 'fpr:::::::::9DC858229FC7DD38854AE2D88D81803C0EBFCD88:' > /dev/null \
+  && rm -rf "${GNUPG_TMP}" \
   && chmod a+r /etc/apt/keyrings/docker.asc \
-  && echo "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" > /etc/apt/sources.list.d/docker.list \
+  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+    > /etc/apt/sources.list.d/docker.list \
   && apt-get update \
   && apt-get install -y containerd.io docker-buildx-plugin docker-ce docker-ce-cli docker-compose-plugin \
   && rm -rf /var/lib/apt/lists/*
@@ -71,7 +88,7 @@ RUN mkdir -m 0755 -p /etc/apt/keyrings \
 # it is removed first rather than letting useradd fail on a duplicate UID.
 ARG USER_UID=1000
 RUN if id -u ${USER_UID} > /dev/null 2>&1; then userdel -r "$(id -un ${USER_UID})" > /dev/null 2>&1 || true; fi \
-  && useradd -m -u ${USER_UID} -s /bin/bash ${USER} \
+  && useradd -l -m -u ${USER_UID} -s /bin/bash ${USER} \
   && usermod -aG docker ${USER} \
   && echo "${USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER} \
   && chmod 440 /etc/sudoers.d/${USER}
@@ -79,74 +96,42 @@ RUN if id -u ${USER_UID} > /dev/null 2>&1; then userdel -r "$(id -un ${USER_UID}
 USER ${USER}
 WORKDIR ${HOME}
 
-# Install mise and language runtimes
-# npm is not pinned separately: it ships inside the node release.
+# Install mise and the toolchain
+# Every tool is pinned in mise.toml, and `--locked` makes the install take each
+# download URL and checksum from mise.lock (the npm/PyPI dependency graphs from
+# .mise/locks/) instead of resolving anything: a lock that does not cover the
+# config fails the build rather than silently resolving something else. The
+# lock records its sidecars relative to itself, hence .mise/ next to it.
 # GITHUB_TOKEN comes from a build secret, never a build arg, so it stays out of
-# the image layers and `docker history`. mise resolves `@latest` through the
-# GitHub API; unauthenticated that is 60 requests/hour shared across every runner
-# on the same egress IP, and the aqua/ubi backends fail with a 403 that mise
-# treats as permanent once it is hit. Optional - a local build without the secret
-# still works, it just gets the anonymous limit.
-
+# the image layers and `docker history`. Downloads come from the URLs in the
+# lock, but mise can still call the GitHub API (release attestation checks, for
+# one); unauthenticated that is 60 requests/hour shared across every runner on
+# the same egress IP. Optional - a local build without the secret still works,
+# it just gets the anonymous limit.
 # Purge the package-manager caches in the same layer that fills them - a later
 # RUN cannot shrink an earlier layer. These are pure build residue: npm's
 # content-addressable store alone runs to gigabytes, and shipping it inflates the
 # image, the SBOM (which has a 16 MiB attestation ceiling) and the Trivy scan.
+COPY --from=mise /usr/local/bin/mise /usr/local/bin/mise
+COPY --chown=${USER}:${USER} mise.toml ${HOME}/.config/mise/config.toml
+COPY --chown=${USER}:${USER} mise.lock ${HOME}/.config/mise/mise.lock
+COPY --chown=${USER}:${USER} .mise/ ${HOME}/.config/mise/.mise/
+# The token read keeps `|| true` on purpose (the secret is optional), so there
+# is no failure for a separate declaration to surface.
+# hadolint ignore=SC2155
 RUN --mount=type=secret,id=github_token,mode=0444 \
   export GITHUB_TOKEN="$(cat /run/secrets/github_token 2> /dev/null || true)" \
-  && curl -fsSL https://mise.run | sh \
-  && mise use --global \
-  node@latest \
-  bun@latest \
-  pnpm@latest \
-  yarn@latest \
-  go@latest \
-  rust@latest \
-  uv@latest \
-  && mise reshim \
-  && { chmod -R u+w "${HOME}/.cache" "${HOME}/.npm/_cacache" "${MISE_DATA_DIR}/downloads" 2> /dev/null || true; } \
-  && rm -rf "${HOME}/.cache" "${HOME}/.npm/_cacache" "${MISE_DATA_DIR}/downloads"
-
-# Install mise packages
-# chart-testing, kubescape and scw have no short name in mise's registry, so
-# they are addressed through their aqua packages directly. chart-testing
-# provides the `ct` binary.
-RUN --mount=type=secret,id=github_token,mode=0444 \
-  export GITHUB_TOKEN="$(cat /run/secrets/github_token 2> /dev/null || true)" \
-  && mise use --global \
-  age@latest \
-  argo@latest \
-  argocd@latest \
-  cosign@latest \
-  dive@latest \
-  github-cli@latest \
-  helm@latest \
-  helm-docs@latest \
-  k6@latest \
-  kind@latest \
-  krew@latest \
-  kubectl@latest \
-  kustomize@latest \
-  kyverno@latest \
-  mc@latest \
-  oc@latest \
-  rclone@latest \
-  sops@latest \
-  terraform@latest \
-  trivy@latest \
-  vault@latest \
-  velero@latest \
-  yamllint@latest \
-  yq@latest \
-  aqua:helm/chart-testing@latest \
-  aqua:kubescape/kubescape@latest \
-  aqua:scaleway/scaleway-cli@latest \
+  && mise install --locked \
   && mise reshim \
   && { chmod -R u+w "${HOME}/.cache" "${HOME}/.npm/_cacache" "${MISE_DATA_DIR}/downloads" 2> /dev/null || true; } \
   && rm -rf "${HOME}/.cache" "${HOME}/.npm/_cacache" "${MISE_DATA_DIR}/downloads"
 
 # Install python packages
-RUN uv venv ${HOME}/.venv \
-  && . ${HOME}/.venv/bin/activate \
-  && uv pip install ansible \
+# The venv picks up mise's python from PATH. Only ansible itself is pinned:
+# its dependencies still resolve at build time.
+# renovate: datasource=pypi depName=ansible
+ARG ANSIBLE_VERSION=14.5.0
+RUN uv venv "${HOME}/.venv" \
+  && . "${HOME}/.venv/bin/activate" \
+  && uv pip install "ansible==${ANSIBLE_VERSION}" \
   && rm -rf "${HOME}/.cache"

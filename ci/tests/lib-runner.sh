@@ -6,8 +6,9 @@
 # The declared list below is a *contract*, not an inventory: these are the tools
 # a workflow running on these images is entitled to assume, so dropping one
 # should fail here and force a deliberate decision. Everything else mise
-# installs is covered automatically by probe_mise_shims - adding a tool to the
-# Dockerfile needs no edit here.
+# installs is covered automatically: probe_mise_config_installed checks every
+# tool pinned in the image's mise.toml, and probe_mise_shims every binary those
+# tools expose - adding a tool to mise.toml needs no edit here.
 
 check_runner_common() {
   local image="$1"
@@ -37,7 +38,9 @@ check_runner_common() {
   require_run ansible "${HOME}/.venv/bin/ansible" --version
 
   echo "${image}: mise inventory"
-  # Enumerated from the image, so this tracks the Dockerfile automatically.
+  # Enumerated from the image, so this tracks mise.toml automatically.
+  require_run mise mise --version
+  probe_mise_config_installed
   probe_mise_shims
   probe_mise_consistency
 
