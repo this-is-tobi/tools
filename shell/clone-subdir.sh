@@ -4,30 +4,31 @@ set -euo pipefail
 
 # Colors
 COLOR_OFF='\033[0m'
-COLOR_BLUE='\033[0;34m'
 COLOR_RED='\033[0;31m'
-COLOR_GREEN='\033[0;32m'
-COLOR_YELLOW='\033[0;33m'
 
 # Defaults
 DELETE_GIT_DIR="false"
 GIT_BRANCH="main"
-OUTPUT_DIR="$(pwd)"
+OUTPUT_DIR="."
 SUB_DIR=""
 REPO_URL=""
 
 # Script helper
 TEXT_HELPER="
-This script aims to clone a git subdirectory.
+This script aims to clone a git subdirectory (or a single file).
+
+The repository is cloned into a temporary directory, then the requested path is
+copied into the output directory under its own name: '-s a/b/c -o out' creates
+'out/c'. Nothing is written outside the output directory and no git metadata is
+left behind.
 
 Available flags:
   -b  Git branch to clone.
       Default: '$GIT_BRANCH'.
-  -d  Delete git directory after clone.
-      Default: '$DELETE_GIT_DIR'.
-  -o  Output directory to clone the repository.
-      Default: '$OUTPUT_DIR'.
-  -s  Sub-directory to clone.
+  -d  Kept for compatibility: the output never contains a '.git' directory.
+  -o  Output directory where the subdirectory is copied.
+      Default: current directory.
+  -s  Sub-directory (or file) to clone, relative to the repository root.
   -u  Url of the target repository.
   -h  Print script help.
 
@@ -35,9 +36,8 @@ Example:
   ./clone-subdir.sh \\
     -u 'https://github.com/this-is-tobi/tools' \\
     -s 'shell' \\
-    -o './tools-shell' \\
-    -b 'main' \\
-    -d
+    -o './tools' \\
+    -b 'main'
 "
 
 # Functions
@@ -58,10 +58,19 @@ while getopts hb:do:s:u: flag; do
       SUB_DIR="${OPTARG}";;
     u)
       REPO_URL="${OPTARG}";;
-    h | *)
+    h)
       print_help
       exit 0;;
+    *)
+      print_help >&2
+      exit 1;;
   esac
+done
+
+# Normalize the sub-directory: './a/b/' -> 'a/b'
+SUB_DIR="${SUB_DIR#./}"
+while [ "${SUB_DIR%/}" != "$SUB_DIR" ]; do
+  SUB_DIR="${SUB_DIR%/}"
 done
 
 # Settings
@@ -76,40 +85,50 @@ Settings:
 
 # Options validation
 if [ -z "$REPO_URL" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: repo url name (flag -u)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: repo url name (flag -u).\n" >&2
   exit 1
 fi
 if [ -z "$SUB_DIR" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: subdirectory to clone (flag -s)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: subdirectory to clone (flag -s).\n" >&2
+  exit 1
+fi
+# The path is looked up inside the temporary clone: refuse anything that could
+# resolve outside of it or to the whole repository.
+case "/$SUB_DIR/" in
+  //|/./|*/../*)
+    printf "\n${COLOR_RED}Error.${COLOR_OFF} Invalid subdirectory '%s': use a path inside the repository.\n" "$SUB_DIR" >&2
+    exit 1;;
+esac
+case "$SUB_DIR" in
+  /*)
+    printf "\n${COLOR_RED}Error.${COLOR_OFF} Invalid subdirectory '%s': use a path relative to the repository root.\n" "$SUB_DIR" >&2
+    exit 1;;
+esac
+
+# Clone into a temporary directory so the current directory is never turned into a repository
+CLONE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/clone-subdir.XXXXXX")"
+trap 'rm -rf "$CLONE_DIR"' EXIT
+
+printf "\n\n${COLOR_RED}[clone subdir]${COLOR_OFF} Clone repository\n\n"
+
+git clone --quiet --depth 1 --filter=blob:none --sparse --branch "$GIT_BRANCH" -- "$REPO_URL" "$CLONE_DIR/repo"
+# Non-cone patterns accept a single file as well as a directory.
+git -C "$CLONE_DIR/repo" sparse-checkout set --no-cone "/$SUB_DIR"
+
+SOURCE="$CLONE_DIR/repo/$SUB_DIR"
+if [ ! -e "$SOURCE" ]; then
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} '%s' does not exist on branch '%s' of '%s'.\n" "$SUB_DIR" "$GIT_BRANCH" "$REPO_URL" >&2
   exit 1
 fi
 
-# init git repository in the output dir
-printf "\n\n${COLOR_RED}[clone subdir]${COLOR_OFF} Init git repository\n\n"
+# Copy the subdirectory into the output directory
+printf "\n\n${COLOR_RED}[clone subdir]${COLOR_OFF} Copy '%s' into '%s'\n\n" "$SUB_DIR" "$OUTPUT_DIR"
 
-[ ! -d "$OUTPUT_DIR" ] && mkdir -p "$OUTPUT_DIR"
-cd "$OUTPUT_DIR"
-git init 
-git remote add origin "$REPO_URL"
-git config core.sparsecheckout true
-
-# Clone sub directory from the target repository
-printf "\n\n${COLOR_RED}[clone subdir]${COLOR_OFF} Clone repository\n\n"
-
-if [ -d "$SUB_DIR" ]; then
-  echo "$SUB_DIR/*" >> .git/info/sparse-checkout
-  git pull origin "$GIT_BRANCH"
-  cp -aR "$SUB_DIR/." . && rm -rf "$SUB_DIR"
+mkdir -p "$OUTPUT_DIR"
+TARGET="${OUTPUT_DIR%/}/$(basename "$SUB_DIR")"
+if [ -d "$SOURCE" ]; then
+  mkdir -p "$TARGET"
+  cp -R "$SOURCE/." "$TARGET/"
 else
-  echo "$SUB_DIR" >> .git/info/sparse-checkout
-  git pull origin "$GIT_BRANCH"
-  cp -a "$SUB_DIR" . && rm -rf $(dirname "$SUB_DIR")
-fi
-cd - > /dev/null
-
-# Delete git artifacts in the fresh cloned repo
-if [ "$DELETE_GIT_DIR" == "true" ]; then
-  printf "\n\n${COLOR_RED}[clone subdir]${COLOR_OFF} Ungit cloned repoitory\n\n"
-
-  rm -rf "${OUTPUT_DIR%/}/.git"
+  cp "$SOURCE" "$TARGET"
 fi
