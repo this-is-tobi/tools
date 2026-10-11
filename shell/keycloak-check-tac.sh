@@ -114,6 +114,9 @@ elif [ -z "$KC_PASSWORD" ]; then
 elif [ -z "$KC_REALM" ]; then
   printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak realm (flag -r).\n" >&2
   exit 1
+elif ! [ "$KC_BATCH_SIZE" -gt 0 ] 2>/dev/null; then
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Batch size (flag -b) must be a positive integer.\n" >&2
+  exit 1
 fi
 
 # Init

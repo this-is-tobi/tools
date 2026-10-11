@@ -143,6 +143,9 @@ elif [ -z "$KC_PASSWORD" ]; then
 elif [ -z "$KC_REALM" ]; then
   printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak realm (flag -r).\n" >&2
   exit 1
+elif ! [ "$KC_BATCH_SIZE" -gt 0 ] 2>/dev/null; then
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Batch size (flag -b) must be a positive integer.\n" >&2
+  exit 1
 fi
 
 # Init
@@ -210,16 +213,18 @@ while true; do
     HAS_TAC_PENDING=$(echo "$REQUIRED_ACTIONS" | jq 'any(. == "TERMS_AND_CONDITIONS")')
     
     if [ "$KC_FORCE_ALL" = true ]; then
-      # Force all users to accept T&C (even those who already accepted)
+      # Force all users to accept T&C (even those who already accepted),
+      # keeping the other actions they still have to complete
       printf "${COLOR_BLUE}Processing user:${COLOR_OFF} $USERNAME (ID: $USER_ID) - force all mode\n"
+      NEW_ACTIONS=$(echo "$REQUIRED_ACTIONS" | jq -c '. + ["TERMS_AND_CONDITIONS"] | unique')
       if [ "$KC_DRY_RUN" = false ]; then
         curl -fsSL \
           -X PUT "$KC_HOST/admin/realms/$KC_REALM/users/$USER_ID" \
           -H "Content-Type: application/json" \
           -H @<(auth_header) \
-          -d '{"requiredActions": ["TERMS_AND_CONDITIONS"]}'
+          -d "{\"requiredActions\": $NEW_ACTIONS}"
       else
-        printf "  ${COLOR_BLUE}[DRY RUN]${COLOR_OFF} Would set requiredActions to [TERMS_AND_CONDITIONS]\n"
+        printf "  ${COLOR_BLUE}[DRY RUN]${COLOR_OFF} Would set requiredActions to %s\n" "$NEW_ACTIONS"
       fi
       UPDATED_COUNT=$((UPDATED_COUNT + 1))
     elif [ "$HAS_ACCEPTED_TAC" = false ] && [ "$HAS_TAC_PENDING" = false ]; then

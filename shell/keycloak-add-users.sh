@@ -22,7 +22,8 @@ KC_PASSWORD environment variable for the admin password, and pass users that
 carry credentials from a file ('-d @users.json') or from stdin ('-d -').
 
 Available flags:
-  -d    JSON array of users to add, '@<file>' to read it from a file or '-' to read it from stdin.
+  -d    JSON array of users to add, '@<file>' to read it from a file or '-' to read it from stdin
+        ('-' needs a downloaded script: piped to bash, stdin is the script itself).
   -k    Keycloak host.
   -p    Keycloak password (or KC_PASSWORD environment variable).
   -r    Keycloak realm where to add users.
