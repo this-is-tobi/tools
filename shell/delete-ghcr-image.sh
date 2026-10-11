@@ -21,7 +21,8 @@ TEXT_HELPER="
 This script aims to delete an image with all its subsequent images in ghcr.
 
 The package version carrying exactly the given tag is deleted, together with the
-untagged manifests it references (platform images, attestations). Deleting a
+untagged manifests it references (platform images, attestations) that no other
+tagged image references. Deleting a
 version deletes all of its tags: when it carries other tags too (e.g. 'latest'),
 the script stops unless -f is given.
 
@@ -207,11 +208,39 @@ if [ -n "$OTHER_TAGS" ]; then
   fi
 fi
 
+CHILD_DIGESTS="$(child_digests "$IMAGE_REF@$MAIN_DIGEST")"
+
+# Manifests also referenced by another tagged image (indexes built from the same
+# platform images, reproducible builds) must survive this deletion.
+SHARED="$WORK_DIR/shared.txt"
+: > "$SHARED"
+if [ -n "$CHILD_DIGESTS" ]; then
+  OTHER_IMAGES="$(jq -r --arg m "$MAIN_DIGEST" '.[]
+    | select(.name != $m and (.metadata.container.tags | length) > 0)
+    | select(all(.metadata.container.tags[]; test("^sha256-[0-9a-f]{64}")) | not)
+    | .name' "$WORK_DIR/versions.json")"
+  if [ -n "$OTHER_IMAGES" ]; then
+    printf "Inspect %s other tagged image(s) for shared manifests...\n" "$(printf '%s\n' "$OTHER_IMAGES" | wc -l | tr -d ' ')"
+    while IFS= read -r DIGEST; do
+      if ! child_digests "$IMAGE_REF@$DIGEST" >> "$SHARED"; then
+        printf "\n${COLOR_RED}Error.${COLOR_OFF} Could not inspect '%s@%s': stopping so that no shared manifest gets deleted.\n" "$IMAGE_REF" "$DIGEST" >&2
+        exit 1
+      fi
+    done <<< "$OTHER_IMAGES"
+  fi
+fi
+
+# Delete main image first: if that fails, the tag still points to complete manifests.
+delete_version "$MAIN_IMAGE_ID" "image '$OWNER/$IMAGE_NAME:$TAG'"
+
 # Delete subsequent images
 # Only untagged children are deleted: a tagged one is an image in its own right.
-CHILD_DIGESTS="$(child_digests "$IMAGE_REF@$MAIN_DIGEST")"
 while IFS= read -r SHA; do
   [ -z "$SHA" ] && continue
+  if grep -qxF -- "$SHA" "$SHARED"; then
+    printf "${COLOR_YELLOW}Skipping${COLOR_OFF} '%s': another tagged image references it.\n" "$SHA"
+    continue
+  fi
   CHILD="$(jq -c --arg s "$SHA" '[.[] | select(.name == $s)][0] // empty' "$WORK_DIR/versions.json")"
   if [ -z "$CHILD" ]; then
     printf "${COLOR_YELLOW}Skipping${COLOR_OFF} '%s': not a version of this package.\n" "$SHA"
@@ -223,6 +252,3 @@ while IFS= read -r SHA; do
   fi
   delete_version "$(jq -r '.id' <<< "$CHILD")" "subsequent image '$OWNER/$IMAGE_NAME@$SHA'"
 done <<< "$CHILD_DIGESTS"
-
-# Delete main image
-delete_version "$MAIN_IMAGE_ID" "image '$OWNER/$IMAGE_NAME:$TAG'"

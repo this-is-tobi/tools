@@ -15,8 +15,9 @@ OWNER=""
 IMAGE_NAME=""
 DRY_RUN="false"
 PROTECT_RELEASES="true"
-# 'latest', versions such as '1', '1.2', 'v1.2.3', '1.2.3-rc.1' and component releases such as 'api-v1.2.3'
-PROTECTED_TAGS_REGEX='^(latest|v?[0-9]+(\.[0-9]+){0,2}([-+][0-9A-Za-z.-]+)?|.+-v[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?)$'
+# 'latest', versions such as '1', '1.2', 'v1.2.3', '1.2.3-rc.1' and component releases such as 'api-v1.2.3'.
+# The major number is capped at 4 digits so date tags ('20241012', '20241012-1a2b3c4') stay purgeable.
+PROTECTED_TAGS_REGEX='^(latest|v?[0-9]{1,4}(\.[0-9]+){0,2}|v?[0-9]{1,4}\.[0-9]+\.[0-9]+[-+][0-9A-Za-z.-]+|.+-v[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?)$'
 if [ "$(uname)" = 'Darwin' ]; then
   DATE="$(date -v -1m '+%Y-%m-%d')"
 else
