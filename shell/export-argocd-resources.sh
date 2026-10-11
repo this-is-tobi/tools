@@ -2,12 +2,8 @@
 
 set -euo pipefail
 
-# Colors
-COLOR_OFF='\033[0m'
-COLOR_BLUE='\033[0;34m'
-COLOR_RED='\033[0;31m'
-COLOR_GREEN='\033[0;32m'
-COLOR_YELLOW='\033[0;33m'
+# Applications can embed credentials (inline Helm values): keep the exports private
+umask 077
 
 # Defaults
 RESOURCES_KIND="all"
@@ -18,6 +14,7 @@ EXPORT_DIR="./argocd-export"
 TEXT_HELPER="
 This script aims to export ready-to-apply argocd projects, applications and applicationsets.
 It uses kubectl-neat to clean up manifests metadata so it is required to work correctly.
+Exported files are only readable by their owner.
 
 Available flags:
   -k    Kind of resources to export, available kinds are 'apps', 'appsets', 'projects' and 'all'.
@@ -43,13 +40,13 @@ print_help() {
 export_argocd_resources () {
   EXPORT_FILE="$EXPORT_DIR/$1.yaml"
   # Clear existing content in the projects file
-  > "$EXPORT_FILE"
+  : > "$EXPORT_FILE"
 
-  RESOURCES=$(kubectl get $1 -n $NAMESPACE --no-headers -o custom-columns=":metadata.name")
+  RESOURCES=$(kubectl get "$1" -n "$NAMESPACE" --no-headers -o custom-columns=":metadata.name")
 
   for RESOURCE in $RESOURCES; do
     echo "---" >> "$EXPORT_FILE"
-    kubectl get $1 $RESOURCE -n $NAMESPACE -o yaml | kubectl neat >> "$EXPORT_FILE"
+    kubectl get "$1" "$RESOURCE" -n "$NAMESPACE" -o yaml | kubectl neat >> "$EXPORT_FILE"
     echo "" >> "$EXPORT_FILE"
   done
 }
@@ -63,9 +60,12 @@ while getopts hk:n:o: flag; do
       NAMESPACE=${OPTARG};;
     o)
       EXPORT_DIR=${OPTARG};;
-    h | *)
+    h)
       print_help
       exit 0;;
+    *)
+      print_help >&2
+      exit 1;;
   esac
 done
 
@@ -91,7 +91,7 @@ elif [[ "$RESOURCES_KIND" == "all" ]]; then
   export_argocd_resources apps
   export_argocd_resources appsets
 else
-  printf "Wrong arguments, you need to specify a valid kind of resources.\n"
-  print_help
+  printf "Wrong arguments, you need to specify a valid kind of resources.\n" >&2
+  print_help >&2
   exit 1
 fi
