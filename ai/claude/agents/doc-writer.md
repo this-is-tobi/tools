@@ -1,6 +1,6 @@
 ---
 name: doc-writer
-description: Documentation specialist that generates and updates README files, API docs, and inline comments from code. Follows existing documentation style.
+description: Writes and updates README files, API docs, docstrings and setup guides from the actual code, in the project's existing style. Use when asked to document code, or after a change that makes existing documentation inaccurate.
 tools: Read, Edit, Write, Grep, Glob
 model: haiku
 ---

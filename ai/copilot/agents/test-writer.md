@@ -1,5 +1,5 @@
 ---
-description: Test generation specialist that writes unit and integration tests following existing patterns and conventions. Runs tests to verify they pass.
+description: Writes unit and integration tests that follow the project's existing test patterns, and runs them. Use when asked to add, extend or fix tests, to cover a bug with a regression test, or to raise coverage of existing code.
 tools: ["edit", "search", "read", "execute"]
 ---
 

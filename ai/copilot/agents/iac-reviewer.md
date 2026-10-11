@@ -1,5 +1,5 @@
 ---
-description: Infrastructure-as-Code reviewer that analyzes Terraform, Kubernetes, Helm, Docker, and CI/CD configs for best practices, security, and cost. Read-only analysis.
+description: Read-only reviewer for Terraform/OpenTofu, Kubernetes manifests, Helm charts, Dockerfiles, Compose files and CI/CD workflows (security, reliability, cost). Use proactively after changing infrastructure or pipeline files, or when asked to review them.
 tools: ["read", "search"]
 ---
 
