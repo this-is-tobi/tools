@@ -89,17 +89,19 @@ jobs:
       matrix:
         image: ${{ fromJSON(needs.resolve-affected.outputs.images) }}
     secrets:
-      # Raises mise's GitHub API limit during the build - see build-images.yml.
-      # Without it a matrix of eight exhausts the 60/hour anonymous limit and the
-      # aqua backend 403s, which mise treats as permanent.
-      BUILD_SECRETS: |
-        github_token=${{ secrets.GITHUB_TOKEN }}
+      # Only used to mint the read-only token below - see build-images.yml.
+      APP_CLIENT_ID: ${{ secrets.APP_CLIENT_ID }}
+      APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
     with:
       IMAGE_NAME: ghcr.io/this-is-tobi/tools/${{ matrix.image.name }}
       IMAGE_TAG: pr-${{ github.event.pull_request.number }}
       IMAGE_CONTEXT: ${{ matrix.image.build.context }}
       IMAGE_DOCKERFILE: ${{ matrix.image.build.dockerfile }}
       IMAGE_TARGET: ${{ matrix.image.build.target }}
+      # Raises mise's GitHub API limit during the build - see build-images.yml.
+      # Without it a matrix of eight exhausts the 60/hour anonymous limit and the
+      # aqua backend 403s, which mise treats as permanent.
+      BUILD_SECRET_GITHUB_TOKEN: app
       BUILD_AMD64: true
       BUILD_ARM64: false
       # No layer cache - see build-images.yml. Actions caches are additionally

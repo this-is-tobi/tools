@@ -358,13 +358,17 @@ Set `"deprecated": true` on its `ci/matrix.json` entry. This excludes it from Re
 
 Six of the eight images install their tooling through `mise`, which resolves every `@latest` against the GitHub API. Unauthenticated that is **60 requests/hour, shared across every runner on the same egress IP** — building the matrix exhausts it, and the `aqua`/`ubi` backends then fail with a `403` that mise treats as permanent rather than retryable. The dotfiles `mise_use` helper retries five times over 50s, which does not outlast a rate-limit window that resets in minutes.
 
-So the build passes a token. It goes in as a **BuildKit build secret**, never a build arg, so it never reaches an image layer or `docker history`:
+So the build passes a token. It goes in as a **BuildKit build secret**, never a build arg, so it never reaches an image layer or `docker history`. `build-docker.yml` mints it from the repository's GitHub App, narrowed to `contents:read` on this repository:
 
 ```yaml
 secrets:
-  BUILD_SECRETS: |
-    github_token=${{ secrets.GITHUB_TOKEN }}
+  APP_CLIENT_ID: ${{ secrets.APP_CLIENT_ID }}
+  APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+with:
+  BUILD_SECRET_GITHUB_TOKEN: app
 ```
+
+Never the job's own `GITHUB_TOKEN`: everything a Dockerfile executes can read the secret — `curl https://mise.run | sh`, every tool mise installs, every package postinstall hook — and the build job holds `packages: write`, so a compromised upstream could push over the images being built. Without the App credentials the build fails at its first step rather than falling back to a wider token.
 
 ```dockerfile
 RUN --mount=type=secret,id=github_token,mode=0444 \
@@ -411,7 +415,7 @@ Exporting to a registry instead moves the destination without removing the uploa
 Revisit this if the large `RUN` is ever split into finer, independently-changing layers: a dotfiles bump could then restore the toolchain layers beneath it, and the arithmetic changes. `build-docker.yml` keeps its `CACHE` and `CACHE_MODE` inputs for callers whose images are shaped that way.
 
 > [!NOTE]
-> PRs from forks won't be able to push the check image — `GITHUB_TOKEN` is read-only for `pull_request` events from forks, which GitHub enforces regardless of the `permissions:` requested in the workflow. Not an issue for same-repo branches.
+> PRs from forks won't be able to build the check image — repository secrets (the App credentials above) are not passed to `pull_request` runs from forks, and `GITHUB_TOKEN` is read-only there, which GitHub enforces regardless of the `permissions:` requested in the workflow. Not an issue for same-repo branches.
 
 ### Image testing
 

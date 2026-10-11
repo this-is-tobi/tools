@@ -62,6 +62,11 @@ on:
         required: false
         default: false
         type: boolean
+      BUILD_SECRET_GITHUB_TOKEN:
+        description: Which credential build-docker.yml exposes to the build as the 'github_token' secret ('none', 'app', 'pat' or 'job-token')
+        required: false
+        default: none
+        type: string
       PROVENANCE:
         description: Generate SLSA provenance attestation for the image
         required: false
@@ -78,8 +83,11 @@ on:
         default: false
         type: boolean
     secrets:
-      BUILD_SECRETS:
-        description: Newline-separated list of build secrets in KEY=VALUE form, forwarded to build-docker.yml
+      APP_CLIENT_ID:
+        description: GitHub App client ID, forwarded to build-docker.yml to mint the BUILD_SECRET_GITHUB_TOKEN=app token
+        required: false
+      APP_PRIVATE_KEY:
+        description: GitHub App private key (PEM), required alongside APP_CLIENT_ID
         required: false
     outputs:
       digest:
@@ -96,7 +104,8 @@ jobs:
       packages: write
       contents: read
     secrets:
-      BUILD_SECRETS: ${{ secrets.BUILD_SECRETS }}
+      APP_CLIENT_ID: ${{ secrets.APP_CLIENT_ID }}
+      APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
     with:
       IMAGE_NAME: ${{ inputs.IMAGE_NAME }}
       IMAGE_TAG: ${{ inputs.IMAGE_TAG }}
@@ -109,6 +118,7 @@ jobs:
       BUILD_ARM64: ${{ inputs.BUILD_ARM64 }}
       USE_QEMU: ${{ inputs.USE_QEMU }}
       CACHE: ${{ inputs.CACHE }}
+      BUILD_SECRET_GITHUB_TOKEN: ${{ inputs.BUILD_SECRET_GITHUB_TOKEN }}
 
   attest:
     needs: build
