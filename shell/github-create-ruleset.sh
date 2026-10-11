@@ -270,7 +270,6 @@ if [ "$MODE" = "branch-protection" ]; then
     --argjson linear "$REQUIRE_LINEAR" \
     --argjson force "$ALLOW_FORCE" \
     --argjson delete "$ALLOW_DELETE" \
-    --argjson signatures "$REQUIRE_SIGNATURES" \
     '{
       required_status_checks: (if ($contexts | length) > 0 then {strict: true, contexts: $contexts} else null end),
       enforce_admins: $admins,
@@ -278,8 +277,7 @@ if [ "$MODE" = "branch-protection" ]; then
       restrictions: null,
       required_linear_history: $linear,
       allow_force_pushes: $force,
-      allow_deletions: $delete,
-      required_signatures: $signatures
+      allow_deletions: $delete
     }')
 
   printf "Applying branch protection to '%s/%s' on branch '%s'...\n" "$OWNER" "$REPO" "$BRANCH"
@@ -289,7 +287,20 @@ if [ "$MODE" = "branch-protection" ]; then
     exit 1
   fi
 
-  printf "${COLOR_GREEN}Branch protection applied successfully.${COLOR_OFF}\n"
+  # Signed commits have their own endpoint: the protection payload has no such field.
+  SIGNATURES_URL="$REPO_URL/branches/$BRANCH/protection/required_signatures"
+  if ! SIGNATURES=$(github_api GET "$SIGNATURES_URL"); then
+    printf "${COLOR_RED}Failed to read the signed commits setting.${COLOR_OFF}\n" >&2
+    exit 1
+  fi
+  SIGNATURES_ENABLED="$(printf '%s\n' "$SIGNATURES" | jq -r '.enabled')"
+  if [ "$REQUIRE_SIGNATURES" = "true" ] && [ "$SIGNATURES_ENABLED" != "true" ]; then
+    github_api POST "$SIGNATURES_URL" > /dev/null || { printf "${COLOR_RED}Failed to require signed commits.${COLOR_OFF}\n" >&2; exit 1; }
+  elif [ "$REQUIRE_SIGNATURES" = "false" ] && [ "$SIGNATURES_ENABLED" = "true" ]; then
+    github_api DELETE "$SIGNATURES_URL" > /dev/null || { printf "${COLOR_RED}Failed to stop requiring signed commits.${COLOR_OFF}\n" >&2; exit 1; }
+  fi
+
+  printf "${COLOR_GREEN}Branch protection applied successfully (signed commits required: %s).${COLOR_OFF}\n" "$REQUIRE_SIGNATURES"
   printf '%s\n' "$RESPONSE" | jq
   exit 0
 fi
