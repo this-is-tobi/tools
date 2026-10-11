@@ -12,7 +12,7 @@ COLOR_WHITE='\033[1;37m'
 COLOR_BOLD='\033[1m'
 
 # Defaults
-NAMESPACE="$(kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}')"
+NAMESPACE=""
 VAULT_NAME=""
 NAMESPACE_ARG=""
 
@@ -23,11 +23,11 @@ This script aims to monitor HashiCorp Vault HA deployment status and cluster hea
 Available flags:
   -v    Vault deployment name (StatefulSet or Deployment).
   -n    Kubernetes namespace where Vault is running.
-        Default: current namespace '$NAMESPACE'.
+        Default: the namespace of the current kubectl context.
   -h    Print script help.
 
 Example:
-  ./monitor-vault.sh \\
+  ./monitor-kube-vault.sh \\
     -v my-vault \\
     -n my-vault
 "
@@ -43,14 +43,20 @@ while getopts hv:n: flag; do
       VAULT_NAME=${OPTARG};;
     n)
       NAMESPACE=${OPTARG};;
-    h | *)
+    h)
       print_help
       exit 0;;
+    *)
+      print_help >&2
+      exit 1;;
   esac
 done
 
 # Setup namespace argument for kubectl commands
-[[ ! -z "$NAMESPACE" ]] && NAMESPACE_ARG="--namespace=$NAMESPACE"
+if [ -z "$NAMESPACE" ]; then
+  NAMESPACE="$(kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}' 2>/dev/null || true)"
+fi
+[[ -n "$NAMESPACE" ]] && NAMESPACE_ARG="--namespace=$NAMESPACE"
 
 # Validate vault name is provided
 if [ -z "$VAULT_NAME" ]; then
@@ -63,71 +69,15 @@ echo -e "${COLOR_BOLD}HashiCorp Vault HA Monitoring - Enhanced${COLOR_OFF}"
 echo "=========================================="
 echo
 
-# Function to check if vault command is available in pods
-check_vault_command() {
-  local pod_name=$1
-  kubectl exec $NAMESPACE_ARG "$pod_name" -- which vault >/dev/null 2>&1
-}
-
-# Function to get volume usage with improved logic
-get_volume_usage() {
-  local pvc_name=$1
-  local namespace=$2
-  local pod_name=$3
-  
-  # Try to get usage directly from the pod
-  if [ -n "$pod_name" ]; then
-    # Vault typically mounts data at /vault/data
-    local mount_path="/vault/data"
-    
-    # Try to get disk usage from the pod
-    local usage=$(kubectl exec -n "$namespace" "$pod_name" -- df -h "$mount_path" 2>/dev/null | tail -1 | awk '{print $3 "/" $2 " (" $5 " used)"}' 2>/dev/null)
-    
-    if [ -n "$usage" ] && [[ "$usage" != *"N/A"* ]]; then
-      echo "$usage"
-    else
-      # Try alternative mount point
-      usage=$(kubectl exec -n "$namespace" "$pod_name" -- df -h /vault/file 2>/dev/null | tail -1 | awk '{print $3 "/" $2 " (" $5 " used)"}' 2>/dev/null)
-      if [ -n "$usage" ] && [[ "$usage" != *"N/A"* ]]; then
-        echo "$usage"
-      else
-        echo "Access denied"
-      fi
-    fi
-  else
-    echo "N/A"
-  fi
-}
-
-# Function to get vault status from a pod
-get_vault_status() {
-  local pod_name=$1
-  local vault_addr="http://127.0.0.1:8200"
-  
-  # Try to get vault status
-  local status=$(kubectl exec $NAMESPACE_ARG "$pod_name" -- vault status -address="$vault_addr" -format=json 2>/dev/null || echo "{}")
-  echo "$status"
-}
-
-# Function to get vault leader info
-get_vault_leader() {
-  local pod_name=$1
-  local vault_addr="http://127.0.0.1:8200"
-  
-  # Try to get leader info
-  local leader=$(kubectl exec $NAMESPACE_ARG "$pod_name" -- vault read -address="$vault_addr" -format=json sys/leader 2>/dev/null || echo "{}")
-  echo "$leader"
-}
-
 # Get Vault pods using correct label selector
-VAULT_PODS=$(kubectl get pods $NAMESPACE_ARG -l app.kubernetes.io/name=vault,component=server -o json 2>/dev/null)
+VAULT_PODS=$(kubectl get pods $NAMESPACE_ARG -l app.kubernetes.io/name=vault,component=server -o json 2>/dev/null || true)
 if [ -z "$VAULT_PODS" ] || [ "$(echo "$VAULT_PODS" | jq -r '.items | length')" = "0" ]; then
   # Try alternative selector
-  VAULT_PODS=$(kubectl get pods $NAMESPACE_ARG -l app=vault -o json 2>/dev/null)
+  VAULT_PODS=$(kubectl get pods $NAMESPACE_ARG -l app=vault -o json 2>/dev/null || true)
   if [ -z "$VAULT_PODS" ] || [ "$(echo "$VAULT_PODS" | jq -r '.items | length')" = "0" ]; then
     # Try by name pattern
-    VAULT_PODS=$(kubectl get pods $NAMESPACE_ARG -o json 2>/dev/null | jq --arg name "$VAULT_NAME" '.items | map(select(.metadata.name | contains($name)))')
-    if [ "$(echo "$VAULT_PODS" | jq -r 'length')" = "0" ]; then
+    VAULT_PODS=$(kubectl get pods $NAMESPACE_ARG -o json 2>/dev/null | jq --arg name "$VAULT_NAME" '.items | map(select(.metadata.name | contains($name)))' || true)
+    if [ -z "$VAULT_PODS" ] || [ "$(echo "$VAULT_PODS" | jq -r 'length')" = "0" ]; then
       echo -e "${COLOR_RED}Error: No Vault pods found with name pattern '$VAULT_NAME'${COLOR_OFF}"
       exit 1
     fi
@@ -167,8 +117,8 @@ echo
 
 # Function to get volume usage with improved logic
 get_volume_usage() {
+  # $2 (namespace) is unused: kubectl calls use NAMESPACE_ARG
   local pvc_name=$1
-  local namespace=$2
   local pod_name=$3
   
   # Try to get usage directly from the vault pod
@@ -177,7 +127,8 @@ get_volume_usage() {
     local mount_path="/vault/data"
     
     # Try to get disk usage from the pod
-    local usage=$(kubectl exec $NAMESPACE_ARG "$pod_name" -- df -h "$mount_path" 2>/dev/null | tail -1 | awk '{print $2 "/" $1 " (" $4 " used)"}' 2>/dev/null)
+    local usage
+    usage=$(kubectl exec $NAMESPACE_ARG "$pod_name" -- df -h "$mount_path" 2>/dev/null | tail -1 | awk '{print $2 "/" $1 " (" $4 " used)"}' 2>/dev/null)
     
     if [ -n "$usage" ] && [[ "$usage" != *"N/A"* ]]; then
       echo "$usage|$mount_path"
@@ -252,9 +203,6 @@ printf "%-35s %-10s %-10s %-12s %-12s %-10s %-15s %s\n" "Pod Name" "Ready" "Acti
 printf "%-35s %-10s %-10s %-12s %-12s %-10s %-15s %s\n" "---------" "-----" "------" "------" "-----------" "-------" "-------" "--------"
 
 LEADER_POD=""
-INITIALIZED_COUNT=0
-SEALED_COUNT=0
-ACTIVE_COUNT=0
 
 # Extract leader pod before the while loop to avoid subshell variable loss
 LEADER_POD=$(echo "$VAULT_PODS" | jq -r '.items[] | select(.metadata.labels["vault-active"] == "true" or .metadata.labels["app.kubernetes.io/component"] == "server" and .metadata.labels["vault-active"] == "true") | .metadata.name')
@@ -264,18 +212,6 @@ echo "$VAULT_PODS" | jq -r '.items[] | "\(.metadata.name)|\(.metadata.labels["va
   # Color coding
   ready_color="${COLOR_GREEN}"
   [ "$ready_status" != "true" ] && ready_color="${COLOR_RED}"
-  
-  active_color="${COLOR_BLUE}"
-  [ "$is_active" = "true" ] && active_color="${COLOR_GREEN}"
-  
-  sealed_color="${COLOR_GREEN}"
-  [ "$sealed" = "true" ] && sealed_color="${COLOR_RED}"
-  
-  init_color="${COLOR_GREEN}"
-  [ "$initialized" = "false" ] && init_color="${COLOR_RED}"
-  
-  standby_color="${COLOR_BLUE}"
-  [ "$standby" = "true" ] && standby_color="${COLOR_YELLOW}"
   
   restart_color="${COLOR_GREEN}"
   if [[ "$restarts" =~ ^[0-9]+$ ]]; then
@@ -307,7 +243,8 @@ echo
 
 # Get recent events
 echo -e "${COLOR_BOLD}Recent Vault Events${COLOR_OFF}"
-vault_events=$(kubectl get events $NAMESPACE_ARG --field-selector involvedObject.kind=Pod --sort-by='.lastTimestamp' 2>/dev/null | grep -i vault | tail -5)
+# No matching event makes grep fail: that must not abort the report
+vault_events=$(kubectl get events $NAMESPACE_ARG --field-selector involvedObject.kind=Pod --sort-by='.lastTimestamp' 2>/dev/null | grep -i vault | tail -5 || true)
 if [ -n "$vault_events" ]; then
   echo "$vault_events"
 else

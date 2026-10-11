@@ -12,7 +12,7 @@ COLOR_WHITE='\033[1;37m'
 COLOR_BOLD='\033[1m'
 
 # Defaults
-NAMESPACE="$(kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}')"
+NAMESPACE=""
 QDRANT_NAME=""
 NAMESPACE_ARG=""
 
@@ -23,7 +23,7 @@ This script aims to monitor Qdrant vector database cluster status and health.
 Available flags:
   -q    Qdrant deployment name (StatefulSet or Deployment).
   -n    Kubernetes namespace where Qdrant is running.
-        Default: current namespace '$NAMESPACE'.
+        Default: the namespace of the current kubectl context.
   -h    Print script help.
 
 Example:
@@ -43,14 +43,20 @@ while getopts hq:n: flag; do
       QDRANT_NAME=${OPTARG};;
     n)
       NAMESPACE=${OPTARG};;
-    h | *)
+    h)
       print_help
       exit 0;;
+    *)
+      print_help >&2
+      exit 1;;
   esac
 done
 
 # Setup namespace argument for kubectl commands
-[[ ! -z "$NAMESPACE" ]] && NAMESPACE_ARG="--namespace=$NAMESPACE"
+if [ -z "$NAMESPACE" ]; then
+  NAMESPACE="$(kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}' 2>/dev/null || true)"
+fi
+[[ -n "$NAMESPACE" ]] && NAMESPACE_ARG="--namespace=$NAMESPACE"
 
 # Validate qdrant name is provided
 if [ -z "$QDRANT_NAME" ]; then
@@ -65,8 +71,8 @@ echo
 
 # Function to get volume usage with improved logic
 get_volume_usage() {
+  # $2 (namespace) is unused: kubectl calls use NAMESPACE_ARG
   local pvc_name=$1
-  local namespace=$2
   local pod_name=$3
   
   # Try to get usage directly from the qdrant pod
@@ -75,7 +81,8 @@ get_volume_usage() {
     local mount_path="/qdrant/storage"
     
     # Try to get disk usage from the pod
-    local usage=$(kubectl exec $NAMESPACE_ARG "$pod_name" -- df -h "$mount_path" 2>/dev/null | tail -1 | awk '{print $3 "/" $2 " (" $5 " used)"}' 2>/dev/null)
+    local usage
+    usage=$(kubectl exec $NAMESPACE_ARG "$pod_name" -- df -h "$mount_path" 2>/dev/null | tail -1 | awk '{print $3 "/" $2 " (" $5 " used)"}' 2>/dev/null)
     
     if [ -n "$usage" ] && [[ "$usage" != *"N/A"* ]]; then
       echo "$usage|$mount_path"
@@ -129,7 +136,8 @@ get_qdrant_collections_from_fs() {
   local pod_name=$1
   
   # Try to list collections directory
-  local collections=$(kubectl exec $NAMESPACE_ARG "$pod_name" -- ls /qdrant/storage/collections 2>/dev/null || echo "")
+  local collections
+  collections=$(kubectl exec $NAMESPACE_ARG "$pod_name" -- ls /qdrant/storage/collections 2>/dev/null || echo "")
   if [ -n "$collections" ]; then
     echo "$collections" | wc -l | tr -d ' '
   else
@@ -142,7 +150,8 @@ get_qdrant_raft_state() {
   local pod_name=$1
   
   # Try to read raft state file
-  local raft_state=$(kubectl exec $NAMESPACE_ARG "$pod_name" -- cat /qdrant/storage/raft_state.json 2>/dev/null || echo "{}")
+  local raft_state
+  raft_state=$(kubectl exec $NAMESPACE_ARG "$pod_name" -- cat /qdrant/storage/raft_state.json 2>/dev/null || echo "{}")
   echo "$raft_state"
 }
 
@@ -151,10 +160,11 @@ get_node_info_from_raft() {
   local raft_state=$1
   
   if [ -n "$raft_state" ] && [ "$raft_state" != "{}" ]; then
-    local this_peer_id=$(echo "$raft_state" | jq -r '.this_peer_id // "N/A"' 2>/dev/null || echo "N/A")
-    local voters_count=$(echo "$raft_state" | jq -r '.state.conf_state.voters | length' 2>/dev/null || echo "0")
-    local version=$(echo "$raft_state" | jq -r --arg peer_id "$this_peer_id" '.peer_metadata_by_id[$peer_id].version // "N/A"' 2>/dev/null || echo "N/A")
-    local first_voter=$(echo "$raft_state" | jq -r '.first_voter // "N/A"' 2>/dev/null || echo "N/A")
+    local this_peer_id voters_count version first_voter
+    this_peer_id=$(echo "$raft_state" | jq -r '.this_peer_id // "N/A"' 2>/dev/null || echo "N/A")
+    voters_count=$(echo "$raft_state" | jq -r '.state.conf_state.voters | length' 2>/dev/null || echo "0")
+    version=$(echo "$raft_state" | jq -r --arg peer_id "$this_peer_id" '.peer_metadata_by_id[$peer_id].version // "N/A"' 2>/dev/null || echo "N/A")
+    first_voter=$(echo "$raft_state" | jq -r '.first_voter // "N/A"' 2>/dev/null || echo "N/A")
     
     # Determine role - first voter is typically the leader in Qdrant raft
     local role="replica"
@@ -169,14 +179,14 @@ get_node_info_from_raft() {
 }
 
 # Get Qdrant pods using correct label selector
-QDRANT_PODS=$(kubectl get pods $NAMESPACE_ARG -l app.kubernetes.io/name=qdrant -o json 2>/dev/null)
+QDRANT_PODS=$(kubectl get pods $NAMESPACE_ARG -l app.kubernetes.io/name=qdrant -o json 2>/dev/null || true)
 if [ -z "$QDRANT_PODS" ] || [ "$(echo "$QDRANT_PODS" | jq -r '.items | length')" = "0" ]; then
   # Try alternative selector
-  QDRANT_PODS=$(kubectl get pods $NAMESPACE_ARG -l app=qdrant -o json 2>/dev/null)
+  QDRANT_PODS=$(kubectl get pods $NAMESPACE_ARG -l app=qdrant -o json 2>/dev/null || true)
   if [ -z "$QDRANT_PODS" ] || [ "$(echo "$QDRANT_PODS" | jq -r '.items | length')" = "0" ]; then
     # Try by name pattern
-    QDRANT_PODS=$(kubectl get pods $NAMESPACE_ARG -o json 2>/dev/null | jq --arg name "$QDRANT_NAME" '.items | map(select(.metadata.name | contains($name)))')
-    if [ "$(echo "$QDRANT_PODS" | jq -r 'length')" = "0" ]; then
+    QDRANT_PODS=$(kubectl get pods $NAMESPACE_ARG -o json 2>/dev/null | jq --arg name "$QDRANT_NAME" '.items | map(select(.metadata.name | contains($name)))' || true)
+    if [ -z "$QDRANT_PODS" ] || [ "$(echo "$QDRANT_PODS" | jq -r 'length')" = "0" ]; then
       echo -e "${COLOR_RED}Error: No Qdrant pods found with name pattern '$QDRANT_NAME'${COLOR_OFF}"
       exit 1
     fi
@@ -453,7 +463,8 @@ echo
 
 # Get recent events
 echo -e "${COLOR_BOLD}Recent Qdrant Events${COLOR_OFF}"
-qdrant_events=$(kubectl get events $NAMESPACE_ARG --field-selector involvedObject.kind=Pod --sort-by='.lastTimestamp' 2>/dev/null | grep -i qdrant | tail -5)
+# No matching event makes grep fail: that must not abort the report
+qdrant_events=$(kubectl get events $NAMESPACE_ARG --field-selector involvedObject.kind=Pod --sort-by='.lastTimestamp' 2>/dev/null | grep -i qdrant | tail -5 || true)
 if [ -n "$qdrant_events" ]; then
   echo "$qdrant_events"
 else
