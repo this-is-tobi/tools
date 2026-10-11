@@ -47,7 +47,8 @@ print_help() {
 }
 
 jwt_decode(){
-  jq -R 'split(".") | .[1] | @base64d | fromjson' <<< "$1"
+  # JWT segments are base64url without padding
+  jq -R 'split(".") | .[1] | gsub("-"; "+") | gsub("_"; "/") | . + ("=" * ((4 - (length % 4)) % 4)) | @base64d | fromjson' <<< "$1"
 }
 
 # Secrets are read by curl from stdin and from a file descriptor, never from its arguments.
