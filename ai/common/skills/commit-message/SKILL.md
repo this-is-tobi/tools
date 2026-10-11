@@ -1,13 +1,14 @@
 ---
 name: commit-message
-description: Generate commit messages following Conventional Commits specification. Use when asked to write a commit message, generate a commit, or format a commit message.
+description: Write a commit message following the Conventional Commits specification from the staged (or described) changes. Use when asked to write, suggest or reword a commit message. It only writes the message; staging and committing stay with the user.
 model: haiku
-allowed-tools: Bash(git diff *) Bash(git status *) Bash(git log *) Bash(git add *) Bash(git commit *)
 ---
 
 # Commit Message Generation
 
 Generate clear, concise commit messages following the Conventional Commits specification.
+
+Read the changes with `git diff --cached` (or `git diff` when nothing is staged), `git status` and `git log` for the repository's style, then output the message. Don't stage, format, commit or amend anything unless the user explicitly asks for it.
 
 > Do not mention the AI assistant in the commit message (eg., "Co-authored-by: AI Assistant"). Instead, focus on the changes made, their purpose, and any relevant context.
 
@@ -76,7 +77,7 @@ Closes #234
 
 ## Common Mistakes
 
-- Forget to format the codebase before creating the commit - always check for lint/format command in the project and run it before committing if it exists
+- Describing unformatted or failing code — if the project has a lint/format command, mention it so the user can run it before committing
 - Past tense ("added feature") — use imperative ("add feature")
 - Vague messages ("fix bug", "update code") — be specific
 - Capitalized subject — start lowercase

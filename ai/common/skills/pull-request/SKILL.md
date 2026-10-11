@@ -1,7 +1,6 @@
 ---
 name: pull-request
 description: Generate comprehensive pull request descriptions. Use when asked to write a PR description, create a pull request, or describe changes for a PR.
-allowed-tools: Bash(git diff *) Bash(git log *) Bash(git status *)
 ---
 
 # Pull Request Description
