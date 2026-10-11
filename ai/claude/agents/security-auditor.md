@@ -1,6 +1,6 @@
 ---
 name: security-auditor
-description: Security auditor that identifies vulnerabilities, misconfigurations, and compliance issues. Uses read-only tools to analyze code without making modifications.
+description: Read-only security auditor for vulnerabilities, secrets and misconfigurations in code, dependencies and infrastructure files. Use proactively when a change touches authentication, authorization, secrets, input parsing, file or network access, or CI/CD and container permissions, and when asked for a security review or audit of a module or change.
 tools: Read, Grep, Glob
 effort: high
 ---
