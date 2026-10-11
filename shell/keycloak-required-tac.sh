@@ -15,7 +15,7 @@ KC_FORCE_ALL=false
 KC_BATCH_SIZE=100
 KC_DRY_RUN=false
 KC_HOST=""
-KC_PASSWORD=""
+KC_PASSWORD="${KC_PASSWORD:-}"
 KC_REALM=""
 
 # Script helper
@@ -24,7 +24,7 @@ The purpose of this script is to force users to accept terms and conditions in a
 
 Available flags:
   -k    Keycloak host.
-  -p    Keycloak password.
+  -p    Keycloak password (or KC_PASSWORD environment variable).
   -r    Keycloak realm where to list users.
   -u    Keycloak username.
         Default: '$KC_USERNAME'.
@@ -38,10 +38,11 @@ Available flags:
   -h    Print script help.
 
 Example:
+  read -rsp 'Password: ' KC_PASSWORD && export KC_PASSWORD
+
   # Dry run to preview changes
   ./keycloak-required-tac.sh \\
     -k 'http://localhost:8080' \\
-    -p 'admin' \\
     -r 'my-realm' \\
     -u 'admin' \\
     -d
@@ -49,14 +50,12 @@ Example:
   # Force only users who haven't accepted T&C
   ./keycloak-required-tac.sh \\
     -k 'http://localhost:8080' \\
-    -p 'admin' \\
     -r 'my-realm' \\
     -u 'admin'
 
   # Force ALL users (e.g., after T&C update)
   ./keycloak-required-tac.sh \\
     -k 'http://localhost:8080' \\
-    -p 'admin' \\
     -r 'my-realm' \\
     -u 'admin' \\
     -f
@@ -65,6 +64,28 @@ Example:
 # Functions
 print_help() {
   printf "$TEXT_HELPER"
+}
+
+# The password is read by curl from stdin, never from its arguments.
+get_token() {
+  printf '%s' "$KC_PASSWORD" | curl -fsSL \
+    -X POST "$KC_HOST/realms/master/protocol/openid-connect/token" \
+    --data-urlencode "client_id=admin-cli" \
+    --data-urlencode "username=$KC_USERNAME" \
+    --data-urlencode "password@-" \
+    --data-urlencode "grant_type=password" | jq -r '.access_token // empty'
+}
+
+refresh_token() {
+  if ! ACCESS_TOKEN="$(get_token)" || [ -z "$ACCESS_TOKEN" ]; then
+    printf "\n${COLOR_RED}Error.${COLOR_OFF} Failed to get an access token.\n" >&2
+    exit 1
+  fi
+}
+
+# Prints the Authorization header; curl reads it through a file descriptor so the token stays out of its arguments.
+auth_header() {
+  printf 'Authorization: Bearer %s\n' "$ACCESS_TOKEN"
 }
 
 # Parse options
@@ -84,9 +105,12 @@ while getopts b:dfhk:p:r:u: flag; do
       KC_FORCE_ALL=true;;
     d)
       KC_DRY_RUN=true;;
-    h | *)
+    h)
       print_help
       exit 0;;
+    *)
+      print_help >&2
+      exit 1;;
   esac
 done
 
@@ -103,28 +127,23 @@ Settings:
 
 # Options validation
 if [ -z "$KC_HOST" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak host (flag -k)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak host (flag -k).\n" >&2
   exit 1
 elif [ -z "$KC_PASSWORD" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: user password (flag -p)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: user password (KC_PASSWORD or flag -p).\n" >&2
   exit 1
 elif [ -z "$KC_REALM" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak realm (flag -r)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak realm (flag -r).\n" >&2
   exit 1
 fi
 
 # Init
-ACCESS_TOKEN=$(curl -fsSL \
-  -X POST "$KC_HOST/realms/master/protocol/openid-connect/token" \
-  -d "client_id=admin-cli" \
-  -d "username=$KC_USERNAME" \
-  -d "password=$KC_PASSWORD" \
-  -d "grant_type=password" | jq -r '.access_token')
+refresh_token
 
 # Get total user count first
 TOTAL_USERS=$(curl -fsSL \
   -X GET "$KC_HOST/admin/realms/$KC_REALM/users/count" \
-  -H "Authorization: Bearer $ACCESS_TOKEN")
+  -H @<(auth_header))
 
 printf "\n${COLOR_BLUE}Total users in realm:${COLOR_OFF} $TOTAL_USERS\n"
 
@@ -152,17 +171,12 @@ while true; do
   printf "\n${COLOR_BLUE}Fetching users ${FIRST}-${BATCH_END}...${COLOR_OFF}\n"
   
   # Refresh token before each batch to avoid expiration
-  ACCESS_TOKEN=$(curl -fsSL \
-    -X POST "$KC_HOST/realms/master/protocol/openid-connect/token" \
-    -d "client_id=admin-cli" \
-    -d "username=$KC_USERNAME" \
-    -d "password=$KC_PASSWORD" \
-    -d "grant_type=password" | jq -r '.access_token')
+  refresh_token
   
   USERS=$(curl -fsSL \
     -X GET "$KC_HOST/admin/realms/$KC_REALM/users?first=$FIRST&max=$KC_BATCH_SIZE" \
     -H "Content-Type: application/json" \
-    -H "Authorization: Bearer $ACCESS_TOKEN")
+    -H @<(auth_header))
   
   # Check if curl succeeded and returned valid JSON
   if [ -z "$USERS" ] || [ "$USERS" = "null" ]; then
@@ -194,7 +208,7 @@ while true; do
         curl -fsSL \
           -X PUT "$KC_HOST/admin/realms/$KC_REALM/users/$USER_ID" \
           -H "Content-Type: application/json" \
-          -H "Authorization: Bearer $ACCESS_TOKEN" \
+          -H @<(auth_header) \
           -d '{"requiredActions": ["TERMS_AND_CONDITIONS"]}'
       else
         printf "  ${COLOR_BLUE}[DRY RUN]${COLOR_OFF} Would set requiredActions to [TERMS_AND_CONDITIONS]\n"
@@ -211,7 +225,7 @@ while true; do
         curl -fsSL \
           -X PUT "$KC_HOST/admin/realms/$KC_REALM/users/$USER_ID" \
           -H "Content-Type: application/json" \
-          -H "Authorization: Bearer $ACCESS_TOKEN" \
+          -H @<(auth_header) \
           -d "{\"requiredActions\": $NEW_ACTIONS}"
       else
         printf "  ${COLOR_BLUE}[DRY RUN]${COLOR_OFF} Would set requiredActions to %s\n" "$NEW_ACTIONS"

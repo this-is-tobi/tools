@@ -13,7 +13,7 @@ COLOR_YELLOW='\033[0;33m'
 KC_USERNAME="admin"
 KC_BATCH_SIZE=500
 KC_HOST=""
-KC_PASSWORD=""
+KC_PASSWORD="${KC_PASSWORD:-}"
 KC_REALM=""
 
 # Script helper
@@ -22,7 +22,7 @@ The purpose of this script is to check how many users have accepted terms and co
 
 Available flags:
   -k    Keycloak host.
-  -p    Keycloak password.
+  -p    Keycloak password (or KC_PASSWORD environment variable).
   -r    Keycloak realm where to list users.
   -u    Keycloak username.
         Default: '$KC_USERNAME'.
@@ -31,9 +31,9 @@ Available flags:
   -h    Print script help.
 
 Example:
+  read -rsp 'Password: ' KC_PASSWORD && export KC_PASSWORD
   ./keycloak-check-tac.sh \\
     -k 'http://localhost:8080' \\
-    -p 'admin' \\
     -r 'my-realm' \\
     -u 'admin'
 "
@@ -41,6 +41,28 @@ Example:
 # Functions
 print_help() {
   printf "$TEXT_HELPER"
+}
+
+# The password is read by curl from stdin, never from its arguments.
+get_token() {
+  printf '%s' "$KC_PASSWORD" | curl -fsSL \
+    -X POST "$KC_HOST/realms/master/protocol/openid-connect/token" \
+    --data-urlencode "client_id=admin-cli" \
+    --data-urlencode "username=$KC_USERNAME" \
+    --data-urlencode "password@-" \
+    --data-urlencode "grant_type=password" | jq -r '.access_token // empty'
+}
+
+refresh_token() {
+  if ! ACCESS_TOKEN="$(get_token)" || [ -z "$ACCESS_TOKEN" ]; then
+    printf "\n${COLOR_RED}Error.${COLOR_OFF} Failed to get an access token.\n" >&2
+    exit 1
+  fi
+}
+
+# Prints the Authorization header; curl reads it through a file descriptor so the token stays out of its arguments.
+auth_header() {
+  printf 'Authorization: Bearer %s\n' "$ACCESS_TOKEN"
 }
 
 # Parse options
@@ -56,9 +78,12 @@ while getopts b:hk:p:r:u: flag; do
       KC_USERNAME=${OPTARG};;
     b)
       KC_BATCH_SIZE=${OPTARG};;
-    h | *)
+    h)
       print_help
       exit 0;;
+    *)
+      print_help >&2
+      exit 1;;
   esac
 done
 
@@ -73,28 +98,23 @@ Settings:
 
 # Options validation
 if [ -z "$KC_HOST" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak host (flag -k)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak host (flag -k).\n" >&2
   exit 1
 elif [ -z "$KC_PASSWORD" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: user password (flag -p)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: user password (KC_PASSWORD or flag -p).\n" >&2
   exit 1
 elif [ -z "$KC_REALM" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak realm (flag -r)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak realm (flag -r).\n" >&2
   exit 1
 fi
 
 # Init
-ACCESS_TOKEN=$(curl -fsSL \
-  -X POST "$KC_HOST/realms/master/protocol/openid-connect/token" \
-  -d "client_id=admin-cli" \
-  -d "username=$KC_USERNAME" \
-  -d "password=$KC_PASSWORD" \
-  -d "grant_type=password" | jq -r '.access_token')
+refresh_token
 
 # Get total count first
 TOTAL=$(curl -fsSL \
   -X GET "$KC_HOST/admin/realms/$KC_REALM/users/count" \
-  -H "Authorization: Bearer $ACCESS_TOKEN")
+  -H @<(auth_header))
 
 printf "\n${COLOR_BLUE}Total users in realm:${COLOR_OFF} $TOTAL\n"
 printf "Counting users with T&C acceptance (this may take a while for large realms)...\n"
@@ -113,16 +133,11 @@ while [ $FIRST -lt $TOTAL ]; do
   printf "${COLOR_BLUE}Processing users ${FIRST}-${BATCH_END}...${COLOR_OFF}\n"
   
   # Refresh token before each batch to avoid expiration
-  ACCESS_TOKEN=$(curl -fsSL \
-    -X POST "$KC_HOST/realms/master/protocol/openid-connect/token" \
-    -d "client_id=admin-cli" \
-    -d "username=$KC_USERNAME" \
-    -d "password=$KC_PASSWORD" \
-    -d "grant_type=password" | jq -r '.access_token')
+  refresh_token
   
   BATCH=$(curl -fsSL \
     -X GET "$KC_HOST/admin/realms/$KC_REALM/users?first=$FIRST&max=$KC_BATCH_SIZE" \
-    -H "Authorization: Bearer $ACCESS_TOKEN")
+    -H @<(auth_header))
   
   BATCH_ACCEPTED=$(echo "$BATCH" | jq '[.[] | select(.attributes.terms_and_conditions)] | length')
   BATCH_PENDING=$(echo "$BATCH" | jq '[.[] | select(.requiredActions // [] | any(. == "TERMS_AND_CONDITIONS"))] | length')
