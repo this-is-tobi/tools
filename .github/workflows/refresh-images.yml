@@ -25,6 +25,10 @@ on:
         type: boolean
         default: false
 
+# Nothing inherits the repository's default token permissions: every job names
+# the scopes it uses, so widening the default never silently reaches a job.
+permissions: {}
+
 # Serialized: two runs would race to commit the same marker files, and the
 # loser's push is rejected. Queued rather than cancelled so a manual refresh
 # started behind the monthly one still lands.
@@ -35,6 +39,10 @@ concurrency:
 jobs:
   refresh:
     name: Touch refresh markers
+    # The markers are computed against, and committed on top of, the ref the run
+    # starts from. Dispatched from another branch, that branch's unmerged
+    # commits would ride along into main.
+    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-26.04
     permissions:
       contents: write

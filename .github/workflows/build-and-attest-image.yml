@@ -97,6 +97,9 @@ on:
         description: Normalized image name (lowercase, registry-compatible)
         value: ${{ jobs.build.outputs.image }}
 
+# Each job below names the scopes it uses; the caller's grant caps them.
+permissions: {}
+
 jobs:
   build:
     uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@80dd0214fc1657cfb8740fc93d89ce935ca27404 # v0

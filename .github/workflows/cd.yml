@@ -6,6 +6,10 @@ on:
     - main
   workflow_dispatch:
 
+# Nothing inherits the repository's default token permissions: every job names
+# the scopes it uses, so widening the default never silently reaches a job.
+permissions: {}
+
 # Serialized: release-please reconciles the state of every release PR on each
 # run, so overlapping runs on a burst of merges fight over the same PRs.
 # Queued rather than cancelled - cancelling could drop the fallback build dispatch
@@ -16,6 +20,10 @@ concurrency:
 
 jobs:
   release:
+    # release-please tags and releases whatever the ref it runs on says, with a
+    # token that can push. A dispatch from another branch would cut releases
+    # from unreviewed history, so it only ever runs for main.
+    if: ${{ github.ref == 'refs/heads/main' }}
     uses: this-is-tobi/github-workflows/.github/workflows/release-app.yml@80dd0214fc1657cfb8740fc93d89ce935ca27404 # v0
     permissions:
       contents: write
@@ -43,11 +51,14 @@ jobs:
     # With an App token, release-please's tag pushes trigger build-images.yml's own
     # `push: tags:` natively, making this dispatch redundant - so it only runs as a
     # fallback for whatever GITHUB_TOKEN can't trigger on its own. If the App is ever
-    # removed or its credentials expire without anyone noticing, this is what keeps
-    # images building instead of silently stopping.
+    # removed or its credentials expire without anyone noticing, this is what still
+    # starts build-images.yml - whose builds then fail loudly, since they need the
+    # App for their read-only token - instead of releases silently never building.
     - name: Dispatch build-images.yml
       if: ${{ env.HAS_APP_AUTH != 'true' }}
       env:
         GH_TOKEN: ${{ github.token }}
+      # The runner's own GITHUB_* variables rather than `${{ }}`, which would be
+      # pasted into the script before the shell parses it.
       run: |
-        gh workflow run build-images.yml --repo ${{ github.repository }} --ref ${{ github.ref_name }}
+        gh workflow run build-images.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME"
