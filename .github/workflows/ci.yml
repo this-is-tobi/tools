@@ -10,7 +10,6 @@ on:
     - closed
     branches:
     - main
-  workflow_dispatch:
 
 # Nothing inherits the repository's default token permissions: every job names
 # the scopes it uses, so widening the default never silently reaches a job.
@@ -23,6 +22,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lint-workflows:
+    name: Lint workflows
+    # Runs on drafts too: it is cheap, and a broken workflow is better found
+    # before the pull request is marked ready.
+    if: ${{ github.event.action != 'closed' }}
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    steps:
+    - name: Checks-out repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+
+    # Schema, expression and context checks, plus shellcheck over every `run:`
+    # block (the image ships shellcheck). Both linters run from their release
+    # images pinned by digest - a tag can be repointed, a digest cannot.
+    - name: Run actionlint
+      uses: docker://rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+      with:
+        args: -color
+
+    # Security audit: template injection, persisted credentials, excessive
+    # permissions, unpinned references, dangerous triggers. The read-only job
+    # token turns on the online audits too (known-vulnerable actions, impostor
+    # commits, refs that disagree with their version comment). Accepted
+    # findings live in .github/zizmor.yml.
+    - name: Run zizmor
+      uses: docker://ghcr.io/zizmorcore/zizmor:1.30.1@sha256:a2eb396d886c053073405c7a980f2139ba2248ec172243cfa3841e57196e8101
+      env:
+        GH_TOKEN: ${{ github.token }}
+      with:
+        args: --format=github .
+
   lint-commits:
     if: ${{ github.event.action != 'closed' && !github.event.pull_request.draft }}
     uses: this-is-tobi/github-workflows/.github/workflows/lint-commits.yml@80dd0214fc1657cfb8740fc93d89ce935ca27404 # v0
@@ -255,6 +288,60 @@ jobs:
       # are allowlisted by value in .gitleaks.toml, so the scan is clean and a
       # twelfth finding means something.
       FAIL_ON_LEAKS: true
+
+  # The one check for main's branch ruleset to require. The image jobs are
+  # matrix legs named after whichever images a pull request touched, so they
+  # cannot be listed as required checks themselves, and a job skipped by its
+  # `if:` satisfies a required check. This one always runs on an open pull
+  # request and fails unless everything it waits on passed, or had nothing to
+  # do. A new pull request job belongs in `needs` below.
+  ci-status:
+    name: CI status
+    # always(), not !cancelled(): a superseded run must still report failure
+    # here, since a skipped check would pass for its commit.
+    if: ${{ always() && github.event.action != 'closed' }}
+    needs:
+    - lint-workflows
+    - lint-commits
+    - resolve-affected
+    - build-images
+    - build-templates
+    - test-images
+    - scan-images
+    - scan-config
+    - scan-secrets
+    runs-on: ubuntu-26.04
+    permissions: {}
+    steps:
+    - name: Check every pull request job
+      env:
+        DRAFT: ${{ github.event.pull_request.draft }}
+        RESULTS: ${{ toJSON(needs) }}
+      run: |
+        set -euo pipefail
+
+        # The jobs above skip drafts, and skipped would read as passed here.
+        if [ "$DRAFT" = "true" ]; then
+          echo "::error::Draft pull request: its checks did not run. Mark it ready for review to run them."
+          exit 1
+        fi
+
+        # These run on every ready pull request, so only success counts. The
+        # image and template jobs are skipped when the pull request touches
+        # none, which is the one legitimate skip.
+        FAILED=$(jq -r '
+          ["lint-workflows", "lint-commits", "resolve-affected", "scan-config", "scan-secrets"] as $always
+          | to_entries[]
+          | select(.value.result != "success" and (.value.result != "skipped" or (.key | IN($always[]))))
+          | "\(.key): \(.value.result)"
+        ' <<< "$RESULTS")
+
+        if [ -n "$FAILED" ]; then
+          echo "::error::Some pull request jobs did not pass:"
+          echo "$FAILED"
+          exit 1
+        fi
+        echo "Every pull request job passed or had nothing to do."
 
   resolve-active:
     name: Resolve active images
