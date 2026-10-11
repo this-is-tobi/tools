@@ -192,7 +192,9 @@ The pinned digest is always the **index (manifest-list) digest**, not a per-arch
 
 ### Scheduled dependency refresh
 
-Digest pinning covers the base OS packages, but not everything in these images comes from the base. [`refresh-images.yml`](../.github/workflows/refresh-images.yml) runs monthly, touches a `.refresh` marker file inside each active image's directory, and pushes one `build(docker): scheduled dependency refresh` commit. That's a real, path-scoped commit, so release-please cuts a genuine patch release from it.
+Digest pinning covers the base OS packages, but not everything in these images comes from the base. [`refresh-images.yml`](../.github/workflows/refresh-images.yml) runs monthly, touches a `.refresh` marker file inside each active image's directory, and opens a pull request from the `refresh-images` branch carrying one `build(docker): scheduled dependency refresh` commit. That's a real, path-scoped commit, so once merged release-please cuts a genuine patch release from it.
+
+The commit is created through the GitHub API with the repository's GitHub App token, not pushed with git: GitHub signs commits an App creates that way, and a pull request opened by the App (unlike one opened with `GITHUB_TOKEN`) runs CI, so the refresh passes through the same checks and the same signed-commit rule as any other change to `main`. There is only ever one refresh pull request: each run rebuilds the branch from `main` and updates the open pull request instead of opening another, so re-running the workflow is also how to rebase it when `main` has moved. The workflow fails without `APP_CLIENT_ID`/`APP_PRIVATE_KEY`.
 
 What it still covers that a digest bump does not:
 

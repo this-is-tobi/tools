@@ -25,13 +25,14 @@ on:
         type: boolean
         default: false
 
+
 # Nothing inherits the repository's default token permissions: every job names
 # the scopes it uses, so widening the default never silently reaches a job.
 permissions: {}
 
-# Serialized: two runs would race to commit the same marker files, and the
-# loser's push is rejected. Queued rather than cancelled so a manual refresh
-# started behind the monthly one still lands.
+# Serialized: two runs would race to rewrite the same branch and pull request.
+# Queued rather than cancelled so a manual refresh started behind the monthly
+# one still lands.
 concurrency:
   group: refresh-images
   cancel-in-progress: false
@@ -44,12 +45,35 @@ jobs:
     # commits would ride along into main.
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-26.04
+    # Read-only: the commit, the branch and the pull request are all written
+    # with the App token minted below, not with this job's GITHUB_TOKEN.
     permissions:
-      contents: write
+      contents: read
+      # The published-date lookup in "Touch refresh markers"
       packages: read
+    env:
+      # `secrets` is not available in a step-level `if`, but it is here.
+      HAS_APP_AUTH: ${{ secrets.APP_CLIENT_ID != '' && secrets.APP_PRIVATE_KEY != '' }}
+      BRANCH: refresh-images
+      COMMIT_MESSAGE: "build(docker): scheduled dependency refresh"
     steps:
+    # The refresh lands as a pull request built through the API with the App
+    # token, and neither half works with GITHUB_TOKEN: a pull request it opens
+    # never runs CI, and a commit it pushes is unsigned, which a main ruleset
+    # requiring signed commits and passing checks refuses. Fail here rather
+    # than half-way through.
+    - name: Validate credentials
+      run: |
+        if [ "$HAS_APP_AUTH" != "true" ]; then
+          echo "::error::refresh-images.yml needs the APP_CLIENT_ID and APP_PRIVATE_KEY secrets: the refresh pull request is opened as the GitHub App so that its CI runs and its commit is signed."
+          exit 1
+        fi
+
     - name: Checks-out repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        # Nothing is pushed with git: the commit is created through the API.
+        persist-credentials: false
 
     - name: Touch refresh markers
       id: touch
@@ -80,12 +104,12 @@ jobs:
         REFRESHED=0
         SKIPPED=0
 
+        # Written once and read twice: the run summary and the pull request body.
+        REPORT="$RUNNER_TEMP/refresh-report.md"
         {
-          echo "## Scheduled dependency refresh"
-          echo
           echo "| Image | Published | Action |"
           echo "| --- | --- | --- |"
-        } >> "$GITHUB_STEP_SUMMARY"
+        } > "$REPORT"
 
         while IFS= read -r ROW; do
           NAME=$(echo "$ROW" | jq -r '.name')
@@ -110,7 +134,7 @@ jobs:
               PUBLISHED_TS=$(date -u -d "$PUBLISHED" +%s 2>/dev/null || true)
               if [ -n "$PUBLISHED_TS" ] && [ "$PUBLISHED_TS" -gt "$CUTOFF" ]; then
                 echo "skip     ${NAME} (published ${PUBLISHED})"
-                echo "| \`${NAME}\` | ${PUBLISHED} | skipped, rebuilt within ${MAX_AGE_DAYS} days |" >> "$GITHUB_STEP_SUMMARY"
+                echo "| \`${NAME}\` | ${PUBLISHED} | skipped, rebuilt within ${MAX_AGE_DAYS} days |" >> "$REPORT"
                 SKIPPED=$((SKIPPED + 1))
                 continue
               fi
@@ -118,7 +142,7 @@ jobs:
           fi
 
           echo "refresh  ${NAME}"
-          echo "| \`${NAME}\` | ${PUBLISHED:-unknown} | refreshed |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| \`${NAME}\` | ${PUBLISHED:-unknown} | refreshed |" >> "$REPORT"
           date -u +%Y-%m-%dT%H:%M:%SZ > "${CTX}/.refresh"
           REFRESHED=$((REFRESHED + 1))
         done < <(echo "$SELECTED" | jq -c '.[]')
@@ -128,16 +152,92 @@ jobs:
         {
           echo
           echo "${REFRESHED} refreshed, ${SKIPPED} skipped (threshold: ${MAX_AGE_DAYS} days)."
+        } >> "$REPORT"
+
+        {
+          echo "## Scheduled dependency refresh"
+          echo
+          cat "$REPORT"
         } >> "$GITHUB_STEP_SUMMARY"
 
-    - name: Commit and push
+        echo "refreshed=${REFRESHED}" >> "$GITHUB_OUTPUT"
+
+    # Scoped to this repository and to what the next step writes: a blob/tree/
+    # commit/ref (contents) and the pull request. A mint without the
+    # permission-* narrowing inherits every permission the installation holds.
+    - name: Generate GitHub App token
+      id: app-token
+      if: ${{ steps.touch.outputs.refreshed != '0' }}
+      uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+      with:
+        client-id: ${{ secrets.APP_CLIENT_ID }}
+        private-key: ${{ secrets.APP_PRIVATE_KEY }}
+        permission-contents: write
+        permission-pull-requests: write
+
+    # The commit is created through the REST API rather than with git: GitHub
+    # signs a commit an App creates that way, as long as no author, committer
+    # or signature is supplied, so it satisfies a signed-commits rule on main.
+    # The branch is rebuilt from the checked-out main on every run and the pull
+    # request reused, so there is only ever one refresh pull request, holding
+    # exactly one commit; anything pushed to the branch by hand is discarded.
+    - name: Open or update the refresh pull request
+      if: ${{ steps.touch.outputs.refreshed != '0' }}
+      env:
+        GH_TOKEN: ${{ steps.app-token.outputs.token }}
       run: |
-        git config user.name github-actions[bot]
-        git config user.email github-actions[bot]@users.noreply.github.com
+        set -euo pipefail
+
         git add -- 'docker/utils/*/.refresh'
-        if ! git diff --cached --quiet; then
-          git commit -m "build(docker): scheduled dependency refresh"
-          git push
+        CHANGED=$(git diff --cached --name-only)
+        if [ -z "$CHANGED" ]; then
+          echo "No marker changed, nothing to propose"
+          exit 0
+        fi
+
+        BASE_SHA=$(git rev-parse HEAD)
+        BASE_TREE=$(git rev-parse 'HEAD^{tree}')
+        TREE=$(jq -n --arg base "$BASE_TREE" '{base_tree: $base, tree: []}')
+        while IFS= read -r FILE; do
+          TREE=$(jq --arg path "$FILE" --rawfile content "$FILE" \
+            '.tree += [{path: $path, mode: "100644", type: "blob", content: $content}]' <<< "$TREE")
+        done <<< "$CHANGED"
+
+        TREE_SHA=$(gh api --method POST "repos/${GITHUB_REPOSITORY}/git/trees" --input - --jq '.sha' <<< "$TREE")
+        COMMIT_SHA=$(jq -n --arg message "$COMMIT_MESSAGE" --arg tree "$TREE_SHA" --arg parent "$BASE_SHA" \
+            '{message: $message, tree: $tree, parents: [$parent]}' \
+          | gh api --method POST "repos/${GITHUB_REPOSITORY}/git/commits" --input - --jq '.sha')
+        echo "Created ${COMMIT_SHA} on top of ${BASE_SHA}"
+
+        # Any failure of the lookup lands in the create branch, which then fails
+        # on an existing ref rather than silently skipping the update.
+        if gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${BRANCH}" --silent 2> /dev/null; then
+          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/git/refs/heads/${BRANCH}" \
+            -f sha="$COMMIT_SHA" -F force=true --silent
         else
-          echo "No changes to commit"
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+            -f ref="refs/heads/${BRANCH}" -f sha="$COMMIT_SHA" --silent
+        fi
+
+        BODY="$RUNNER_TEMP/refresh-body.md"
+        {
+          echo "Scheduled dependency refresh from \`refresh-images.yml\`. Merging it cuts a patch release for every image marked refreshed below, which rebuilds it with current packages."
+          echo
+          cat "$RUNNER_TEMP/refresh-report.md"
+          echo
+          echo "The workflow rebuilds this branch from \`${GITHUB_REF_NAME}\` on every run and updates this pull request, so commits pushed here by hand are discarded. If \`${GITHUB_REF_NAME}\` moves before this merges, re-run the workflow to rebase it."
+        } > "$BODY"
+
+        PR_NUMBER=$(gh api --method GET "repos/${GITHUB_REPOSITORY}/pulls" \
+          -f head="${GITHUB_REPOSITORY_OWNER}:${BRANCH}" -f base="$GITHUB_REF_NAME" -f state=open \
+          --jq '.[0].number // empty')
+        if [ -n "$PR_NUMBER" ]; then
+          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" \
+            -f title="$COMMIT_MESSAGE" -F "body=@${BODY}" --silent
+          echo "Updated pull request #${PR_NUMBER}"
+        else
+          PR_URL=$(gh api --method POST "repos/${GITHUB_REPOSITORY}/pulls" \
+            -f title="$COMMIT_MESSAGE" -f head="$BRANCH" -f base="$GITHUB_REF_NAME" -F "body=@${BODY}" \
+            --jq '.html_url')
+          echo "Opened ${PR_URL}"
         fi
