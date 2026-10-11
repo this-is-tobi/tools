@@ -114,20 +114,29 @@ jobs:
       matrix:
         image: ${{ fromJSON(needs.matrix.outputs.images) }}
     secrets:
-      # mise resolves every `@latest` through the GitHub API, which is 60
-      # requests/hour when unauthenticated and shared across every runner on the
-      # same egress IP - building the whole matrix at once exhausts it and the
-      # aqua/ubi backends fail with a 403 that mise treats as permanent. Passed
-      # as a build secret rather than a build arg so it never lands in an image
-      # layer; the Dockerfiles mount it at /run/secrets/github_token.
-      BUILD_SECRETS: |
-        github_token=${{ secrets.GITHUB_TOKEN }}
+      # Only used to mint the read-only build token below.
+      APP_CLIENT_ID: ${{ secrets.APP_CLIENT_ID }}
+      APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
     with:
       IMAGE_NAME: ghcr.io/this-is-tobi/tools/${{ matrix.image.name }}
       IMAGE_TAG: ${{ matrix.image.build.tag }}
       IMAGE_CONTEXT: ${{ matrix.image.build.context }}
       IMAGE_DOCKERFILE: ${{ matrix.image.build.dockerfile }}
       IMAGE_TARGET: ${{ matrix.image.build.target }}
+      # mise resolves its tools through the GitHub API, which is 60
+      # requests/hour when unauthenticated and shared across every runner on the
+      # same egress IP - building the whole matrix at once exhausts it and the
+      # aqua/ubi backends fail with a 403 that mise treats as permanent. So the
+      # build gets a token, as the BuildKit secret `github_token` the
+      # Dockerfiles mount at /run/secrets/github_token (a secret, not a build
+      # arg, so it never lands in an image layer).
+      #
+      # `app` mints it from the GitHub App narrowed to contents:read on this
+      # repository. Never the job token: everything the Dockerfiles execute can
+      # read the secret - install scripts, postinstall hooks, prebuilt binaries
+      # - and this job holds packages:write, so a compromised upstream could
+      # push over the images it is building.
+      BUILD_SECRET_GITHUB_TOKEN: app
       LATEST_TAG: ${{ matrix.image.build.latest == true }}
       TAG_MAJOR_AND_MINOR: true
       BUILD_AMD64: true
