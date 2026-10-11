@@ -5,11 +5,12 @@
     "helpers:pinGitHubActionDigests"
   ],
   "semanticCommits": "enabled",
+  "osvVulnerabilityAlerts": true,
   "customManagers": [
     {
       "customType": "regex",
       "description": "Track the pinned dotfiles commit that the debug/dev/dev-lite images clone. Without a pin the image content depends on whatever dotfiles HEAD is at build time, so builds aren't reproducible and a bad dotfiles push reaches every image built after it.",
-      "fileMatch": ["/^docker/utils/[^/]+/Dockerfile$/"],
+      "managerFilePatterns": ["/^docker/utils/[^/]+/Dockerfile$/"],
       "matchStrings": ["ARG DOTFILES_REF=(?<currentDigest>[0-9a-f]{40})"],
       "currentValueTemplate": "main",
       "depNameTemplate": "this-is-tobi/dotfiles",
@@ -18,17 +19,38 @@
     },
     {
       "customType": "regex",
-      "description": "Track version pins declared as build args. Renovate's dockerfile manager only reads FROM lines, so an ARG <NAME>_VERSION is invisible to it and would never move. Each pin declares its own datasource in a preceding '# renovate:' comment.",
-      "fileMatch": ["/^docker/utils/[^/]+/Dockerfile$/"],
+      "description": "Track version pins declared as build args, in any Dockerfile under docker/. Renovate's dockerfile manager only reads FROM lines, so an ARG <NAME>_VERSION is invisible to it and would never move. Each pin declares its own datasource in a preceding '# renovate:' comment.",
+      "managerFilePatterns": ["/^docker/.+/Dockerfile$/"],
       "matchStrings": [
-        "#\\s*renovate:\\s*datasource=(?<datasource>[a-z-]+?)\\s+depName=(?<depName>[^\\s]+?)(?:\\s+versioning=(?<versioning>[^\\s]+?))?(?:\\s+extractVersion=(?<extractVersion>[^\\s]+?))?\\s+ARG\\s+[A-Z_]+?_VERSION=(?<currentValue>[^\\s]+)"
+        "#\\s*renovate:\\s*datasource=(?<datasource>[a-z-]+?)\\s+depName=(?<depName>[^\\s]+?)(?:\\s+versioning=(?<versioning>[^\\s]+?))?(?:\\s+extractVersion=(?<extractVersion>[^\\s]+?))?\\s+ARG\\s+[A-Z0-9_]+?_VERSION=(?<currentValue>[^\\s]+)"
       ]
     }
   ],
   "packageRules": [
     {
-      "description": "Everything the customManagers pick up out of an active image's Dockerfile lands as 'build', matching how base image bumps are committed, so release-please cuts a patch release for the affected image. Listed first so the more specific rules below can refine it.",
-      "matchManagers": ["custom.regex"],
+      "description": "Supply-chain cooldown: a release is only proposed once it has been public for 3 days, which is usually long enough for a compromised or broken release of an action, a build-arg pin or a mise tool to be caught and pulled upstream before it reaches CI or an image. Security fixes bypass it. Updates whose datasource gives no release timestamp are held (listed under Pending Status Checks on the Dependency Dashboard, where they can be approved) unless a rule below exempts them.",
+      "matchManagers": ["github-actions", "custom.regex", "mise"],
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "The same cooldown for every container image: base images, docker:// actions and the image-backed build-arg pins.",
+      "matchDatasources": ["docker"],
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "Registries other than Docker Hub return no release timestamp, so the cooldown above would hold their updates forever - ghcr.io/actions/actions-runner, the base of the runner images, among them. They are raised without the age check instead.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/**", "gcr.io/**", "quay.io/**", "nvcr.io/**", "mcr.microsoft.com/**"],
+      "minimumReleaseAgeBehaviour": "timestamp-optional"
+    },
+    {
+      "description": "GitHub-hosted runner labels (runs-on) carry no release timestamp, and there is no third-party release to wait out.",
+      "matchDatasources": ["github-runners"],
+      "minimumReleaseAge": null
+    },
+    {
+      "description": "Everything the customManagers and the mise manager pick up out of an active image's directory lands as 'build', matching how base image bumps are committed, so release-please cuts a patch release for the affected image. Listed before the more specific rules below so they can refine it.",
+      "matchManagers": ["custom.regex", "mise"],
       "matchFileNames": ["docker/utils/**"],
       "semanticCommitType": "build"
     },
@@ -49,11 +71,12 @@
       "commitMessageTopic": "{{depName}} base image"
     },
     {
-      "description": "Every image cloning dotfiles moves together in a single PR - the pin exists to make builds reproducible, not to let images drift apart from one another. 'build' so each affected image still gets its patch release. Run shell/bump-dotfiles-ref.sh to do the same bump by hand.",
+      "description": "Every image cloning dotfiles moves together in a single PR - the pin exists to make builds reproducible, not to let images drift apart from one another. 'build' so each affected image still gets its patch release. Run shell/bump-dotfiles-ref.sh to do the same bump by hand. No cooldown: it is this owner's own repository, and git-refs has no release timestamp, so the cooldown would hold it forever.",
       "matchDepNames": ["this-is-tobi/dotfiles"],
       "groupName": "dotfiles pin",
       "commitMessageTopic": "dotfiles pin",
-      "semanticCommitType": "build"
+      "semanticCommitType": "build",
+      "minimumReleaseAge": null
     },
     {
       "description": "Deprecated legacy images are not released anymore, skip churn.",
