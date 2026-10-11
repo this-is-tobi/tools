@@ -112,6 +112,14 @@ while getopts hn:o:t:d:u:c:w:p:e:Pf:k flag; do
   esac
 done
 
+# Anything left after the flags is a mistake (getopts stops at the first non-option)
+shift $((OPTIND - 1))
+if [ $# -gt 0 ]; then
+  printf "Unexpected argument: '%s'.\n" "$1" >&2
+  print_help >&2
+  exit 1
+fi
+
 HOMEPAGE_URL="${HOMEPAGE_URL:-https://github.com/$OWNER}"
 
 # Settings
