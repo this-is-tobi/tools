@@ -196,6 +196,12 @@ Renovate only proposes a new version of an action, a container image, a build-ar
 
 Renovate also raises fixes for known vulnerabilities in npm and other language dependencies from the OSV database (`osvVulnerabilityAlerts`).
 
+### Batched and grouped updates
+
+- **mise toolchain** — every tool in a `docker/utils/<image>/mise.toml` and the `ghcr.io/jdx/mise` image the runner Dockerfiles take the mise binary from move together in one PR, opened at most weekly (Monday before 04:00 UTC). `act-runner` and `gh-runner` share one tool list and must move in step, every such PR rebuilds and releases both, and mise itself releases several times a week. GHCR gives no release date, so for the mise image the weekly batch is the only spacing it gets.
+- **`mise.lock`** — Renovate refreshes it in the same PR by running `mise lock` for the bumped tools in mise's safe mode (`MISE_SAFE=1`, mise 2026.7.12 or newer), which needs no `allowedUnsafeExecutions` and so works on the hosted Renovate app. It does not commit the npm/PyPI dependency graphs under `.mise/locks/` (today `yarn` and `yamllint`), so those tools get their own PR with a note to run `mise lock --platform linux-x64,linux-arm64` by hand and push the result; until then their locked build fails rather than installing something unlocked. `.mise/locks/` is in `ignorePaths`, so Renovate's npm and PyPI managers never open PRs against those generated files.
+- **Dockerfile frontend** — `# syntax=docker/dockerfile:1@sha256:...` bumps land in one PR for every Dockerfile as `chore`: the frontend changes how a Dockerfile is parsed, not what an image contains, so they release nothing and images pick them up at their next release.
+
 ### Scheduled dependency refresh
 
 Digest pinning covers the base OS packages, but not everything in these images comes from the base. [`refresh-images.yml`](../.github/workflows/refresh-images.yml) runs monthly, touches a `.refresh` marker file inside each active image's directory, and opens a pull request from the `refresh-images` branch carrying one `build(docker): scheduled dependency refresh` commit. That's a real, path-scoped commit, so once merged release-please cuts a genuine patch release from it.
@@ -314,7 +320,7 @@ Every PR, drafts included, also runs **Lint**: [actionlint](https://github.com/r
 
 ### GitHub API rate limit during builds
 
-Six of the eight images install their tooling through `mise`, which resolves every `@latest` against the GitHub API. Unauthenticated that is **60 requests/hour, shared across every runner on the same egress IP** — building the matrix exhausts it, and the `aqua`/`ubi` backends then fail with a `403` that mise treats as permanent rather than retryable. The dotfiles `mise_use` helper retries five times over 50s, which does not outlast a rate-limit window that resets in minutes.
+Every image that installs tooling through `mise` reaches the GitHub API during the build: `act-runner` and `gh-runner` install the exact versions pinned in their `mise.lock` but still fetch release assets (and check attestations) through `api.github.com`, and `debug`, `dev` and `dev-lite` resolve each tool's latest release through the dotfiles setup scripts. Unauthenticated that is **60 requests/hour, shared across every runner on the same egress IP** — building the matrix exhausts it, and the `aqua`/`ubi` backends then fail with a `403` that mise treats as permanent rather than retryable. The dotfiles `mise_use` helper retries five times over 50s, which does not outlast a rate-limit window that resets in minutes.
 
 So the build passes a token. It goes in as a **BuildKit build secret**, never a build arg, so it never reaches an image layer or `docker history`. `build-docker.yml` mints it from the repository's GitHub App, narrowed to `contents:read` on this repository:
 
