@@ -4,9 +4,9 @@ on:
   schedule:
   # Monthly on the 1st at 00:00 UTC - catches package updates that a pinned
   # base-image bump alone would never trigger: third-party apt repositories
-  # (docker.com, nvidia), the mise tools installed at @latest, and the window
-  # between upstream rebuilds of a base image where the distro repositories are
-  # already ahead of it.
+  # (docker.com, nvidia), the tools the dotfiles-based images install at
+  # @latest, and the window between upstream rebuilds of a base image where the
+  # distro repositories are already ahead of it.
   - cron: '0 0 1 * *'
   workflow_dispatch:
     inputs:

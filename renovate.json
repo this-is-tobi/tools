@@ -6,6 +6,17 @@
   ],
   "semanticCommits": "enabled",
   "osvVulnerabilityAlerts": true,
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "**/examples/**",
+    "**/__tests__/**",
+    "**/test/**",
+    "**/tests/**",
+    "**/__fixtures__/**",
+    "**/.mise/locks/**"
+  ],
   "customManagers": [
     {
       "customType": "regex",
@@ -69,6 +80,35 @@
       "semanticCommitType": "chore",
       "pinDigests": true,
       "commitMessageTopic": "{{depName}} base image"
+    },
+    {
+      "description": "The Dockerfile frontend (# syntax=docker/dockerfile:1@sha256:...) changes how a Dockerfile is parsed, not what an image contains, so its bumps land in one PR for every Dockerfile as 'chore' and release nothing; images pick it up at their next release.",
+      "matchDepNames": ["docker/dockerfile"],
+      "groupName": "Dockerfile frontend",
+      "commitMessageTopic": "Dockerfile frontend",
+      "semanticCommitType": "chore"
+    },
+    {
+      "description": "The runner images' mise toolchain - every tool in a docker/utils mise.toml - moves in one weekly PR. act-runner and gh-runner share one tool list and have to move together, and every such PR rebuilds and releases both. 'build' so release-please cuts those releases.",
+      "matchManagers": ["mise"],
+      "matchFileNames": ["docker/utils/**"],
+      "groupName": "mise toolchain",
+      "schedule": ["* 0-3 * * 1"],
+      "semanticCommitType": "build"
+    },
+    {
+      "description": "The mise binary itself (the ghcr.io/jdx/mise image the runner Dockerfiles copy it from) joins the same weekly PR: mise releases several times a week, and GHCR gives no release date for the cooldown to wait on, so the weekly batch is what spaces its bumps out.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/jdx/mise"],
+      "groupName": "mise toolchain",
+      "schedule": ["* 0-3 * * 1"]
+    },
+    {
+      "description": "Tools mise installs from npm or PyPI are locked by a dependency graph under .mise/locks/ that mise.lock points at - today npm:@yarnpkg/cli-dist and yamllint, whose short name maps to mise's pypi backend although Renovate looks it up on GitHub. Renovate refreshes mise.lock but commits nothing under .mise/locks/, so these bumps fail the locked build until the lock is refreshed by hand; kept out of the weekly group so they cannot hold the rest of the toolchain back.",
+      "matchManagers": ["mise"],
+      "matchDepNames": ["/^(npm|pypi|pipx):/", "yamllint"],
+      "groupName": "mise tools locked by dependency graph",
+      "prBodyNotes": ["This tool is locked by a dependency graph under `.mise/locks/`, which Renovate does not regenerate. Run `mise lock --platform linux-x64,linux-arm64` in each changed `docker/utils/<image>/` directory and push `mise.lock` and `.mise/locks/` to this branch (see docs/04-docker.md)."]
     },
     {
       "description": "Every image cloning dotfiles moves together in a single PR - the pin exists to make builds reproducible, not to let images drift apart from one another. 'build' so each affected image still gets its patch release. Run shell/bump-dotfiles-ref.sh to do the same bump by hand. No cooldown: it is this owner's own repository, and git-refs has no release timestamp, so the cooldown would hold it forever.",
