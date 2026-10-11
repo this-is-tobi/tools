@@ -19,6 +19,10 @@ on:
         type: boolean
         default: false
 
+# Nothing inherits the repository's default token permissions: every job names
+# the scopes it uses, so widening the default never silently reaches a job.
+permissions: {}
+
 concurrency:
   group: scan-images
   cancel-in-progress: true
@@ -34,6 +38,8 @@ jobs:
     steps:
     - name: Checks-out repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
 
     - name: Resolve images to scan
       id: resolve
@@ -59,7 +65,7 @@ jobs:
         fi
 
         echo "Images to scan: $SELECTED"
-        echo "NAMES=$SELECTED" >> $GITHUB_OUTPUT
+        echo "NAMES=$SELECTED" >> "$GITHUB_OUTPUT"
 
   scan:
     name: Scan ${{ matrix.name }}

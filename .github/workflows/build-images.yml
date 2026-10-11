@@ -16,6 +16,10 @@ on:
         type: boolean
         default: false
 
+# Nothing inherits the repository's default token permissions: every job names
+# the scopes it uses, so widening the default never silently reaches a job.
+permissions: {}
+
 # Serialized: cd.yml dispatches this on every push to main, so a burst of
 # merges can otherwise leave several runs pushing the same image:tag at once.
 # Note GitHub still cancels a *pending* run when a newer one queues, even with
@@ -31,12 +35,25 @@ concurrency:
 jobs:
   matrix:
     name: Resolve build matrix
+    # A run builds the Dockerfiles and the release-please manifest of the ref it
+    # was started on, then publishes and signs the result under the release
+    # version. Dispatched from any other branch - a feature branch, or an
+    # unmerged release PR's - it would publish unreviewed content as a release,
+    # and with FORCE overwrite one that already shipped. Only main and release
+    # tags publish; every later job needs this one, so they skip with it.
+    if: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      # `docker manifest inspect` below, to skip what is already published
+      packages: read
     outputs:
       images: ${{ steps.resolve.outputs.IMAGES }}
     steps:
     - name: Checks-out repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
 
     - name: Login to GitHub Container Registry
       uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
@@ -96,7 +113,7 @@ jobs:
         fi
 
         echo "Resolved images: $IMAGES"
-        echo "IMAGES=$IMAGES" >> $GITHUB_OUTPUT
+        echo "IMAGES=$IMAGES" >> "$GITHUB_OUTPUT"
 
   build:
     name: Build ${{ matrix.image.name }}

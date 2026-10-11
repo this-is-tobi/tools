@@ -350,6 +350,8 @@ Set `"deprecated": true` on its `ci/matrix.json` entry. This excludes it from Re
 
 `build-images.yml` also accepts `workflow_dispatch` with an optional comma-separated `IMAGES` input (leave empty to rebuild every active image). Useful for forcing a rebuild without waiting on a release-please PR.
 
+A dispatch only publishes when started from `main` or from a release tag (`<name>-v<version>`, which rebuilds that one release from its own commit); from any other branch the run skips. A run builds the Dockerfiles and the release-please manifest of the ref it starts on and signs the result as that release, so a feature branch — or an unmerged release PR's branch — would otherwise ship unreviewed content under a release version, and `FORCE` would overwrite one that already shipped. `cd.yml` and `refresh-images.yml` are restricted to `main` the same way.
+
 ### PR build checks
 
 `ci.yml` verifies buildability before anything merges, not just commit message format. On every non-draft PR it diffs changed files against `ci/matrix.json`'s `build.context` fields and builds (AMD64 only, no attestation) just the images actually touched, tagged `<image>:pr-<number>` and pushed to ghcr.io — a PR touching only docs or a single Dockerfile builds nothing or exactly that one image. `docker/templates/**` changes get a local `docker build` for both the `dev` and `prod` stages instead (no push — templates were never published by this pipeline, they're copy-paste starting points). PR-tagged images are deleted from ghcr.io once the PR closes (merged or not), via the shared `clean-cache.yml` workflow.

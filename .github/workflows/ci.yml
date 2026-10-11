@@ -12,6 +12,10 @@ on:
     - main
   workflow_dispatch:
 
+# Nothing inherits the repository's default token permissions: every job names
+# the scopes it uses, so widening the default never silently reaches a job.
+permissions: {}
+
 # One CI run per PR - a rapid push sequence otherwise leaves several runs
 # racing to push the same <image>:pr-<n> tag.
 concurrency:
@@ -30,6 +34,8 @@ jobs:
     name: Resolve affected images and templates
     if: ${{ github.event.action != 'closed' && !github.event.pull_request.draft }}
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     outputs:
       images: ${{ steps.resolve.outputs.IMAGES }}
       templates: ${{ steps.resolve.outputs.TEMPLATES }}
@@ -38,6 +44,8 @@ jobs:
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         fetch-depth: 0
+        # Only the local history is read; nothing here talks to the remote.
+        persist-credentials: false
 
     - name: Resolve affected images and templates
       id: resolve
@@ -54,7 +62,7 @@ jobs:
             | [.[] | select(.build.context as $ctx | $changed | any(startswith(($ctx | ltrimstr("./")) + "/")))]
           ')
         echo "Affected images: $IMAGES"
-        echo "IMAGES=$IMAGES" >> $GITHUB_OUTPUT
+        echo "IMAGES=$IMAGES" >> "$GITHUB_OUTPUT"
 
         # Templates aren't tracked in matrix.json (they're never built/published by
         # this pipeline), so their build-check matrix is declared inline. Both a
@@ -71,7 +79,7 @@ jobs:
             | [.[] | select(.context as $ctx | $changed | any(startswith($ctx + "/")))]
           ')
         echo "Affected templates: $TEMPLATES"
-        echo "TEMPLATES=$TEMPLATES" >> $GITHUB_OUTPUT
+        echo "TEMPLATES=$TEMPLATES" >> "$GITHUB_OUTPUT"
 
   build-images:
     name: Build ${{ matrix.image.name }} (PR check)
@@ -240,17 +248,21 @@ jobs:
     name: Resolve active images
     if: ${{ github.event.action == 'closed' }}
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
     outputs:
       names: ${{ steps.list.outputs.NAMES }}
     steps:
     - name: Checks-out repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
 
     - name: List active images
       id: list
       run: |
         NAMES=$(jq -c '[.[] | select(.deprecated != true) | .name]' ci/matrix.json)
-        echo "NAMES=$NAMES" >> $GITHUB_OUTPUT
+        echo "NAMES=$NAMES" >> "$GITHUB_OUTPUT"
 
   cleanup-cache:
     name: Delete PR build caches
