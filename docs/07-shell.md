@@ -106,47 +106,81 @@ chmod +x script.sh
 ./kube-generate-token.sh -n default -s my-service-account --kubeconfig
 ```
 
+### GitHub Repository Settings
+
+The GitHub scripts read the token from `GH_TOKEN`, then `GITHUB_TOKEN`, then `gh auth token`. The `-t` flag still works but exposes the token in the process list and the shell history.
+
+```sh
+# Merge strategy, Dependabot alerts, secret scanning, Actions policy (all actions allowed,
+# pinned to a full commit SHA), read-only workflow token, tag protection for every tag
+./github-configure-repo.sh -o owner -r repo -T '*'
+
+# Only allow GitHub-owned actions and some patterns instead
+./github-configure-repo.sh -o owner -r repo -a selected -L 'docker/*,owner/github-workflows/*'
+
+# Classic branch protection on 'main'
+./github-create-ruleset.sh -o owner -r repo -b main
+
+# Repository ruleset on the default branch: required checks, pull requests without
+# mandatory approval, repository admins may bypass
+./github-create-ruleset.sh -o owner -r repo -m ruleset -c 'ci / lint,ci / test' -A 0 -a false
+
+# Register a GitHub App (manifest flow: the browser opens, paste back the address GitHub redirects to)
+./github-create-app.sh -n my-app -o owner -p '{"contents":"read"}' -e push
+```
+
+`github-configure-repo.sh` leaves Dependabot security pull requests off by default (`-x true` turns them on when Renovate does not handle vulnerabilities). With `-H true` (the default), every action and reusable workflow must be referenced by a full commit SHA; it is not documented whether GitHub also enforces this for actions called from inside a composite action, so turn it off with `-H false` if a run fails on such an action. Both scripts update existing rulesets in place, so they can be run again.
+
 ### GitHub Container Registry
 
 ```sh
-# Delete image
-GITHUB_TOKEN=<token> ./delete-ghcr-image.sh -o owner -r repo -i image-name -t tag
+# Delete the version carrying exactly this tag and the untagged manifests it references
+# (-n: dry run; -f: also when the version carries other tags, such as 'latest')
+./delete-ghcr-image.sh -o owner -i image-name -t tag -n
 
-# Purge old tags (dry run)
-./purge-ghcr-tags.sh -o owner -r repo -i image-name -d 30 --dry-run
+# Purge versions older than a date (dry run first). Release tags ('latest', '1.2.3',
+# 'api-v1.2.3', ...), what they reference and their signatures are kept unless -a is given
+./purge-ghcr-tags.sh -u owner -i image-name -d 2024-01-01 -n
 ```
+
+Both scripts need `docker buildx` to list the manifests an image references (`docker login ghcr.io` for private images) and follow the API pagination.
 
 ### Keycloak Management
 
+The admin password is read from `KC_PASSWORD` (and the client secret of `keycloak-get-token.sh` from `KC_CLIENT_SECRET`); `-p` and `-s` still work but expose the value in the process list and the shell history. Passwords and tokens are handed to `curl` through stdin or a file descriptor, never as arguments.
+
 ```sh
+read -rsp 'Password: ' KC_PASSWORD && export KC_PASSWORD
+
 # Get access token
-./keycloak-get-token.sh -k https://keycloak.example.com -r my-realm -i client-id -s client-secret -u admin -p password
+read -rsp 'Client secret: ' KC_CLIENT_SECRET && export KC_CLIENT_SECRET
+./keycloak-get-token.sh -k https://keycloak.example.com -r my-realm -i client-id -u admin
 
 # List users
-./keycloak-list-users.sh -k https://keycloak.example.com -r my-realm -u admin -p password
+./keycloak-list-users.sh -k https://keycloak.example.com -r my-realm -u admin
 
-# Extract users to CSV
-./keycloak-extract-users.sh -k https://keycloak.example.com -r my-realm -u admin -p password -b 100 -o users.csv
+# Extract users to CSV (file created with mode 600, formula-like cells neutralized)
+./keycloak-extract-users.sh -k https://keycloak.example.com -r my-realm -u admin -b 100 -o users.csv
 
-# Add users
-./keycloak-add-users.sh -k https://keycloak.example.com -r my-realm -u admin -p password -d '[{"username":"user1","enabled":true}]'
+# Add users or clients: inline JSON, '@file' or '-' (stdin) when they carry credentials
+./keycloak-add-users.sh -k https://keycloak.example.com -r my-realm -u admin -d @users.json
+./keycloak-add-clients.sh -k https://keycloak.example.com -r my-realm -u admin -c @clients.json
 
 # Check terms acceptance
-./keycloak-check-tac.sh -k https://keycloak.example.com -r my-realm -u admin -p password
+./keycloak-check-tac.sh -k https://keycloak.example.com -r my-realm -u admin
 ```
 
 ### Development Tools
 
 ```sh
-# Clone subdirectory
+# Clone a subdirectory (or a single file): './output/dir' is created, nothing else is written
 ./clone-subdir.sh -u https://github.com/owner/repo -b main -s path/to/dir -o ./output
 
 # Generate GitHub Actions matrix
-./compose-to-matrix.sh -f docker-compose.yml -o matrix.json
+./compose-to-matrix.sh -f docker-compose.yml -n owner/repo -t 1.0.0 -a
 
-# Manage /etc/hosts
-sudo ./manage-etc-hosts.sh add example.local 192.168.1.100
-sudo ./manage-etc-hosts.sh remove example.local
+# Map a host name in /etc/hosts (uses sudo only when needed; -f targets another file)
+./manage-etc-hosts.sh -i 192.168.1.100 -n example.local
 ```
 
 ## Troubleshooting
@@ -175,10 +209,14 @@ kubectl auth can-i get pods --all-namespaces
 ### GitHub Token Issues
 
 ```sh
-# Set token as environment variable
-export GITHUB_TOKEN=ghp_your_token_here
+# Reuse the gh CLI session (nothing to export)
+gh auth login
 
-# Required scopes: repo, write:packages, admin:org (depending on script)
+# Or set the token in the environment without leaving it in the shell history
+read -rs GH_TOKEN && export GH_TOKEN
+
+# Required access: repository admin (configure-repo, create-ruleset),
+# read:packages + delete:packages (ghcr scripts)
 ```
 
 ## Best Practices
