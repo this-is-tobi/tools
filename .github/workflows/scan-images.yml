@@ -95,6 +95,9 @@ jobs:
       # context deadline and writes no report at all, so the image silently goes
       # unscanned while the faster ones report normally.
       TIMEOUT: 15m
-      # Reporting, not gating - the blocking check lives in ci.yml, scoped to
-      # CRITICAL findings on the image a PR just built.
+      # The findings accepted for the pull request gate, so the Security tab does
+      # not keep re-raising what was deliberately accepted there.
+      TRIVYIGNORES: .trivyignore.yaml
+      # Reporting, not gating - the blocking check is ci.yml's image scan, which
+      # fails a pull request on a fixable CRITICAL finding in the image it built.
       FAIL_ON_ERROR: false

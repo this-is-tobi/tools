@@ -197,18 +197,21 @@ jobs:
     with:
       IMAGE: ghcr.io/this-is-tobi/tools/${{ matrix.image.name }}:pr-${{ github.event.pull_request.number }}
       FORMAT: table
-      # Reporting, not gating. Every CRITICAL these images carry today is a Go
-      # stdlib or vendored-dependency CVE inside a third-party release binary -
-      # krew plugins, helm-docs, mkcert, mc, kustomize - and none is fixable
-      # here: `ignore-unfixed` does not filter them because Go shipped the fix,
-      # but the vulnerable artifact is somebody else's prebuilt binary that only
-      # a new upstream release can change. There are no CRITICAL OS-package
-      # findings at all. Gating on that would mean permanently red PRs waiting
-      # on other projects to cut releases, so the full table goes to the run
-      # summary instead and scan-images.yml carries the same picture weekly
-      # against what is actually published.
-      SEVERITY: CRITICAL,HIGH
-      FAIL_ON_ERROR: false
+      # Gating: a CRITICAL vulnerability with a fix available (scan-trivy.yml
+      # always passes `ignore-unfixed`), or a CRITICAL secret, fails the pull
+      # request. HIGH is left to scan-images.yml, which reports it weekly
+      # against what is actually published, so this table carries exactly what
+      # blocks.
+      #
+      # `ignore-unfixed` filters less than it looks on these images: a Go stdlib
+      # CVE counts as fixed once Go ships the fix, even inside a third-party
+      # prebuilt binary (krew plugins, helm-docs, mkcert, mc, kustomize) that
+      # only a new upstream release can change. Such a finding blocks until the
+      # tool is updated or removed, or is accepted in .trivyignore.yaml with a
+      # reason and a `paths` scope to that binary.
+      SEVERITY: CRITICAL
+      FAIL_ON_ERROR: true
+      TRIVYIGNORES: .trivyignore.yaml
       # Trivy's default is 5m per scan, not per file, and `dev` spends most of it
       # on a single large statically linked binary - at 5m it aborts with a
       # context deadline and writes no report at all, so the image silently goes

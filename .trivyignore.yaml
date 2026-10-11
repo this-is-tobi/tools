@@ -1,16 +1,24 @@
-# Trivy misconfiguration findings that are accepted rather than fixed.
+# Trivy findings that are accepted rather than fixed.
 #
-# The config scan in ci.yml is reporting-only, so this file exists to keep that
-# report readable: unfiltered it is ~90 lines of known-and-accepted noise, which
-# means nobody reads it and a real finding goes unnoticed.
+# Three scans read this file, each naming it through scan-trivy.yml's
+# TRIVYIGNORES input (Trivy auto-detects a plain `.trivyignore`, not this YAML
+# form):
+#
+# - ci.yml's config scan of `docker/` (the `misconfigurations` below). It is
+#   reporting-only, so this file keeps that report readable: unfiltered it is
+#   ~90 lines of known-and-accepted noise, which means nobody reads it and a
+#   real finding goes unnoticed. Paths are relative to the scan root (`docker`),
+#   not the repository root.
+# - ci.yml's scan of the image a pull request built, which fails the pull
+#   request on a CRITICAL finding, and scan-images.yml's weekly scan of the
+#   published images (the `secrets` and `vulnerabilities` sections). Paths are
+#   file paths inside the image; start them with `**/` so they match however
+#   Trivy roots them.
 #
 # Two rules for editing this file. Every entry states why, in terms of this
-# repository rather than in the abstract. And if a reason stops being true, the
-# entry gets deleted rather than reworded.
-#
-# Paths are relative to the scan root (`docker`), not the repository root.
-# Trivy auto-detects a plain `.trivyignore`, but not this YAML form - ci.yml
-# names it explicitly through scan-trivy.yml's TRIVYIGNORES input.
+# repository rather than in the abstract, and is scoped with `paths` to where
+# that reason holds, so the same finding anywhere else is still reported. And
+# if a reason stops being true, the entry gets deleted rather than reworded.
 
 misconfigurations:
 - id: DS-0010
@@ -35,6 +43,23 @@ misconfigurations:
     none - debug shipped `CMD echo "healthy"` and reported healthy for an image
     whose tooling had never installed. backup keeps a real one because it has
     something meaningful to assert.
+  paths:
+  - "utils/act-runner/Dockerfile"
+  - "utils/curl/Dockerfile"
+  - "utils/debug/Dockerfile"
+  - "utils/dev/Dockerfile"
+  - "utils/dev-lite/Dockerfile"
+  - "utils/gh-runner/Dockerfile"
+  - "utils/gh-runner-gpu/Dockerfile"
+
+- id: DS-0026
+  statement: >-
+    "No HEALTHCHECK defined", bun template. Its prod stage is distroless, with no
+    shell and no HTTP client to run a health check with; the template says to
+    wire an HTTP liveness/readiness probe at the orchestrator instead, in its
+    Dockerfile and in docs/04-docker.md.
+  paths:
+  - "templates/bun/Dockerfile"
 
 - id: DS-0029
   statement: >-
@@ -43,6 +68,13 @@ misconfigurations:
     ci/tests rather than by trimming. Removing packages from these apt lines is
     what dropped libatomic1 and shipped a runner whose node exited 127; the size
     saving does not justify re-running that experiment.
+  paths:
+  - "utils/act-runner/Dockerfile"
+  - "utils/debug/Dockerfile"
+  - "utils/dev/Dockerfile"
+  - "utils/dev-lite/Dockerfile"
+  - "utils/gh-runner/Dockerfile"
+  - "utils/gh-runner-gpu/Dockerfile"
 
 - id: KSV-0011
   statement: >-
@@ -99,6 +131,13 @@ misconfigurations:
 # verified here, so adding a securityContext risks publishing an example that
 # does not run. Harden from utils/backup/cronjob.yaml instead, which is the
 # supported one. These entries go away with the images.
+
+- id: DS-0026
+  statement: Deprecated image, retained unchanged pending removal.
+  paths:
+  - "utils/pg-backup/**"
+  - "utils/s3-backup/**"
+  - "utils/vault-backup/**"
 
 - id: KSV-0001
   statement: Deprecated image, retained unchanged pending removal.
@@ -218,3 +257,14 @@ misconfigurations:
   - "utils/pg-backup/**"
   - "utils/s3-backup/**"
   - "utils/vault-backup/**"
+
+secrets:
+- id: aws-access-key-id
+  statement: >-
+    ansible's community.aws collection, installed in the runner images and in
+    dev, documents this module with placeholder keys in its EXAMPLES block -
+    `ASIAXXXXXXXXXXXXXXXX`, `AKIA1EXAMPLE1EXAMPLE` - which match the key
+    pattern. Scoped to that one module, so a key-shaped value anywhere else in
+    an image still fails the pull request.
+  paths:
+  - "**/ansible_collections/community/aws/plugins/modules/sts_session_token.py"
