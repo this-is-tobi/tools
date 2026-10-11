@@ -4,57 +4,52 @@ set -euo pipefail
 
 # Colors
 COLOR_OFF='\033[0m'
-COLOR_BLUE='\033[0;34m'
 COLOR_RED='\033[0;31m'
 COLOR_GREEN='\033[0;32m'
 COLOR_YELLOW='\033[0;33m'
 
 # Defaults
-NAMESPACE="$(kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}')"
-CONTAINER_NAME=""
-API_KEY=""
+NAMESPACE=""
+API_KEY="${QDRANT_API_KEY:-}"
 COLLECTION_NAME=""
 EXPORT_DIR="./backups"
 DATE_TIME=$(date +"%Y%m%dT%H%M")
-DUMP_PATH=""
 DUMP_FILE=""
 MODE=""
 TARGET=""
 QDRANT_PORT="6333"
 NAMESPACE_ARG=""
-CONTAINER_ARG=""
-AUTH_HEADER=""
 POD_NAME=""
 SERVICE_NAME=""
-HTTP_CLIENT=""
-BASE_URL=""
-PATHS=(
-  /qdrant/storage
-  /tmp
-  /var/tmp
-)
+QDRANT_URL=""
+LOCAL_PORT=""
+PF_PID=""
+PF_LOG=""
+LOCAL_TMP_PATHS=()
 
 # Script helper
 TEXT_HELPER="
 This script aims to perform a snapshot on a kubernetes qdrant pod and copy locally the snapshot files, or the opposite, restore local snapshot files to a qdrant pod.
 
-NOTE: Qdrant containers have a built-in CLI at /qdrant/qdrant for snapshots:
-  - dump/restore (uses Qdrant CLI + kubectl cp)
-  - dump_forward/restore_forward (uses port forwarding + API calls)
+It forwards a random free local port to the pod and drives the Qdrant snapshot API with the local
+curl, one snapshot per collection.
 
 Available flags:
   -a    API key for Qdrant authentication (optional).
-  -c    Name of the pod's container.
+        Prefer the QDRANT_API_KEY environment variable: a -a value shows in the local process list.
+  -c    Name of the pod's container (unused, kept for compatibility).
   -r    Specific collection name to backup/restore (if not specified, all collections will be processed).
+        When restoring a single file, the collection to restore it into.
   -f    Local snapshot file or directory to restore (only needed with restore mode).
   -m    Mode to run. Available modes are:
-          dump              - Create snapshots using Qdrant CLI and copy them locally.
           dump_forward      - Create snapshots locally using port forward + API.
-          restore           - Restore local snapshots using Qdrant CLI.
           restore_forward   - Restore local snapshots using port forward + API.
           list              - List available collections.
+        The former 'dump' and 'restore' modes are no longer available: the Qdrant
+        '--storage-snapshot' flag they relied on only restores a snapshot when a server
+        starts, it cannot snapshot or restore a running pod.
   -n    Kubernetes namespace target where the qdrant pod is running.
-        Default: current namespace '$NAMESPACE'.
+        Default: the namespace of the current kubectl context.
   -o    Output directory where to export files.
         Default: '$EXPORT_DIR'.
   -p    Qdrant port (default: '$QDRANT_PORT').
@@ -62,23 +57,15 @@ Available flags:
   -h    Print script help.
 
 Example:
-  # CLI mode (like Vault - uses Qdrant CLI)
-  ./backup-kube-qdrant.sh \\
-    -m 'dump' \\
-    -t 'my-qdrant-pod' \\
-    -o './backups'
-
-  ./backup-kube-qdrant.sh \\
-    -m 'restore' \\
-    -t 'my-qdrant-pod' \\
-    -f './backups/20240101T1200-qdrant'
-
-  # Port forwarding mode (uses local curl + API)
-  ./backup-kube-qdrant.sh \\
+  QDRANT_API_KEY='my-api-key' ./backup-kube-qdrant.sh \\
     -m 'dump_forward' \\
     -t 'my-qdrant-pod' \\
-    -r 'my-collection' \\
-    -a 'my-api-key'
+    -r 'my-collection'
+
+  QDRANT_API_KEY='my-api-key' ./backup-kube-qdrant.sh \\
+    -m 'restore_forward' \\
+    -t 'my-qdrant-pod' \\
+    -f './backups/20240101T1200-qdrant'
 "
 
 # Functions
@@ -86,127 +73,106 @@ print_help() {
   printf "$TEXT_HELPER"
 }
 
-isRW() {
-  kubectl $NAMESPACE_ARG exec ${POD_NAME} -- sh -c "[ -w $1 ] && echo 'true' || echo 'false'"
+error () {
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} %s\n" "$1" >&2
 }
 
-hasHttpClient() {
-  if kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- which curl >/dev/null 2>&1; then
-    HTTP_CLIENT="curl"
-    return 0
-  elif kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- which wget >/dev/null 2>&1; then
-    HTTP_CLIENT="wget"
-    return 0
-  else
-    return 1
+cleanup () {
+  local STATUS=$?
+  if [ -n "$PF_PID" ]; then
+    kill "$PF_PID" 2>/dev/null || true
+    wait "$PF_PID" 2>/dev/null || true
   fi
+  if [ -n "$PF_LOG" ]; then
+    rm -f "$PF_LOG"
+  fi
+  if [ ${#LOCAL_TMP_PATHS[@]} -gt 0 ]; then
+    rm -rf "${LOCAL_TMP_PATHS[@]}"
+  fi
+  exit "$STATUS"
 }
 
 getPodFromService() {
   local SVC_NAME="$1"
   SELECTOR=$(kubectl $NAMESPACE_ARG get svc "$SVC_NAME" -o jsonpath='{.spec.selector}' | jq -r 'to_entries | map("\(.key)=\(.value)") | join(",")')
   if [[ -z "$SELECTOR" ]]; then
-    echo "No selector found for service $SVC_NAME"
+    echo "No selector found for service $SVC_NAME" >&2
     exit 1
   fi
   POD_NAME=$(kubectl $NAMESPACE_ARG get pod -l "$SELECTOR" -o jsonpath='{.items[0].metadata.name}')
   if [[ -z "$POD_NAME" ]]; then
-    echo "No pods found for selector '$SELECTOR' in namespace '$NAMESPACE'."
+    echo "No pods found for selector '$SELECTOR' in namespace '$NAMESPACE'." >&2
     exit 1
   else
     echo "$POD_NAME"
   fi
 }
 
-getCollections() {
-  local base_url="$1"
-  local auth_header="$2"
-  
-  if [ "$HTTP_CLIENT" = "curl" ]; then
-    kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- curl -s ${auth_header} "${base_url}/collections" | jq -r '.result.collections[].name' 2>/dev/null || echo ""
-  else
-    kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- wget -q -O- ${auth_header} "${base_url}/collections" | jq -r '.result.collections[].name' 2>/dev/null || echo ""
-  fi
-}
-
-createSnapshot() {
-  local base_url="$1"
-  local collection="$2"
-  local auth_header="$3"
-  
-  if [ "$HTTP_CLIENT" = "curl" ]; then
-    kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- curl -s -X POST ${auth_header} "${base_url}/collections/${collection}/snapshots"
-  else
-    kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- wget -q -O- --method=POST ${auth_header} "${base_url}/collections/${collection}/snapshots"
-  fi
-}
-
-getSnapshots() {
-  local base_url="$1"
-  local collection="$2"
-  local auth_header="$3"
-  
-  if [ "$HTTP_CLIENT" = "curl" ]; then
-    kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- curl -s ${auth_header} "${base_url}/collections/${collection}/snapshots" | jq -r '.result[].name' 2>/dev/null || echo ""
-  else
-    kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- wget -q -O- ${auth_header} "${base_url}/collections/${collection}/snapshots" | jq -r '.result[].name' 2>/dev/null || echo ""
-  fi
-}
-
-downloadSnapshot() {
-  local base_url="$1"
-  local collection="$2"
-  local snapshot="$3"
-  local auth_header="$4"
-  local output_path="$5"
-  
-  if [ "$HTTP_CLIENT" = "curl" ]; then
-    kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- curl -s ${auth_header} "${base_url}/collections/${collection}/snapshots/${snapshot}" -o "${output_path}"
-  else
-    kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- wget -q ${auth_header} "${base_url}/collections/${collection}/snapshots/${snapshot}" -O "${output_path}"
-  fi
-}
-
-uploadSnapshot() {
-  local base_url="$1"
-  local collection="$2"
-  local snapshot_path="$3"
-  local auth_header="$4"
-  
-  if [ "$HTTP_CLIENT" = "curl" ]; then
-    kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- curl -s -X PUT ${auth_header} "${base_url}/collections/${collection}/snapshots/upload" --data-binary "@${snapshot_path}"
-  else
-    echo "Snapshot upload not supported with wget. Use curl instead."
-    return 1
-  fi
-}
-
-hasQdrantCli() {
-  kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- test -x /qdrant/qdrant
-}
-
-checkDiskSpace () {
-  local PATH_TO_CHECK="$1"
-  local MIN_SPACE_MB=1024  # 1GB minimum for snapshots
-  
-  # Get available space in MB
-  AVAILABLE_SPACE=$(kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- df -BM "$PATH_TO_CHECK" | tail -1 | awk '{print $4}' | sed 's/M//')
-  
-  if [ "$AVAILABLE_SPACE" -lt "$MIN_SPACE_MB" ]; then
-    printf "\n${COLOR_YELLOW}Warning.${COLOR_OFF} Low disk space on ${PATH_TO_CHECK}: ${AVAILABLE_SPACE}MB available (minimum recommended: ${MIN_SPACE_MB}MB).\n"
-    printf "The snapshot might fail if the data is too large.\n\n"
-    printf "${COLOR_BLUE}Tip:${COLOR_OFF} Consider using 'dump_forward' mode instead, which dumps directly to your local machine\n"
-    printf "without requiring space in the container. Example:\n"
-    printf "  $0 -m dump_forward -t ${TARGET} -o ${EXPORT_DIR}\n\n"
-    read -p "Do you want to continue with 'dump' mode anyway? (y/N): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      printf "\n${COLOR_RED}Abort.${COLOR_OFF} Operation cancelled by user.\n"
+# Forwards a random free local port to the pod's Qdrant port, waits for the tunnel to listen and
+# sets QDRANT_URL, so requests never reach a Qdrant instance already running on this machine.
+startPortForward () {
+  local TRIES=0
+  PF_LOG="$(mktemp)"
+  kubectl ${NAMESPACE_ARG} port-forward --address 127.0.0.1 "pod/${POD_NAME}" ":${QDRANT_PORT}" > "$PF_LOG" 2>&1 &
+  PF_PID=$!
+  while true; do
+    LOCAL_PORT="$(sed -n 's/^Forwarding from 127\.0\.0\.1:\([0-9][0-9]*\) .*/\1/p' "$PF_LOG" | head -n 1)"
+    [ -n "$LOCAL_PORT" ] && break
+    if ! kill -0 "$PF_PID" 2>/dev/null || [ "$TRIES" -ge 30 ]; then
+      cat "$PF_LOG" >&2
+      error "Port forward to pod '${POD_NAME}' (port ${QDRANT_PORT}) did not start."
       exit 1
     fi
+    TRIES=$((TRIES + 1))
+    sleep 1
+  done
+  QDRANT_URL="http://127.0.0.1:${LOCAL_PORT}"
+  printf "Forwarding 127.0.0.1:%s to pod '%s' port %s.\n" "$LOCAL_PORT" "$POD_NAME" "$QDRANT_PORT"
+}
+
+# curl against the forwarded API, failing on HTTP errors. The api-key header is read from stdin
+# (-H @-) so the key never shows in curl's argument list.
+qcurl () {
+  if [ -n "$API_KEY" ]; then
+    printf 'api-key: %s\n' "$API_KEY" | curl -fsS -H @- "$@"
   else
-    printf "\n${COLOR_GREEN}Disk space check:${COLOR_OFF} ${AVAILABLE_SPACE}MB available on ${PATH_TO_CHECK}.\n"
+    curl -fsS "$@"
   fi
+}
+
+urlEncode () {
+  jq -rn --arg x "$1" '$x | @uri'
+}
+
+listCollections () {
+  qcurl "${QDRANT_URL}/collections" | jq -r '.result.collections[].name'
+}
+
+# Qdrant names snapshots '<collection>-<peer id>-<YYYY-MM-DD-HH-MM-SS>.snapshot' and dump_forward
+# saves them as '<collection>-<snapshot name>', so the collection is what precedes that suffix
+# (once, if dump_forward doubled it), not the text before the first dash.
+collectionFromFile () {
+  local NAME="${1%.snapshot}"
+  local SUFFIX_RE='^(.+)-[0-9]+-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}$'
+  local HALF
+  if [[ "$NAME" =~ $SUFFIX_RE ]]; then
+    NAME="${BASH_REMATCH[1]}"
+    HALF=$(( (${#NAME} - 1) / 2 ))
+    if [ $(( ${#NAME} % 2 )) -eq 1 ] && [ "${NAME:HALF:1}" = "-" ] && [ "${NAME:0:HALF}" = "${NAME:HALF+1}" ]; then
+      NAME="${NAME:0:HALF}"
+    fi
+  fi
+  printf '%s\n' "$NAME"
+}
+
+uploadSnapshot () {
+  local SNAPSHOT_FILE="$1"
+  local COLLECTION="$2"
+  printf "\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Restoring collection: %s (file: %s)\n" "$COLLECTION" "$SNAPSHOT_FILE"
+  # priority=snapshot makes the uploaded data win over what the collection currently holds
+  qcurl -X POST "${QDRANT_URL}/collections/$(urlEncode "$COLLECTION")/snapshots/upload?priority=snapshot" \
+    -F "snapshot=@${SNAPSHOT_FILE}"
+  echo
 }
 
 # Parse options
@@ -215,7 +181,7 @@ while getopts ha:c:r:f:m:n:o:p:t: flag; do
     a)
       API_KEY=${OPTARG};;
     c)
-      CONTAINER_NAME=${OPTARG};;
+      ;;
     r)
       COLLECTION_NAME=${OPTARG};;
     f)
@@ -230,25 +196,55 @@ while getopts ha:c:r:f:m:n:o:p:t: flag; do
       QDRANT_PORT=${OPTARG};;
     t)
       TARGET=${OPTARG};;
-    h | *)
+    h)
       print_help
       exit 0;;
+    *)
+      print_help >&2
+      exit 1;;
   esac
 done
 
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 # Init
-[[ ! -z "$NAMESPACE" ]] && NAMESPACE_ARG="--namespace=$NAMESPACE"
-[[ ! -z "$CONTAINER_NAME" ]] && CONTAINER_ARG="--container=$CONTAINER_NAME"
-[[ ! -z "$API_KEY" ]] && AUTH_HEADER="-H 'api-key: $API_KEY'"
-BASE_URL="http://localhost:${QDRANT_PORT}"
+if [ -z "$NAMESPACE" ]; then
+  NAMESPACE="$(kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}' 2>/dev/null || true)"
+fi
+[[ -n "$NAMESPACE" ]] && NAMESPACE_ARG="--namespace=$NAMESPACE"
+
+# Options validation
+if [ -z "$MODE" ]; then
+  error "Argument missing: mode (flag -m)."
+  exit 1
+elif [ "$MODE" = "dump" ] || [ "$MODE" = "restore" ]; then
+  error "Mode '$MODE' is no longer available: Qdrant's '--storage-snapshot' flag only restores a snapshot at server start, it cannot snapshot or restore a running pod. Use '${MODE}_forward' instead."
+  exit 1
+elif [ "$MODE" != "dump_forward" ] && [ "$MODE" != "restore_forward" ] && [ "$MODE" != "list" ]; then
+  error "Unknown mode '$MODE' (flag -m)."
+  exit 1
+elif [ -z "$TARGET" ]; then
+  error "Argument missing: target pod or service (flag -t)."
+  exit 1
+elif [ "$MODE" = "restore_forward" ] && [ -z "$DUMP_FILE" ]; then
+  error "Argument missing: dump file or directory (flag -f)."
+  exit 1
+elif [ "$MODE" = "restore_forward" ] && [ ! -e "$DUMP_FILE" ]; then
+  error "Dump file or directory '$DUMP_FILE' not found (flag -f)."
+  exit 1
+fi
 
 if [[ "$TARGET" == svc/* || "$TARGET" == service/* ]]; then
   SERVICE_NAME="${TARGET#*/}"
   POD_NAME=$(getPodFromService "$SERVICE_NAME")
   if [[ -z "$POD_NAME" ]]; then
-    echo "No pods found for service : $SERVICE_NAME"
+    echo "No pods found for service : $SERVICE_NAME" >&2
     exit 1
   fi
+elif [[ "$TARGET" == pod/* ]]; then
+  POD_NAME="${TARGET#*/}"
 else
   POD_NAME="$TARGET"
 fi
@@ -260,204 +256,118 @@ Settings:
   > EXPORT_DIR: ${EXPORT_DIR}
   > DUMP_FILE: ${DUMP_FILE}
   > COLLECTION_NAME: ${COLLECTION_NAME:-"all"}
-  > API_KEY: $(if [ -n "$API_KEY" ]; then printf "%*s" $(( ${#API_KEY} - 3 )) "" | tr " " "*"; echo "${API_KEY: -3}"; else echo "none"; fi)
+  > API_KEY: $([ -n "$API_KEY" ] && echo 'set' || echo 'not set')
   > NAMESPACE: ${NAMESPACE}
   > TARGET: ${TARGET}
   > POD_NAME: ${POD_NAME}
-  > CONTAINER_NAME: ${CONTAINER_NAME}
   > QDRANT_PORT: ${QDRANT_PORT}
 "
-
-# Options validation
-if [ -z "$MODE" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: mode (flag -m)".
-  exit 1
-elif [ -z "$TARGET" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: target pod or service (flag -t)".
-  exit 1
-elif [ "$MODE" = "restore" ] || [ "$MODE" = "restore_forward" ] && [ -z "$DUMP_FILE" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: dump file or directory (flag -f)".
-  exit 1
-fi
-
-# Check for dependencies based on mode
-if [ "$MODE" = "dump" ] || [ "$MODE" = "restore" ]; then
-  # CLI modes - check for Qdrant CLI and writable paths
-  if ! hasQdrantCli; then
-    printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Error: Qdrant CLI not found at /qdrant/qdrant in container.\n"
-    printf "${COLOR_YELLOW}Recommendation: Use port forwarding modes instead:${COLOR_OFF}\n"
-    printf "  - For backup: ./backup-kube-qdrant.sh -m dump_forward -t ${TARGET}\n"
-    printf "  - For restore: ./backup-kube-qdrant.sh -m restore_forward -t ${TARGET} -f <backup_file>\n\n"
-    exit 1
-  fi
-  
-  for P in ${PATHS[*]}; do
-    if [ "$(isRW $P)" = true ]; then
-      DUMP_PATH=$P
-      break
-    fi
-  done
-  if [ -z $DUMP_PATH ]; then
-    printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Error: Container filesystem is read-only for paths ${PATHS[*]}.\n\n"
-    exit 1
-  fi
-elif [ "$MODE" != "dump_forward" ] && [ "$MODE" != "restore_forward" ] && [ "$MODE" != "list" ]; then
-  # Legacy API modes - check for HTTP client
-  if ! hasHttpClient; then
-    printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Error: No HTTP client (curl or wget) found in container.\n"
-    printf "${COLOR_YELLOW}Recommendation: Use CLI or port forwarding modes instead:${COLOR_OFF}\n"
-    printf "  - For backup: ./backup-kube-qdrant.sh -m dump -t ${TARGET}\n"
-    printf "  - For backup: ./backup-kube-qdrant.sh -m dump_forward -t ${TARGET}\n"
-    printf "  - For restore: ./backup-kube-qdrant.sh -m restore -t ${TARGET} -f <backup_file>\n"
-    printf "  - For restore: ./backup-kube-qdrant.sh -m restore_forward -t ${TARGET} -f <backup_file>\n\n"
-    exit 1
-  fi
-fi
 
 # List collections
 if [ "$MODE" = "list" ]; then
   printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Listing collections.\n\n"
-  
-  set +e
-  kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5555:${QDRANT_PORT} &
-  sleep 2
-  
-  COLLECTIONS=$(curl -s ${AUTH_HEADER} "http://127.0.0.1:5555/collections" | jq -r '.result.collections[].name' 2>/dev/null)
-  
+
+  startPortForward
+  if ! COLLECTIONS=$(listCollections); then
+    error "Unable to list collections through the port forward."
+    exit 1
+  fi
+
   if [ -n "$COLLECTIONS" ]; then
     printf "${COLOR_GREEN}Available collections:${COLOR_OFF}\n"
     echo "$COLLECTIONS" | while read -r collection; do
       printf "  - %s\n" "$collection"
     done
   else
-    printf "${COLOR_YELLOW}No collections found or unable to connect.${COLOR_OFF}\n"
+    printf "${COLOR_YELLOW}No collections found.${COLOR_OFF}\n"
   fi
-  
-  kill %1 2>/dev/null || true
-
-# Create snapshots using Qdrant CLI and copy locally
-elif [ "$MODE" = "dump" ]; then
-  # Check available disk space in container
-  checkDiskSpace "$DUMP_PATH"
-
-  # Create output directory
-  [ ! -d "$EXPORT_DIR" ] && mkdir -p $EXPORT_DIR
-
-  # Set paths variables
-  BACKUP_DIR="${EXPORT_DIR}/${DATE_TIME}-qdrant"
-  SNAPSHOT_FILE="storage-snapshot.tar"
-  DESTINATION_DUMP="${BACKUP_DIR}/${SNAPSHOT_FILE}"
-  mkdir -p "$BACKUP_DIR"
-
-  printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Creating storage snapshot using Qdrant CLI.\n\n"
-  
-  # Create snapshot using Qdrant CLI
-  kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- /qdrant/qdrant --storage-snapshot "${DUMP_PATH}/${SNAPSHOT_FILE}"
-
-  # Copy snapshot locally
-  printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Copying snapshot locally (path: '${DESTINATION_DUMP}').\n\n"
-  kubectl ${NAMESPACE_ARG} cp ${POD_NAME}:${DUMP_PATH}/${SNAPSHOT_FILE} "${DESTINATION_DUMP}" ${CONTAINER_ARG}
-
-  # Clean up snapshot from pod
-  printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Cleaning up snapshot file from container.\n\n"
-  kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- rm -f "${DUMP_PATH}/${SNAPSHOT_FILE}"
-  printf "${COLOR_GREEN}Done.${COLOR_OFF} Snapshot file removed from container.\n"
 
 elif [ "$MODE" = "dump_forward" ]; then
   # Create output directory
-  [ ! -d "$EXPORT_DIR" ] && mkdir -p $EXPORT_DIR
-
-  # Set paths variables
   BACKUP_DIR="${EXPORT_DIR}/${DATE_TIME}-qdrant"
   mkdir -p "$BACKUP_DIR"
 
   printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Creating snapshots using port forward.\n\n"
-  
-  set +e
-  kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5555:${QDRANT_PORT} &
-  sleep 2
+
+  startPortForward
 
   # Get collections to backup
   if [ -n "$COLLECTION_NAME" ]; then
     COLLECTIONS="$COLLECTION_NAME"
-  else
-    COLLECTIONS=$(curl -s ${AUTH_HEADER} "http://127.0.0.1:5555/collections" | jq -r '.result.collections[].name' 2>/dev/null)
-    if [ -z "$COLLECTIONS" ]; then
-      printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Error: No collections found or unable to connect.\n\n"
-      kill %1 2>/dev/null || true
-      exit 1
-    fi
+  elif ! COLLECTIONS=$(listCollections); then
+    error "Unable to list collections through the port forward."
+    exit 1
+  fi
+  if [ -z "$COLLECTIONS" ]; then
+    error "No collections found."
+    exit 1
   fi
 
   # Create and download snapshots for each collection
-  for collection in $COLLECTIONS; do
-    printf "\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Processing collection: ${collection}\n"
-    
+  FAILED=()
+  while IFS= read -r collection; do
+    [ -n "$collection" ] || continue
+    printf "\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Processing collection: %s\n" "$collection"
+    COLLECTION_PATH="${QDRANT_URL}/collections/$(urlEncode "$collection")/snapshots"
+
     # Create snapshot
-    SNAPSHOT_RESULT=$(curl -s -X POST ${AUTH_HEADER} "http://127.0.0.1:5555/collections/${collection}/snapshots")
-    SNAPSHOT_NAME=$(echo "$SNAPSHOT_RESULT" | jq -r '.result.name' 2>/dev/null)
-    
-    if [ -z "$SNAPSHOT_NAME" ] || [ "$SNAPSHOT_NAME" = "null" ]; then
-      printf "${COLOR_RED}Error creating snapshot for collection: ${collection}${COLOR_OFF}\n"
+    SNAPSHOT_NAME=""
+    if SNAPSHOT_RESULT=$(qcurl -X POST "$COLLECTION_PATH"); then
+      SNAPSHOT_NAME=$(printf '%s' "$SNAPSHOT_RESULT" | jq -r '.result.name // empty' 2>/dev/null || true)
+    fi
+    if [ -z "$SNAPSHOT_NAME" ]; then
+      printf "${COLOR_RED}Error creating snapshot for collection: %s${COLOR_OFF}\n" "$collection" >&2
+      FAILED+=("$collection")
       continue
     fi
-    
-    # Download snapshot
+
+    # Download snapshot, under a temporary name until the download is complete
     LOCAL_SNAPSHOT="${BACKUP_DIR}/${collection}-${SNAPSHOT_NAME}"
-    printf "${COLOR_GREEN}Downloading snapshot: ${LOCAL_SNAPSHOT}${COLOR_OFF}\n"
-    curl -s ${AUTH_HEADER} "http://127.0.0.1:5555/collections/${collection}/snapshots/${SNAPSHOT_NAME}" -o "${LOCAL_SNAPSHOT}"
-  done
+    printf "${COLOR_GREEN}Downloading snapshot: %s${COLOR_OFF}\n" "$LOCAL_SNAPSHOT"
+    LOCAL_TMP_PATHS=("${LOCAL_SNAPSHOT}.partial")
+    if qcurl -o "${LOCAL_SNAPSHOT}.partial" "${COLLECTION_PATH}/$(urlEncode "$SNAPSHOT_NAME")"; then
+      mv "${LOCAL_SNAPSHOT}.partial" "$LOCAL_SNAPSHOT"
+    else
+      rm -f "${LOCAL_SNAPSHOT}.partial"
+      printf "${COLOR_RED}Error downloading snapshot for collection: %s${COLOR_OFF}\n" "$collection" >&2
+      FAILED+=("$collection")
+    fi
+    LOCAL_TMP_PATHS=()
+  done <<< "$COLLECTIONS"
 
-  kill %1 2>/dev/null || true
-
-# Restore snapshots using Qdrant CLI
-elif [ "$MODE" = "restore" ]; then
-  printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Restoring storage snapshot using Qdrant CLI.\n\n"
-
-  # Copy local snapshot into pod
-  DUMP_FILE_BASENAME="$(basename ${DUMP_FILE})"
-  printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Copy local snapshot file into container (path: '$DUMP_PATH/$DUMP_FILE_BASENAME').\n\n"
-  kubectl ${NAMESPACE_ARG} cp ${DUMP_FILE} ${POD_NAME}:${DUMP_PATH}/${DUMP_FILE_BASENAME} ${CONTAINER_ARG}
-
-  # Restore using Qdrant CLI
-  printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Restore storage snapshot.\n\n"
-  kubectl ${NAMESPACE_ARG} exec ${POD_NAME} ${CONTAINER_ARG} -- /qdrant/qdrant --storage-snapshot ${DUMP_PATH}/${DUMP_FILE_BASENAME} --force-snapshot
-
-  # Clean up
-  kubectl $NAMESPACE_ARG exec ${POD_NAME} ${CONTAINER_ARG} -- rm -f "${DUMP_PATH}/${DUMP_FILE_BASENAME}"
+  if [ ${#FAILED[@]} -gt 0 ]; then
+    error "Backup incomplete, failed collections: ${FAILED[*]}."
+    exit 1
+  fi
 
 elif [ "$MODE" = "restore_forward" ]; then
   printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Restoring snapshots using port forward.\n\n"
-  
-  set +e
-  kubectl ${NAMESPACE_ARG} port-forward ${POD_NAME} 5555:${QDRANT_PORT} &
-  sleep 2
+
+  startPortForward
 
   if [ -d "$DUMP_FILE" ]; then
-    # Restore from directory
+    # Restore from directory, only the -r collection when given
+    RESTORED=0
     for snapshot_file in "$DUMP_FILE"/*; do
+      # Skip what is not a complete download
       [ -f "$snapshot_file" ] || continue
-      
-      filename=$(basename "$snapshot_file")
-      collection=$(echo "$filename" | cut -d'-' -f1)
-      
-      printf "\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Restoring collection: ${collection}\n"
-      
-      # Upload snapshot
-      curl -s -X PUT ${AUTH_HEADER} "http://127.0.0.1:5555/collections/${collection}/snapshots/upload" --data-binary "@${snapshot_file}"
+      [[ "$snapshot_file" == *.partial ]] && continue
+      collection=$(collectionFromFile "$(basename "$snapshot_file")")
+      if [ -n "$COLLECTION_NAME" ] && [ "$collection" != "$COLLECTION_NAME" ]; then
+        continue
+      fi
+      uploadSnapshot "$snapshot_file" "$collection"
+      RESTORED=$((RESTORED + 1))
     done
+    if [ "$RESTORED" -eq 0 ]; then
+      error "No snapshot to restore in '$DUMP_FILE'${COLLECTION_NAME:+ for collection '$COLLECTION_NAME'}."
+      exit 1
+    fi
   else
     # Restore single file
-    filename=$(basename "$DUMP_FILE")
-    collection=$(echo "$filename" | cut -d'-' -f1)
-    
-    printf "\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Restoring collection: ${collection}\n"
-    
-    # Upload snapshot
-    curl -s -X PUT ${AUTH_HEADER} "http://127.0.0.1:5555/collections/${collection}/snapshots/upload" --data-binary "@${DUMP_FILE}"
+    collection="${COLLECTION_NAME:-$(collectionFromFile "$(basename "$DUMP_FILE")")}"
+    uploadSnapshot "$DUMP_FILE" "$collection"
   fi
-
-  kill %1 2>/dev/null || true
 fi
 
 printf "\n\n${COLOR_RED}[Backup wrapper].${COLOR_OFF} Operation completed successfully.\n\n"
