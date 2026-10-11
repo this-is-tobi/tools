@@ -12,7 +12,7 @@ COLOR_WHITE='\033[1;37m'
 COLOR_BOLD='\033[1m'
 
 # Defaults
-NAMESPACE="$(kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}')"
+NAMESPACE=""
 CLUSTER_NAME=""
 NAMESPACE_ARG=""
 
@@ -23,11 +23,11 @@ This script aims to monitor CloudNativePG cluster status and replication.
 Available flags:
   -c    CloudNativePG cluster name.
   -n    Kubernetes namespace where the cluster is running.
-        Default: current namespace '$NAMESPACE'.
+        Default: the namespace of the current kubectl context.
   -h    Print script help.
 
 Example:
-  ./monitor-cnpg.sh \\
+  ./monitor-kube-cnpg.sh \\
     -c my-cluster \\
     -n my-namespace
 "
@@ -43,14 +43,20 @@ while getopts hc:n: flag; do
       CLUSTER_NAME=${OPTARG};;
     n)
       NAMESPACE=${OPTARG};;
-    h | *)
+    h)
       print_help
       exit 0;;
+    *)
+      print_help >&2
+      exit 1;;
   esac
 done
 
 # Setup namespace argument for kubectl commands
-[[ ! -z "$NAMESPACE" ]] && NAMESPACE_ARG="--namespace=$NAMESPACE"
+if [ -z "$NAMESPACE" ]; then
+  NAMESPACE="$(kubectl config view --minify -o jsonpath='{.contexts[0].context.namespace}' 2>/dev/null || true)"
+fi
+[[ -n "$NAMESPACE" ]] && NAMESPACE_ARG="--namespace=$NAMESPACE"
 
 # Validate cluster name is provided
 if [ -z "$CLUSTER_NAME" ]; then
@@ -64,7 +70,7 @@ echo "=============================================="
 echo
 
 # Get cluster info
-CLUSTER_INFO=$(kubectl get clusters.postgresql.cnpg.io $CLUSTER_NAME $NAMESPACE_ARG -o json 2>/dev/null)
+CLUSTER_INFO=$(kubectl get clusters.postgresql.cnpg.io "$CLUSTER_NAME" $NAMESPACE_ARG -o json 2>/dev/null || true)
 
 if [ -z "$CLUSTER_INFO" ]; then
   echo -e "${COLOR_RED}Error: Cluster '$CLUSTER_NAME' not found${COLOR_OFF}"
@@ -82,14 +88,17 @@ INSTANCES_READY=$(echo "$CLUSTER_INFO" | jq -r '.status.readyInstances')
 DATA_STORAGE=$(echo "$CLUSTER_INFO" | jq -r '.spec.storage.size')
 WAL_STORAGE=$(echo "$CLUSTER_INFO" | jq -r '.spec.walStorage.size // "N/A"')
 
-# Calculate uptime
+# Calculate uptime (BSD date first, then GNU date)
+UPTIME="N/A"
 if [ "$PRIMARY_START_TIME" != "null" ] && [ "$PRIMARY_START_TIME" != "" ]; then
-  UPTIME_SECONDS=$(( $(date +%s) - $(date -j -f "%Y-%m-%dT%H:%M:%SZ" "${PRIMARY_START_TIME%.*}Z" +%s 2>/dev/null || echo "0") ))
-  UPTIME_HOURS=$((UPTIME_SECONDS / 3600))
-  UPTIME_MINUTES=$(((UPTIME_SECONDS % 3600) / 60))
-  UPTIME="${UPTIME_HOURS}h${UPTIME_MINUTES}m"
-else
-  UPTIME="N/A"
+  PRIMARY_START_EPOCH=$(date -j -u -f "%Y-%m-%dT%H:%M:%SZ" "${PRIMARY_START_TIME%%[.Z]*}Z" +%s 2>/dev/null \
+    || date -u -d "$PRIMARY_START_TIME" +%s 2>/dev/null || true)
+  if [ -n "$PRIMARY_START_EPOCH" ]; then
+    UPTIME_SECONDS=$(( $(date +%s) - PRIMARY_START_EPOCH ))
+    UPTIME_HOURS=$((UPTIME_SECONDS / 3600))
+    UPTIME_MINUTES=$(((UPTIME_SECONDS % 3600) / 60))
+    UPTIME="${UPTIME_HOURS}h${UPTIME_MINUTES}m"
+  fi
 fi
 
 echo -e "${COLOR_BOLD}Cluster Summary${COLOR_OFF}"
@@ -133,7 +142,8 @@ get_volume_usage() {
     fi
     
     # Try to get disk usage from the pod
-    local usage=$(kubectl exec -n "$namespace" "$instance_name" -c postgres -- df -h "$mount_path" 2>/dev/null | tail -1 | awk '{print $3 "/" $2 " (" $5 " used)"}' 2>/dev/null)
+    local usage
+    usage=$(kubectl exec -n "$namespace" "$instance_name" -c postgres -- df -h "$mount_path" 2>/dev/null | tail -1 | awk '{print $3 "/" $2 " (" $5 " used)"}' 2>/dev/null)
     
     if [ -n "$usage" ] && [[ "$usage" != *"N/A"* ]]; then
       echo "$usage|$mount_path"
@@ -185,12 +195,13 @@ get_lsn() {
   local role=$3
   
   # Use different functions for primary vs replica
+  local lsn
   if [ "$role" = "primary" ]; then
     # Primary: get current WAL LSN
-    local lsn=$(kubectl exec -n "$namespace" "$pod_name" -c postgres -- psql -U postgres -t -c "SELECT pg_current_wal_lsn();" 2>/dev/null | tr -d ' \n')
+    lsn=$(kubectl exec -n "$namespace" "$pod_name" -c postgres -- psql -U postgres -t -c "SELECT pg_current_wal_lsn();" 2>/dev/null | tr -d ' \n')
   else
     # Replica: get last received LSN
-    local lsn=$(kubectl exec -n "$namespace" "$pod_name" -c postgres -- psql -U postgres -t -c "SELECT pg_last_wal_receive_lsn();" 2>/dev/null | tr -d ' \n')
+    lsn=$(kubectl exec -n "$namespace" "$pod_name" -c postgres -- psql -U postgres -t -c "SELECT pg_last_wal_receive_lsn();" 2>/dev/null | tr -d ' \n')
   fi
   
   if [ -z "$lsn" ] || [ "$lsn" = "" ]; then
@@ -207,7 +218,8 @@ get_replica_sync_mode() {
   local namespace=$3
   
   # Query pg_stat_replication for this specific replica
-  local sync_info=$(kubectl exec -n "$namespace" "$primary_pod" -c postgres -- psql -U postgres -t -c "
+  local sync_info
+  sync_info=$(kubectl exec -n "$namespace" "$primary_pod" -c postgres -- psql -U postgres -t -c "
     SELECT 
       CASE 
         WHEN sync_state = 'sync' THEN 'Synchronous'
@@ -235,13 +247,14 @@ echo
 
 # Get current write LSN and WAL file info from primary
 echo -e "${COLOR_BOLD}Current WAL Status${COLOR_OFF}"
+TIMELINE_ID="N/A"
 if [ -n "$PRIMARY_INSTANCE" ]; then
-  CURRENT_LSN=$(kubectl exec -n "$NAMESPACE" "$PRIMARY_INSTANCE" -c postgres -- psql -U postgres -t -c "SELECT pg_current_wal_lsn();" 2>/dev/null | tr -d ' \n')
+  CURRENT_LSN=$(kubectl exec -n "$NAMESPACE" "$PRIMARY_INSTANCE" -c postgres -- psql -U postgres -t -c "SELECT pg_current_wal_lsn();" 2>/dev/null | tr -d ' \n' || true)
   TIMELINE_ID=$(echo "$CLUSTER_INFO" | jq -r '.status.timelineID // "N/A"')
   
   if [ -n "$CURRENT_LSN" ] && [ "$CURRENT_LSN" != "" ]; then
     # Calculate WAL file name from LSN
-    WAL_FILE=$(kubectl exec -n "$NAMESPACE" "$PRIMARY_INSTANCE" -c postgres -- psql -U postgres -t -c "SELECT pg_walfile_name('$CURRENT_LSN');" 2>/dev/null | tr -d ' \n')
+    WAL_FILE=$(kubectl exec -n "$NAMESPACE" "$PRIMARY_INSTANCE" -c postgres -- psql -U postgres -t -c "SELECT pg_walfile_name('$CURRENT_LSN');" 2>/dev/null | tr -d ' \n' || true)
     echo -e "Current Write LSN:   ${COLOR_GREEN}$CURRENT_LSN${COLOR_OFF} (Timeline: ${COLOR_YELLOW}$TIMELINE_ID${COLOR_OFF} - WAL File: ${COLOR_BLUE}$WAL_FILE${COLOR_OFF})"
   else
     echo -e "Current Write LSN:   ${COLOR_RED}N/A${COLOR_OFF} (Timeline: $TIMELINE_ID - WAL File: N/A)"
@@ -268,11 +281,8 @@ echo
 
 # Streaming Replication status
 echo -e "${COLOR_BOLD}Streaming Replication status${COLOR_OFF}"
-MAX_SYNC_REPLICAS=$(echo "$CLUSTER_INFO" | jq -r '.spec.postgresql.syncReplicaElectionConstraint.enabled // false')
-MIN_SYNC_REPLICAS=$(echo "$CLUSTER_INFO" | jq -r '.spec.minSyncReplicas // 0')
-
 # Check if replication slots are enabled
-REPLICATION_SLOTS=$(kubectl exec -n "$NAMESPACE" "$PRIMARY_INSTANCE" -c postgres -- psql -U postgres -t -c "SELECT count(*) FROM pg_replication_slots;" 2>/dev/null | tr -d ' \n')
+REPLICATION_SLOTS=$(kubectl exec -n "$NAMESPACE" "$PRIMARY_INSTANCE" -c postgres -- psql -U postgres -t -c "SELECT count(*) FROM pg_replication_slots;" 2>/dev/null | tr -d ' \n' || true)
 if [ -n "$REPLICATION_SLOTS" ] && [ "$REPLICATION_SLOTS" != "0" ]; then
   echo -e "${COLOR_GREEN}Replication Slots Enabled${COLOR_OFF}"
 else
@@ -318,30 +328,6 @@ if [ -n "$PRIMARY_INSTANCE" ]; then
       slot_status=$(kubectl exec -n "$NAMESPACE" "$PRIMARY_INSTANCE" -c postgres -- psql -U postgres -t -c "SELECT CASE WHEN active THEN 'active' ELSE 'inactive' END FROM pg_replication_slots WHERE slot_name = '$app_name';" 2>/dev/null | tr -d ' \n')
       [ -z "$slot_status" ] && slot_status="N/A"
       
-      # Color code lag times - but not in printf
-      lag_color=""
-      if [ "$write_lag" = "00:00:00" ] && [ "$flush_lag" = "00:00:00" ] && [ "$replay_lag" = "00:00:00" ]; then
-        lag_color="${COLOR_GREEN}"
-      else
-        lag_color="${COLOR_YELLOW}"
-      fi
-      
-      # Color code sync state
-      sync_color=""
-      if [ "$sync_state" = "sync" ]; then
-        sync_color="${COLOR_GREEN}"
-      else
-        sync_color="${COLOR_BLUE}"
-      fi
-      
-      # Color code slot status
-      slot_color=""
-      if [ "$slot_status" = "active" ]; then
-        slot_color="${COLOR_GREEN}"
-      elif [ "$slot_status" = "inactive" ]; then
-        slot_color="${COLOR_RED}"
-      fi
-      
       printf "%-23s %-12s %-12s %-12s %-12s %-10s %-10s %-11s %-10s %-11s %-14s %s\n" \
         "$app_name" "$sent_lsn" "$write_lsn" "$flush_lsn" "$replay_lsn" \
         "$write_lag" \
@@ -382,25 +368,17 @@ kubectl get pods $NAMESPACE_ARG -l cnpg.io/cluster="$CLUSTER_NAME" -o json | jq 
   # Format role like cnpg plugin
   if [ "$role" = "primary" ]; then
     formatted_role="Primary"
-    role_color="${COLOR_GREEN}"
-    formatted_status="OK"
-    status_color="${COLOR_GREEN}"
   else
     # Check if it's sync or async
     sync_mode=$(get_replica_sync_mode "$PRIMARY_INSTANCE" "$pod_name" "$NAMESPACE")
     if [ "$sync_mode" = "Synchronous" ]; then
       formatted_role="Standby (sync)"
-      role_color="${COLOR_YELLOW}"  # Warning level for sync
     else
       formatted_role="Standby (async)"
-      role_color="${COLOR_WHITE}"   # Info level for async
     fi
-    formatted_status="OK"
-    status_color="${COLOR_GREEN}"
   fi
-  
-  # Use simplified status
-  [ "$status" = "Running" ] && formatted_status="OK" && status_color="${COLOR_GREEN}"
+  formatted_status="$status"
+  [ "$status" = "Running" ] && formatted_status="OK"
   
   printf "%-33s %-12s %-17s %-7s %-10s %-15s %s\n" \
     "$pod_name" "$lsn" \
@@ -424,7 +402,7 @@ if [ -n "$PRIMARY_INSTANCE" ]; then
     OVERALL_REPL_MODE="No replicas"
   else
     # Check if any replica is synchronous
-    SYNC_REPLICAS=$(kubectl exec -n "$NAMESPACE" "$PRIMARY_INSTANCE" -c postgres -- psql -U postgres -t -c "SELECT count(*) FROM pg_stat_replication WHERE sync_state = 'sync';" 2>/dev/null | tr -d ' \n')
+    SYNC_REPLICAS=$(kubectl exec -n "$NAMESPACE" "$PRIMARY_INSTANCE" -c postgres -- psql -U postgres -t -c "SELECT count(*) FROM pg_stat_replication WHERE sync_state = 'sync';" 2>/dev/null | tr -d ' \n' || true)
     
     if [ -n "$SYNC_REPLICAS" ] && [ "$SYNC_REPLICAS" != "0" ]; then
       OVERALL_REPL_MODE="Mixed (sync+async)"
