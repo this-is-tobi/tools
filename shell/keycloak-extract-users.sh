@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+# The export holds personal data: keep it readable by the current user only.
+umask 077
+
 # Colors
 COLOR_OFF='\033[0m'
 COLOR_BLUE='\033[0;34m'
@@ -14,12 +17,19 @@ KC_USERNAME="admin"
 KC_BATCH_SIZE=100
 KC_OUTPUT_FILE="keycloak_users_$(date +%Y%m%d_%H%M%S).csv"
 KC_HOST=""
-KC_PASSWORD=""
+KC_PASSWORD="${KC_PASSWORD:-}"
 KC_REALM=""
 
 # Script helper
 TEXT_HELPER="
 The purpose of this script is to extract all users from a keycloak realm to a CSV file.
+
+The file is created readable by the current user only, and cells starting with
+'=', '+', '-', '@', a tab or a carriage return are prefixed with a quote so
+spreadsheet applications do not evaluate them as formulas.
+
+A password passed with -p is visible in the process list and the shell
+history: prefer the KC_PASSWORD environment variable.
 
 Available flags:
   -b    Batch size for user extraction.
@@ -27,16 +37,16 @@ Available flags:
   -k    Keycloak host.
   -o    Output CSV file path.
         Default: '$KC_OUTPUT_FILE'.
-  -p    Keycloak password.
+  -p    Keycloak password (or KC_PASSWORD environment variable).
   -r    Keycloak realm to extract users from.
   -u    Keycloak username.
         Default: '$KC_USERNAME'.
   -h    Print script help.
 
 Example:
+  read -rsp 'Password: ' KC_PASSWORD && export KC_PASSWORD
   ./keycloak-extract-users.sh \\
     -k 'http://localhost:8080' \\
-    -p 'admin' \\
     -r 'my-realm' \\
     -u 'admin' \\
     -b 100 \\
@@ -48,29 +58,41 @@ print_help() {
   printf "$TEXT_HELPER"
 }
 
+# The password is read by curl from stdin, never from its arguments.
 get_token() {
-  curl -fsSL \
+  printf '%s' "$KC_PASSWORD" | curl -fsSL \
     -X POST "$KC_HOST/realms/master/protocol/openid-connect/token" \
-    -d "client_id=admin-cli" \
-    -d "username=$KC_USERNAME" \
-    -d "password=$KC_PASSWORD" \
-    -d "grant_type=password" | jq -r '.access_token'
+    --data-urlencode "client_id=admin-cli" \
+    --data-urlencode "username=$KC_USERNAME" \
+    --data-urlencode "password@-" \
+    --data-urlencode "grant_type=password" | jq -r '.access_token // empty'
 }
 
+# Admin tokens from the master realm live about a minute: a new one is fetched for every batch.
+refresh_token() {
+  if ! ACCESS_TOKEN="$(get_token)" || [ -z "$ACCESS_TOKEN" ]; then
+    printf "\n${COLOR_RED}Error.${COLOR_OFF} Failed to get an access token.\n" >&2
+    exit 1
+  fi
+}
+
+# The bearer token is passed through a file descriptor, never as an argument.
 get_users_batch() {
   local first=$1
   local max=$2
-  
+
   curl -fsSL \
     -X GET "$KC_HOST/admin/realms/$KC_REALM/users?first=${first}&max=${max}" \
-    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H @<(printf 'Authorization: Bearer %s\n' "$ACCESS_TOKEN") \
     -H "Content-Type: application/json"
 }
 
 extract_user_data() {
   local user_json=$1
-  
-  echo "$user_json" | jq -r '.[] | 
+
+  echo "$user_json" | jq -r '
+    def cell: if type == "string" and test("^[=+@\t\r-]") then "'"'"'" + . else . end;
+    .[] |
     [
       .firstName // "",
       .lastName // "",
@@ -80,7 +102,7 @@ extract_user_data() {
       .username,
       (.enabled | tostring),
       (.emailVerified | tostring)
-    ] | @csv' >> "$KC_OUTPUT_FILE"
+    ] | map(cell) | @csv' >> "$KC_OUTPUT_FILE"
 }
 
 # Parse options
@@ -98,9 +120,12 @@ while getopts hb:k:o:p:r:u: flag; do
       KC_REALM=${OPTARG};;
     u)
       KC_USERNAME=${OPTARG};;
-    h | *)
+    h)
       print_help
       exit 0;;
+    *)
+      print_help >&2
+      exit 1;;
   esac
 done
 
@@ -116,26 +141,28 @@ Settings:
 
 # Options validation
 if [ -z "$KC_HOST" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak host (flag -k)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak host (flag -k).\n" >&2
   exit 1
 elif [ -z "$KC_PASSWORD" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: user password (flag -p)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: user password (KC_PASSWORD or flag -p).\n" >&2
   exit 1
 elif [ -z "$KC_REALM" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak realm (flag -r)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak realm (flag -r).\n" >&2
+  exit 1
+elif ! [ "$KC_BATCH_SIZE" -gt 0 ] 2>/dev/null; then
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Batch size (flag -b) must be a positive integer.\n" >&2
   exit 1
 fi
 
 # Init
-ACCESS_TOKEN=$(get_token)
-
-if [ -z "$ACCESS_TOKEN" ] || [ "$ACCESS_TOKEN" == "null" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Failed to get access token.\n"
-  exit 1
-fi
+refresh_token
 
 # Create CSV header
 echo "FirstName,LastName,Email,TermsAndConditionsStatus,UserID,Username,Enabled,EmailVerified" > "$KC_OUTPUT_FILE"
+# The umask only applies to new files: tighten an existing one too.
+if [ -f "$KC_OUTPUT_FILE" ]; then
+  chmod 600 "$KC_OUTPUT_FILE"
+fi
 
 # Extract users
 first=0
@@ -147,25 +174,26 @@ printf "\n${COLOR_YELLOW}Starting user extraction...${COLOR_OFF}\n"
 while true; do
   batch_count=$((batch_count + 1))
   printf "${COLOR_BLUE}Fetching batch ${batch_count} (users ${first} to $((first + KC_BATCH_SIZE)))...${COLOR_OFF}\n"
-  
+
+  refresh_token
   users_json=$(get_users_batch "$first" "$KC_BATCH_SIZE")
   user_count=$(echo "$users_json" | jq '. | length')
-  
+
   if [ "$user_count" -eq 0 ]; then
     printf "${COLOR_GREEN}No more users to fetch${COLOR_OFF}\n"
     break
   fi
-  
+
   extract_user_data "$users_json"
-  
+
   total_users=$((total_users + user_count))
   printf "${COLOR_GREEN}Processed ${user_count} users (Total: ${total_users})${COLOR_OFF}\n"
-  
+
   if [ "$user_count" -lt "$KC_BATCH_SIZE" ]; then
     printf "${COLOR_GREEN}Reached end of user list${COLOR_OFF}\n"
     break
   fi
-  
+
   first=$((first + KC_BATCH_SIZE))
   sleep 0.5
 done

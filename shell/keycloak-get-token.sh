@@ -4,40 +4,40 @@ set -euo pipefail
 
 # Colors
 COLOR_OFF='\033[0m'
-COLOR_BLUE='\033[0;34m'
 COLOR_RED='\033[0;31m'
-COLOR_GREEN='\033[0;32m'
-COLOR_YELLOW='\033[0;33m'
 
 # Defaults
 KC_USERNAME="admin"
 KC_HOST=""
-KC_PASSWORD=""
+KC_PASSWORD="${KC_PASSWORD:-}"
 KC_REALM=""
 CLIENT_ID=""
-CLIENT_SECRET=""
+CLIENT_SECRET="${KC_CLIENT_SECRET:-}"
 
 # Script helper
 TEXT_HELPER="
 The purpose of this script is to display the keycloak user's token based on appropriate information.
 
+Secrets passed as flags are visible in the process list and the shell history:
+prefer the KC_PASSWORD and KC_CLIENT_SECRET environment variables.
+
 Available flags:
   -i    Keycloak client id.
   -k    Keycloak host.
-  -p    User password.
+  -p    User password (or KC_PASSWORD environment variable).
   -r    Keycloak realm.
-  -s    Keycloak client secret.
+  -s    Keycloak client secret (or KC_CLIENT_SECRET environment variable).
   -u    Keycloak username.
         Default: '$KC_USERNAME'.
   -h    Print script help.
 
 Example:
+  read -rsp 'Password: ' KC_PASSWORD; read -rsp 'Client secret: ' KC_CLIENT_SECRET
+  export KC_PASSWORD KC_CLIENT_SECRET
   ./keycloak-get-token.sh \\
     -k 'http://localhost:8080' \\
-    -p 'admin' \\
     -r 'my-realm' \\
     -i 'my-client' \\
-    -s 'client-secret' \\
     -u 'admin'
 "
 
@@ -48,6 +48,17 @@ print_help() {
 
 jwt_decode(){
   jq -R 'split(".") | .[1] | @base64d | fromjson' <<< "$1"
+}
+
+# Secrets are read by curl from stdin and from a file descriptor, never from its arguments.
+get_token() {
+  printf '%s' "$KC_PASSWORD" | curl -fsSL \
+    -X POST "$KC_HOST/realms/$KC_REALM/protocol/openid-connect/token" \
+    --data-urlencode "grant_type=password" \
+    --data-urlencode "client_id=$CLIENT_ID" \
+    --data-urlencode client_secret@<(printf '%s' "$CLIENT_SECRET") \
+    --data-urlencode "username=$KC_USERNAME" \
+    --data-urlencode "password@-" | jq -r '.access_token // empty'
 }
 
 # Parse options
@@ -65,9 +76,12 @@ while getopts hi:k:p:r:s:u: flag; do
       CLIENT_SECRET=${OPTARG};;
     u)
       KC_USERNAME=${OPTARG};;
-    h | *)
+    h)
       print_help
       exit 0;;
+    *)
+      print_help >&2
+      exit 1;;
   esac
 done
 
@@ -78,38 +92,35 @@ Settings:
   > KC_REALM: ${KC_REALM}
   > KC_USERNAME: ${KC_USERNAME}
   > CLIENT_ID: ${CLIENT_ID}
-  > CLIENT_SECRET: $(printf "%*s" $(( ${#CLIENT_SECRET} - 3 )) "" | tr " " "*"; echo ${CLIENT_SECRET: -3};)
+  > CLIENT_SECRET: $([ -n "$CLIENT_SECRET" ] && echo set || echo unset)
 "
 
 # Options validation
 if [ -z "$CLIENT_ID" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: client id (flag -i)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: client id (flag -i).\n" >&2
   exit 1
 elif [ -z "$KC_HOST" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak host (flag -k)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak host (flag -k).\n" >&2
   exit 1
 elif [ -z "$KC_PASSWORD" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: user password (flag -p)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: user password (KC_PASSWORD or flag -p).\n" >&2
   exit 1
 elif [ -z "$KC_REALM" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak realm (flag -r)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: keycloak realm (flag -r).\n" >&2
   exit 1
 elif [ -z "$CLIENT_SECRET" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: client secret (flag -s)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: client secret (KC_CLIENT_SECRET or flag -s).\n" >&2
   exit 1
 elif [ -z "$KC_USERNAME" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: username (flag -u)".
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: username (flag -u).\n" >&2
   exit 1
 fi
 
 # Init
-ACCESS_TOKEN=$(curl -fsSL \
-  -X GET "$KC_HOST/realms/$KC_REALM/protocol/openid-connect/token" \
-  -d "client_id=$CLIENT_ID" \
-  -d "client_secret=$CLIENT_SECRET" \
-  -d "username=$KC_USERNAME" \
-  -d "password=$KC_PASSWORD" \
-  -d "grant_type=password" | jq -r '.access_token')
+if ! ACCESS_TOKEN="$(get_token)" || [ -z "$ACCESS_TOKEN" ]; then
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Failed to get an access token.\n" >&2
+  exit 1
+fi
 
 # Display token
 jwt_decode "$ACCESS_TOKEN"
