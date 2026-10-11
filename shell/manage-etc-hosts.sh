@@ -48,7 +48,7 @@ update_hosts() {
       if (comment != "") line = line " " comment
       return line
     }
-    /^[[:space:]]*(#|$)/ { print; next }
+    /^[ \t]*(#|$)/ { print; next }
     # A name may have one IPv4 and one IPv6 entry: only lines of the same family are touched
     (index($1, ":") > 0) != (index(ip, ":") > 0) { print; next }
     {
