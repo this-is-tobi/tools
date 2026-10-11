@@ -3,6 +3,71 @@
 # Prerequisite :
 #   - https://github.com/helm/chart-testing
 #   - https://github.com/adrienverge/yamllint
+#
+# Lint, with chart-testing, every chart that has a staged change: the closest
+# directory holding a Chart.yaml above each staged file.
+#
+# Environment:
+#   CT_CONFIG       chart-testing config file (default: .ct.yaml, see
+#                   git-hooks/configs/chart-testing.yaml)
+#   CT_LINT_CONFIG  yamllint config file used by chart-testing (default:
+#                   .yamllint, see git-hooks/configs/yamllint.yaml)
+# When a variable is unset and its default file does not exist, chart-testing
+# looks up the file itself (ct.yaml and lintconf.yaml).
+#
+# The working tree copy of each chart is linted: unstaged edits are linted too.
+#
+# The checks run in a subshell so that, when several hooks are appended to the
+# same pre-commit file, finishing early here never skips the hooks after it.
+(
+  set -uo pipefail
 
-# Check if charts respect linting rules
-ct lint --config <config_path> --lint-conf <config_path> .
+  cd "$(git rev-parse --show-toplevel)" || exit 1
+
+  # Deleted files count: removing a template or a helper changes the chart
+  CHARTS=''
+  while IFS= read -r -d '' FILE; do
+    DIR="$FILE"
+    while [ "$DIR" != '.' ]; do
+      case "$DIR" in
+        */*) DIR="${DIR%/*}" ;;
+        *) DIR='.' ;;
+      esac
+      if [ -f "$DIR/Chart.yaml" ]; then
+        CHARTS="${CHARTS}${DIR}"$'\n'
+        break
+      fi
+    done
+  done < <(git diff --cached --name-only -z --diff-filter=ACMRD)
+  CHARTS=$(printf '%s' "$CHARTS" | sort -u | paste -s -d ',' -)
+
+  if [ -z "$CHARTS" ]; then
+    echo "helm-lint: no staged change in a Helm chart, skipped."
+    exit 0
+  fi
+
+  if ! command -v ct > /dev/null 2>&1; then
+    echo "helm-lint: ct is not installed (https://github.com/helm/chart-testing). Install it, or skip the hook once with 'git commit --no-verify'." >&2
+    exit 1
+  fi
+
+  CONFIG_ARGS=()
+  CONFIG_PATH="${CT_CONFIG:-.ct.yaml}"
+  if [ -f "$CONFIG_PATH" ]; then
+    CONFIG_ARGS+=(--config "$CONFIG_PATH")
+  elif [ -n "${CT_CONFIG:-}" ]; then
+    echo "helm-lint: config file '$CONFIG_PATH' (CT_CONFIG) not found." >&2
+    exit 1
+  fi
+  LINT_CONFIG_PATH="${CT_LINT_CONFIG:-.yamllint}"
+  if [ -f "$LINT_CONFIG_PATH" ]; then
+    CONFIG_ARGS+=(--lint-conf "$LINT_CONFIG_PATH")
+  elif [ -n "${CT_LINT_CONFIG:-}" ]; then
+    echo "helm-lint: config file '$LINT_CONFIG_PATH' (CT_LINT_CONFIG) not found." >&2
+    exit 1
+  fi
+
+  # Check if charts respect linting rules
+  # ${a[@]+...} because bash 3.2 treats an empty array as unbound under set -u
+  ct lint ${CONFIG_ARGS[@]+"${CONFIG_ARGS[@]}"} --charts "$CHARTS"
+) || exit $?

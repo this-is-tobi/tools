@@ -3,7 +3,59 @@
 # Prerequisite :
 #   - https://github.com/eslint/eslint
 #   - https://github.com/antfu/eslint-config
+#
+# Lint the staged js, ts, vue, json, markdown, yaml and toml files with ESLint
+# (flat config). The project's node_modules/.bin/eslint is used when it exists,
+# otherwise the eslint found in PATH.
+#
+# Environment:
+#   ESLINT_CONFIG  ESLint config file (default: eslint.config.js, see
+#                  git-hooks/configs/eslint.config.js). When it is unset and
+#                  eslint.config.js does not exist, ESLint looks up its config
+#                  itself (eslint.config.mjs, eslint.config.ts, ...).
+#
+# The working tree copy of each staged file is linted: unstaged edits to a
+# staged file are linted too.
+#
+# The checks run in a subshell so that, when several hooks are appended to the
+# same pre-commit file, finishing early here never skips the hooks after it.
+(
+  set -uo pipefail
 
+  cd "$(git rev-parse --show-toplevel)" || exit 1
 
-# Check if js, ts, json, markdown and yaml files respect linting rules
-eslint --config <config_path> .
+  FILES=()
+  while IFS= read -r -d '' FILE; do
+    [ -f "$FILE" ] && FILES+=("$FILE")
+  done < <(git diff --cached --name-only -z --diff-filter=ACMR -- \
+    '*.js' '*.cjs' '*.mjs' '*.jsx' '*.ts' '*.cts' '*.mts' '*.tsx' '*.vue' \
+    '*.json' '*.jsonc' '*.json5' '*.md' '*.yaml' '*.yml' '*.toml')
+
+  if [ "${#FILES[@]}" -eq 0 ]; then
+    echo "eslint-lint: no staged file for ESLint, skipped."
+    exit 0
+  fi
+
+  if [ -x node_modules/.bin/eslint ]; then
+    ESLINT=node_modules/.bin/eslint
+  elif command -v eslint > /dev/null 2>&1; then
+    ESLINT=eslint
+  else
+    echo "eslint-lint: eslint is not installed (https://github.com/eslint/eslint). Install it in the project (npm install --save-dev eslint), or skip the hook once with 'git commit --no-verify'." >&2
+    exit 1
+  fi
+
+  CONFIG_PATH="${ESLINT_CONFIG:-eslint.config.js}"
+  CONFIG_ARGS=()
+  if [ -f "$CONFIG_PATH" ]; then
+    CONFIG_ARGS=(--config "$CONFIG_PATH")
+  elif [ -n "${ESLINT_CONFIG:-}" ]; then
+    echo "eslint-lint: config file '$CONFIG_PATH' (ESLINT_CONFIG) not found." >&2
+    exit 1
+  fi
+
+  # Check if staged files respect linting rules; files the config ignores (lock
+  # files, Chart.yaml, ...) are skipped silently
+  # ${a[@]+...} because bash 3.2 treats an empty array as unbound under set -u
+  "$ESLINT" ${CONFIG_ARGS[@]+"${CONFIG_ARGS[@]}"} --no-warn-ignored -- "${FILES[@]}"
+) || exit $?
