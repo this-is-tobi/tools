@@ -1,19 +1,55 @@
 #!/bin/bash
 
-# Path to the commit message file
-COMMIT_MSG_FILE=$1
+# Check that the commit message follows the conventional commit format:
+#   <type>(<scope>)!: <subject>
+#
+# Only the subject is checked: the first line that is neither blank nor a
+# comment (git runs this hook before it strips the comments of the editor
+# template). The subjects git writes itself for merges, reverts and
+# fixup/squash/amend commits are accepted as they are.
+#
+# The checks run in a subshell so that, when this file is appended to an
+# existing commit-msg hook, finishing early here never skips the code after it.
+(
+  set -uo pipefail
 
-# Regular expression for conventional commit message
-CONVENTIONAL_COMMIT_TYPES='feat|fix|docs|style|refactor|perf|test|chore|revert|ci|build'
-CONVENTIONAL_COMMIT_REGEX="^(${CONVENTIONAL_COMMIT_TYPES})(\([a-zA-Z0-9\-_ ]+\))?!?: .+"
+  COMMIT_MSG_FILE="${1:-}"
 
-# Read the commit message
-COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+  # Same types as @commitlint/config-conventional
+  CONVENTIONAL_COMMIT_TYPES='build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test'
+  # POSIX classes instead of ranges such as a-z: macOS rejects "\-" inside a
+  # bracket expression, and a range depends on the locale
+  CONVENTIONAL_COMMIT_REGEX="^(${CONVENTIONAL_COMMIT_TYPES})(\([[:alnum:]_./ ,-]+\))?!?: [^[:space:]]"
+  GIT_DEFAULT_SUBJECT_REGEX='^(Merge |Revert "|Reapply "|(fixup|squash|amend)! )'
 
-# Check if the commit message matches the conventional commit format
-if ! [[ "$COMMIT_MSG" =~ $CONVENTIONAL_COMMIT_REGEX ]]; then
-  echo "Commit message does not follow conventional commit format."
-  echo "Expected format: <type>(<scope>)!: <subject>"
-  echo "Allowed types: $(echo "$CONVENTIONAL_COMMIT_TYPES" | sed 's/|/, /g')"
+  if [ ! -r "$COMMIT_MSG_FILE" ]; then
+    echo "conventional-commit: cannot read the commit message file '$COMMIT_MSG_FILE'." >&2
+    exit 1
+  fi
+
+  COMMENT_CHAR=$(git config --get core.commentString 2>/dev/null || git config --get core.commentChar 2>/dev/null)
+  case "$COMMENT_CHAR" in
+    ''|auto) COMMENT_CHAR='#' ;;
+  esac
+
+  SUBJECT=''
+  while IFS= read -r LINE || [ -n "$LINE" ]; do
+    LINE="${LINE%$'\r'}"
+    case "$LINE" in
+      "$COMMENT_CHAR"*) continue ;;
+      *[![:space:]]*) SUBJECT="$LINE"; break ;;
+    esac
+  done < "$COMMIT_MSG_FILE"
+
+  if [[ "$SUBJECT" =~ $GIT_DEFAULT_SUBJECT_REGEX ]] || [[ "$SUBJECT" =~ $CONVENTIONAL_COMMIT_REGEX ]]; then
+    exit 0
+  fi
+
+  {
+    echo "Commit message does not follow conventional commit format:"
+    echo "  ${SUBJECT:-(empty message)}"
+    echo "Expected format: <type>(<scope>)!: <subject>  (scope and '!' are optional)"
+    echo "Allowed types: ${CONVENTIONAL_COMMIT_TYPES//|/, }"
+  } >&2
   exit 1
-fi
+) || exit $?
