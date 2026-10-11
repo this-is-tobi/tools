@@ -7,7 +7,6 @@ COLOR_OFF='\033[0m'
 COLOR_BLUE='\033[0;34m'
 COLOR_RED='\033[0;31m'
 COLOR_GREEN='\033[0;32m'
-COLOR_YELLOW='\033[0;33m'
 
 # Defaults
 BOOLEAN_MODE="false"
@@ -56,9 +55,12 @@ while getopts hbp:sv: flag; do
       SEARCH_MODE="true";;
     v)
       PACKAGE_VERSION=${OPTARG};;
-    h | *)
+    h)
       print_help
       exit 0;;
+    *)
+      print_help >&2
+      exit 1;;
   esac
 done
 

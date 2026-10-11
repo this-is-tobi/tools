@@ -2,20 +2,9 @@
 
 set -euo pipefail
 
-# Colors
-COLOR_OFF='\033[0m'
-COLOR_BLUE='\033[0;34m'
-COLOR_RED='\033[0;31m'
-COLOR_GREEN='\033[0;32m'
-COLOR_YELLOW='\033[0;33m'
-
-# Versions
-DOCKER_VERSION="$(docker --version)"
-
 # Defaults
 REGISTRY="docker.io"
 TAGS="latest"
-COMMIT_SHA="$(git rev-parse --short HEAD)"
 PLATFORMS="linux/amd64"
 CSV=false
 RECURSIVE=false
@@ -24,7 +13,6 @@ NAMESPACE=""
 
 unset MAJOR_VERSION
 unset MINOR_VERSION
-unset PATCH_VERSION
 
 # Script helper
 TEXT_HELPER="
@@ -76,19 +64,25 @@ while getopts hacf:n:p:r:t: flag; do
       REGISTRY=${OPTARG};;
     t)
       TAGS=${OPTARG};;
-    h | *)
+    h)
       print_help
       exit 0;;
+    *)
+      print_help >&2
+      exit 1;;
   esac
 done
 
 
 # Options validation
-if [ ! -f "$(readlink -f $COMPOSE_FILE)" ]; then
-  echo "\nDocker compose file $COMPOSE_FILE does not exist."
-  print_help
+if [ -z "$COMPOSE_FILE" ] || [ ! -f "$COMPOSE_FILE" ]; then
+  printf "\nDocker compose file '%s' does not exist.\n" "$COMPOSE_FILE" >&2
+  print_help >&2
   exit 1
 fi
+
+# Versions
+DOCKER_VERSION="$(docker --version)"
 
 # Init
 if [ "$REGISTRY" ] && [[ "$REGISTRY" != */ ]]; then
@@ -116,7 +110,7 @@ Settings:
 MATRIX=$(cat "$COMPOSE_FILE" \
   | docker run -i --rm mikefarah/yq -o=json \
   | jq \
-    --arg d "$(dirname $(readlink -f $COMPOSE_FILE))" \
+    --arg d "$(dirname "$(readlink -f "$COMPOSE_FILE")")" \
     --arg p "$PLATFORMS" \
     --arg r "$REGISTRY" \
     --arg t "$TAGS" \
@@ -143,7 +137,6 @@ if [ ! -z "$TAGS" ]; then
     if [[ "$t" == *"."*"."* ]] && [[ "$RECURSIVE" == "true" ]]; then
       MAJOR_VERSION="$(echo $t | cut -d "." -f 1)"
       MINOR_VERSION="$(echo $t | cut -d "." -f 2)"
-      PATCH_VERSION="$(echo $t | cut -d "." -f 3)"
 
       MATRIX=$(echo "$MATRIX" \
         | jq \
