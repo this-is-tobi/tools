@@ -4,8 +4,9 @@ services:
   registry:
     image: docker.io/registry:3
     restart: always
+    # Loopback only: the registry serves this machine.
     ports:
-    - 5555:5000
+    - 127.0.0.1:${REGISTRY_PORT:-5555}:5000
     environment:
       REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
       REGISTRY_AUTH: htpasswd
