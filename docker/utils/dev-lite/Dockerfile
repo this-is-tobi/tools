@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+
 ARG BASE_IMAGE=docker.io/debian:13@sha256:913f6706df59a68922d1dd08f78c2476560a8d367897200a6005b00e5f67c2d5
 
 FROM ${BASE_IMAGE} AS build
@@ -25,7 +27,7 @@ RUN apt-get update && apt-get install -y \
   wget \
   zsh \
   && rm -rf /var/lib/apt/lists/* \
-  && sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen && sudo locale-gen \
+  && sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen && locale-gen \
   && useradd -ms /bin/zsh "$USER_NAME" \
   && echo "$USER_NAME ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/$USER_NAME" \
   && chmod 440 "/etc/sudoers.d/$USER_NAME"
@@ -57,6 +59,11 @@ ARG DOTFILES_REF=972015d509ce8af4a886b43f91db4d14af60c356
 # rm -rf fails there even as the owner - hence the chmod. Grouped with `|| true` so
 # only the chmod is forgiving: the surrounding && chain must still fail the build if
 # the install above it failed.
+# The setup scripts run as the image user (they install into its home), so the
+# cleanup of root-owned paths goes through the sudo they already rely on. The
+# token read keeps `|| true` on purpose (the secret is optional), so there is
+# no failure for a separate declaration to surface.
+# hadolint ignore=DL3004,SC2155
 RUN --mount=type=secret,id=github_token,mode=0444 \
   export GITHUB_TOKEN="$(cat /run/secrets/github_token 2> /dev/null || true)" \
   && git clone https://github.com/this-is-tobi/dotfiles \

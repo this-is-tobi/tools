@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+
 ARG BASE_IMAGE=docker.io/alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
 
 FROM ${BASE_IMAGE} AS build
@@ -9,6 +11,8 @@ FROM ${BASE_IMAGE} AS build
 COPY .refresh /etc/.image-refresh
 
 ARG TARGETARCH
+# A user name, not a credential: DL3064 matches on the word alone.
+# hadolint ignore=DL3064
 ARG USERNAME=alpine
 ARG USER_UID=1000
 ARG USER_GID=${USER_UID}
@@ -72,6 +76,9 @@ COPY --chown=${USER_UID}:${USER_GID} ./scripts/ ${HOME}/scripts/
 RUN chmod +x ${HOME}/scripts/*.sh
 
 # Healthcheck
+# Shell form on purpose: ${HOME} has to expand, and DL3025's concern (signals
+# reaching PID 1) is about the main process, not a healthcheck.
+# hadolint ignore=DL3025
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD ${HOME}/scripts/healthcheck.sh || exit 1
 

@@ -53,5 +53,8 @@ COPY --chown=1001:0 --chmod=750 ./default.conf.template /etc/nginx/templates/def
 COPY --chown=1001:0 --chmod=750 ./entrypoint.sh /docker-entrypoint.d/90-runtime-env.sh
 USER 1001
 EXPOSE ${PORT}
+# Shell form on purpose: ${PORT} has to expand at runtime, and DL3025's concern
+# (signals reaching PID 1) is about the main process, not a healthcheck.
+# hadolint ignore=DL3025
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget -q -O- http://127.0.0.1:${PORT}/healthz || exit 1
