@@ -1,6 +1,8 @@
 #!/bin/bash
 
-set -e
+# pipefail: the snapshot download is piped into rclone, and without it a failed
+# download would still end in "Backup completed".
+set -eo pipefail
 
 # Source utility functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -39,11 +41,18 @@ printf "  > RCLONE_EXTRA_ARGS: ${RCLONE_EXTRA_ARGS}\n"
 configure_backup_destination
 
 
-# Prepare auth header if API key is provided
-AUTH_HEADER=""
-if [ ! -z "${QDRANT_API_KEY}" ]; then
-  AUTH_HEADER="-H api-key: ${QDRANT_API_KEY}"
-fi
+# Calls the Qdrant API. -f turns an HTTP error into a non-zero exit instead of
+# handing the error body on as if it were a snapshot. The API key header is
+# read from a file descriptor rather than passed as an argument, so the key
+# never shows up in the process list; it used to be word-split out of a string,
+# which sent an empty `api-key:` header and handed the key to curl as a URL.
+qdrant_curl() {
+  if [ -n "${QDRANT_API_KEY}" ]; then
+    curl -fsS -H @<(printf 'api-key: %s\n' "${QDRANT_API_KEY}") "$@"
+  else
+    curl -fsS "$@"
+  fi
+}
 
 
 # Start backup
@@ -53,7 +62,7 @@ if [ -z "${QDRANT_COLLECTION}" ] || [ "${QDRANT_COLLECTION}" = "all" ]; then
   # Full cluster snapshot
   log "Creating full cluster snapshot"
   
-  SNAPSHOT=$(curl -s -X POST ${AUTH_HEADER} "${QDRANT_URL}/snapshots" | jq -r '.result.name')
+  SNAPSHOT=$(qdrant_curl -X POST "${QDRANT_URL}/snapshots" | jq -r '.result.name')
   
   if [ -z "${SNAPSHOT}" ] || [ "${SNAPSHOT}" = "null" ]; then
     error "Failed to create snapshot"
@@ -65,11 +74,11 @@ if [ -z "${QDRANT_COLLECTION}" ] || [ "${QDRANT_COLLECTION}" = "all" ]; then
   
   BACKUP_PATH="${DEST_BASE}/${DATE_TIME}-cluster.snapshot"
   
-  curl -s ${AUTH_HEADER} "${QDRANT_URL}/snapshots/${SNAPSHOT}" \
+  qdrant_curl "${QDRANT_URL}/snapshots/${SNAPSHOT}" \
     | rclone rcat --stats-one-line-date ${RCLONE_EXTRA_ARGS} "${BACKUP_PATH}"
   
   # Delete local snapshot from Qdrant
-  curl -s -X DELETE ${AUTH_HEADER} "${QDRANT_URL}/snapshots/${SNAPSHOT}" > /dev/null
+  qdrant_curl -X DELETE "${QDRANT_URL}/snapshots/${SNAPSHOT}" > /dev/null
   
   log "Backup completed: ${BACKUP_PATH}"
 
@@ -77,7 +86,7 @@ else
   # Collection snapshot
   log "Creating snapshot for collection: ${QDRANT_COLLECTION}"
   
-  SNAPSHOT=$(curl -s -X POST ${AUTH_HEADER} "${QDRANT_URL}/collections/${QDRANT_COLLECTION}/snapshots" | jq -r '.result.name')
+  SNAPSHOT=$(qdrant_curl -X POST "${QDRANT_URL}/collections/${QDRANT_COLLECTION}/snapshots" | jq -r '.result.name')
   
   if [ -z "${SNAPSHOT}" ] || [ "${SNAPSHOT}" = "null" ]; then
     error "Failed to create collection snapshot"
@@ -89,11 +98,11 @@ else
   
   BACKUP_PATH="${DEST_BASE}/${DATE_TIME}-${QDRANT_COLLECTION}.snapshot"
   
-  curl -s ${AUTH_HEADER} "${QDRANT_URL}/collections/${QDRANT_COLLECTION}/snapshots/${SNAPSHOT}" \
+  qdrant_curl "${QDRANT_URL}/collections/${QDRANT_COLLECTION}/snapshots/${SNAPSHOT}" \
     | rclone rcat --stats-one-line-date ${RCLONE_EXTRA_ARGS} "${BACKUP_PATH}"
   
   # Delete snapshot from Qdrant server
-  curl -s -X DELETE ${AUTH_HEADER} "${QDRANT_URL}/collections/${QDRANT_COLLECTION}/snapshots/${SNAPSHOT}" > /dev/null
+  qdrant_curl -X DELETE "${QDRANT_URL}/collections/${QDRANT_COLLECTION}/snapshots/${SNAPSHOT}" > /dev/null
   
   log "Backup completed: ${BACKUP_PATH}"
 fi
