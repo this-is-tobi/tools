@@ -190,6 +190,12 @@ Active bases are pinned as `tag@sha256:...` (`pinDigests`). The tag alone isn't 
 
 The pinned digest is always the **index (manifest-list) digest**, not a per-architecture one — it points at a list of per-platform manifests, so buildx still resolves the right one for each of `linux/amd64` and `linux/arm64`. Pinning a platform-specific digest by mistake (e.g. one copied from `docker pull --platform ...` or a registry UI's per-arch row) breaks the other arch with `no match for platform in manifest`. Read the correct one with `docker buildx imagetools inspect <image>:<tag>` and take the top-level `Digest:`.
 
+### Update cooldown
+
+Renovate only proposes a new version of an action, a container image, a build-arg pin or a mise tool (`mise.toml`, picked up by Renovate's built-in mise manager wherever it sits under `docker/`) once it has been public for **3 days** (`minimumReleaseAge`). A compromised or broken upstream release is usually caught and pulled within that window, before it reaches CI or an image; security fixes bypass the wait. An update whose source publishes no release date is held rather than raised unchecked, and appears under *Pending Status Checks* on the Dependency Dashboard, where it can be approved by hand. Three exceptions are configured: images from registries other than Docker Hub (`ghcr.io/actions/actions-runner` among them) give no date and are raised without the wait, as are GitHub runner labels; the dotfiles pin has no cooldown at all.
+
+Renovate also raises fixes for known vulnerabilities in npm and other language dependencies from the OSV database (`osvVulnerabilityAlerts`).
+
 ### Scheduled dependency refresh
 
 Digest pinning covers the base OS packages, but not everything in these images comes from the base. [`refresh-images.yml`](../.github/workflows/refresh-images.yml) runs monthly, touches a `.refresh` marker file inside each active image's directory, and opens a pull request from the `refresh-images` branch carrying one `build(docker): scheduled dependency refresh` commit. That's a real, path-scoped commit, so once merged release-please cuts a genuine patch release from it.
@@ -257,7 +263,7 @@ ARG VAULT_VERSION=2.0.3
 ARG PG_VERSION=18
 ```
 
-The comment is the whole configuration — adding a tracked pin to any active image needs nothing more than the `# renovate:` line above an `ARG <NAME>_VERSION=`, no change to `renovate.json`.
+The comment is the whole configuration — adding a tracked pin to any Dockerfile under `docker/` needs nothing more than the `# renovate:` line above an `ARG <NAME>_VERSION=`, no change to `renovate.json`.
 
 `PG_VERSION` is the major that alpine's `postgresql<major>-client` package name is built from, tracked through the `postgres` image rather than the apk index. A major bump there depends on alpine having published the matching client package; the PR build and smoke test are what catch it if not.
 
