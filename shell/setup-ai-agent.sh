@@ -34,6 +34,7 @@ BLOCK_END="<!-- /general-instructions -->"
 MANIFEST=".setup-ai-agent-manifest"
 STAMP="$(date +%Y%m%d%H%M%S)"
 WORK_DIR=""
+PENDING_TMP=""
 
 # Script helper
 TEXT_HELPER="
@@ -114,6 +115,9 @@ fail() {
 }
 
 cleanup() {
+  if [ -n "$PENDING_TMP" ]; then
+    rm -f "$PENDING_TMP"
+  fi
   if [ -n "$WORK_DIR" ]; then
     rm -rf "$WORK_DIR"
   fi
@@ -185,10 +189,17 @@ commit_file() {
     return 0
   fi
   tmp="$(mktemp "${dest}.XXXXXX")"
-  if ! { cp "$from" "$tmp" && chmod 644 "$tmp" && mv -f "$tmp" "$dest"; }; then
-    rm -f "$tmp"
+  PENDING_TMP="$tmp"
+  # An existing file keeps its mode (cp -p, then overwrite the content); a new one gets 644
+  if [ -f "$dest" ]; then
+    cp -p "$dest" "$tmp" || fail "could not write '${dest}'"
+  else
+    chmod 644 "$tmp"
+  fi
+  if ! { cat "$from" > "$tmp" && mv -f "$tmp" "$dest"; }; then
     fail "could not write '${dest}'"
   fi
+  PENDING_TMP=""
 }
 
 # backup_name <file>: '<file>.bak.<timestamp>', with a counter when a run in the same second made one.
@@ -237,6 +248,10 @@ install_file() {
   mkdir -p "$(dirname "$dest")"
   if [ -f "$dest" ] && ! cmp -s "$from" "$dest"; then
     recorded="$(recorded_sum "$rel")"
+    if [ -z "$recorded" ] && [ "$(first_heading "$dest")" != "$(first_heading "$from")" ]; then
+      warn "left '${dest}' alone: it is not a file this script installed (another heading than the shipped one). Move or remove it to have the shipped version."
+      return 0
+    fi
     if [ -z "$recorded" ] || [ "$(checksum "$dest")" != "$recorded" ]; then
       backup "$dest"
     fi
@@ -294,6 +309,11 @@ manifest_close() {
       if [ -z "$rel" ] || in_new_manifest "$rel"; then
         continue
       fi
+      case "$rel" in
+        */../*|../*|*/..|/*|*[!A-Za-z0-9._/-]*)
+          warn "ignored the manifest entry '${rel}' in '${OLD_MANIFEST}': not a path inside '${ROOT}'."
+          continue;;
+      esac
       managed=0
       for prefix in "$@"; do
         case "$rel" in
@@ -335,8 +355,9 @@ write_block() {
   [ -f "$file" ] || input="/dev/null"
 
   awk -v b="$BLOCK_BEGIN" -v e="$BLOCK_END" -v hf="$old_head" -v bf="$old_body" '
-    index($0, b) == 1 { inblock = 1; head = $0; n = 0; next }
-    inblock && $0 == e { found = 1; exit }
+    { line = $0; sub(/\r$/, "", line) }
+    index(line, b) == 1 { inblock = 1; head = line; n = 0; next }
+    inblock && line == e { found = 1; exit }
     inblock { lines[++n] = $0 }
     END {
       if (found) {
@@ -346,25 +367,29 @@ write_block() {
       }
     }' "$input"
 
+  if [ "$(grep -c "^${BLOCK_BEGIN}" "$input" || true)" -gt 1 ]; then
+    backup "$file"
+  fi
   if [ -f "$old_head" ]; then
     old_sum="$(sed -n 's/^<!-- general-instructions \([0-9-]*\) -->$/\1/p' "$old_head")"
     if ! cmp -s "$old_body" "$body" && { [ -z "$old_sum" ] || [ "$(checksum "$old_body")" != "$old_sum" ]; }; then
       backup "$file"
     fi
-  elif grep -qxF "$GENERAL_HEADING" "$input"; then
+  elif grep -q "^${GENERAL_HEADING}"'\r*$' "$input"; then
     warn "'${file}' already holds an unmarked copy of the general instructions from an older run; remove it by hand so it is not loaded twice."
   fi
 
   awk -v b="$BLOCK_BEGIN" -v e="$BLOCK_END" -v blk="$block" '
     function flush(   i) { for (i = 1; i <= n; i++) print buf[i]; n = 0 }
-    function emit(   line) {
+    function emit(   l) {
       if (done) return
-      while ((getline line < blk) > 0) print line
+      while ((getline l < blk) > 0) print l
       close(blk)
       done = 1
     }
-    index($0, b) == 1 { if (inblock) flush(); inblock = 1; buf[++n] = $0; next }
-    inblock { buf[++n] = $0; if ($0 == e) { inblock = 0; n = 0; emit() } next }
+    { line = $0; sub(/\r$/, "", line) }
+    index(line, b) == 1 { if (inblock) flush(); inblock = 1; buf[++n] = $0; next }
+    inblock { buf[++n] = $0; if (line == e) { inblock = 0; n = 0; emit() } next }
     { print; seen = 1 }
     END {
       if (inblock) flush()
@@ -445,16 +470,19 @@ resolve_instructions() {
       python)     names="general python docker github-actions";;
       kubernetes) names="general kubernetes docker github-actions terraform shell";;
       go)         names="general go docker github-actions";;
-      general|*)  names="general";;
+      general)    names="general";;
+      *)          fail "invalid -p value '${PRESET}' (expected 'general', 'javascript', 'python', 'kubernetes' or 'go').";;
     esac
   fi
   # Names become download URLs and file names
+  local unique=""
   for name in $names; do
     case "$name" in
-      *[!A-Za-z0-9_-]*) fail "invalid instruction name '${name}' (letters, digits, '-' and '_' only).";;
+      -*|*[!A-Za-z0-9_-]*) fail "invalid instruction name '${name}' (letters, digits, '-' and '_' only, not starting with '-').";;
     esac
+    has_word "$name" "$unique" || unique="${unique:+${unique} }${name}"
   done
-  printf '%s' "$names"
+  printf '%s' "$unique"
 }
 
 # The superpowers plugin ships its own systematic-debugging skill, with the same trigger. Personal
@@ -510,16 +538,15 @@ setup_agents_md() {
 # Claude Code reads AGENTS.md only while no CLAUDE.md exists; otherwise CLAUDE.md has to import it.
 link_claude_md() {
   local file import
-  if [ -L "AGENTS.md" ] || [ -L "CLAUDE.md" ]; then
-    note "AGENTS.md or CLAUDE.md is a symlink: left the link between them as it is."
-    return 0
-  fi
   # A CLAUDE.md written by older runs holds a second copy of the instructions
-  if [ -f "CLAUDE.md" ] && [ "$(first_heading "CLAUDE.md")" = "$GENERAL_HEADING" ]; then
+  if [ -f "CLAUDE.md" ] && [ ! -L "CLAUDE.md" ] && [ "$(first_heading "CLAUDE.md")" = "$GENERAL_HEADING" ]; then
     retire "CLAUDE.md" "" "$GENERAL_HEADING"
   fi
   for file in CLAUDE.md .claude/CLAUDE.md; do
-    if [ -f "$file" ]; then
+    if [ -f "$file" ] && [ "$file" -ef "AGENTS.md" ]; then
+      # One is a symlink to the other: Claude Code already reads the shared file
+      return 0
+    elif [ -f "$file" ]; then
       import="@AGENTS.md"
       [ "$file" = "CLAUDE.md" ] || import="@../AGENTS.md"
       if ! grep -qxF "$import" "$file"; then
@@ -558,9 +585,9 @@ setup_claude() {
     install_file "$(general_body)" "general-instructions.md"
     # VS Code also reads ~/.claude/CLAUDE.md but does not expand '@' imports, so this copy never
     # doubles the one Copilot gets from ~/.copilot/copilot-instructions.md
-    touch "${HOME}/.claude/CLAUDE.md"
+    [ -f "${HOME}/.claude/CLAUDE.md" ] || : > "${HOME}/.claude/CLAUDE.md"
     grep -qxF '@general-instructions.md' "${HOME}/.claude/CLAUDE.md" || \
-      echo '@general-instructions.md' >> "${HOME}/.claude/CLAUDE.md"
+      printf '\n%s\n' '@general-instructions.md' >> "${HOME}/.claude/CLAUDE.md"
   else
     manifest_open ".claude"
     link_claude_md
@@ -605,6 +632,7 @@ setup_claude() {
 }
 
 setup_claude_plugins() {
+  local plugin
   if ! command -v claude > /dev/null 2>&1; then
     printf "${COLOR_RED}Warning${COLOR_OFF}: 'claude' binary not found — skipping plugin install (-P).\n"
     return 0
@@ -629,7 +657,10 @@ setup_claude_plugins() {
 # content is loaded once.
 copilot_item() {
   local from="$1" rel="$2" claude_rel="$3" claude_copy=".claude/$3"
-  if [ -n "$claude_rel" ] && [ -f "$claude_copy" ] && [ -f ".claude/${MANIFEST}" ] \
+  if [ -n "$claude_rel" ] && [ -e "$claude_copy" ] && [ "${ROOT}/${rel}" -ef "$claude_copy" ]; then
+    # .github/<folder> is a link to .claude/<folder>: nothing to install or remove
+    SHARED="${SHARED} ${claude_copy}"
+  elif [ -n "$claude_rel" ] && [ -f "$claude_copy" ] && [ -f ".claude/${MANIFEST}" ] \
     && awk -v p="$claude_rel" '$2 == p { found = 1 } END { exit !found }' ".claude/${MANIFEST}"; then
     retire "${ROOT}/${rel}" "$rel" "$(first_heading "$from")"
     SHARED="${SHARED} ${claude_copy}"
@@ -682,9 +713,13 @@ setup_copilot() {
 
   if [ "$WITH_AGENTS" = "1" ]; then
     managed="skills/ agents/"
-    for name in $AGENTS; do
-      install_file "$(src "ai/copilot/agents/${name}.md")" "agents/${name}.md"
-    done
+    if [ "${ROOT}/agents" -ef "$(dirname "${ROOT}")/.claude/agents" ] 2> /dev/null; then
+      warn "'${ROOT}/agents' is the same folder as the Claude Code one: Copilot agents not installed (the formats differ)."
+    else
+      for name in $AGENTS; do
+        install_file "$(src "ai/copilot/agents/${name}.md")" "agents/${name}.md"
+      done
+    fi
   fi
 
   # shellcheck disable=SC2086 # one argument per managed prefix
@@ -779,10 +814,11 @@ main() {
     setup_agents_md
   fi
   if [ "$TOOL" = "claude" ] || [ "$TOOL" = "both" ]; then
-    setup_claude "$INSTRUCTIONS"
+    # Plugins first: whether superpowers is there decides if systematic-debugging is installed
     if [ "$WITH_PLUGINS" = "1" ]; then
       setup_claude_plugins
     fi
+    setup_claude "$INSTRUCTIONS"
   fi
   if [ "$TOOL" = "copilot" ] || [ "$TOOL" = "both" ]; then
     setup_copilot "$INSTRUCTIONS"
