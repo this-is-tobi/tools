@@ -34,6 +34,7 @@ rules:
     check-multi-line-strings: false
   quoted-strings:
     quote-type: double
+    required: false
   key-duplicates: enable
   line-length: disable
   new-line-at-end-of-file: disable
@@ -43,4 +44,4 @@ rules:
   truthy:
     level: warning
 ignore: |
-  */templates/
+  **/templates/
