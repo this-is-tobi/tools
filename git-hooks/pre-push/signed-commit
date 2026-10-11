@@ -1,25 +1,117 @@
 #!/bin/bash
 
-# Function to check if a commit is signed
-is_commit_signed() {
-  local commit_hash=$1
-  git verify-commit "$commit_hash" > /dev/null 2>&1
-  return $?
-}
+# Reject a push that sends commits which are not signed, or whose signature git
+# cannot verify. Every commit is reported, not only the first one.
+#
+# git writes one line per pushed ref on stdin:
+#   <local ref> <local sha> <remote ref> <remote sha>
+# Only the commits the remote does not have yet are checked: <remote sha>..<local sha>
+# for an existing ref, and the commits that are on no remote-tracking branch for
+# a new ref (remote sha all zeros). Deletions send no commit and are skipped.
+#
+# Signature statuses (git log --format=%G?) accepted:
+#   G  good signature
+#   U  good signature from a key of unknown trust: a GPG key not marked as
+#      trusted, or an SSH key missing from gpg.ssh.allowedSignersFile. The
+#      signature is valid; matching the key to its owner is left to the remote,
+#      which is what marks the commit as verified.
+# Rejected: N (not signed), B (bad), E (cannot be checked, e.g. missing public
+# key), X/Y (expired signature or key), R (revoked key). SSH signatures can only
+# be checked with gpg.ssh.allowedSignersFile set.
+#
+# The checks run in a subshell so that, when this file is appended to an
+# existing pre-push hook, finishing early here never skips the code after it.
+# The refs come from stdin, which can only be read once: an earlier hook in the
+# same file must not consume it.
+(
+  set -uo pipefail
 
-# Read the remote name and URL from the input
-read local_ref local_sha remote_ref remote_sha
+  is_zero_sha() {
+    case "$1" in
+      *[!0]*) return 1 ;;
+    esac
+  }
 
-# Get the range of commits to check
-commit_range=$(git rev-list "$local_sha".."$remote_sha")
+  # git reports N for an SSH signature when gpg.ssh.allowedSignersFile is not
+  # set, so look for the signature header to tell "unsigned" from "unverifiable"
+  has_signature_header() {
+    local headers
+    headers=$(git cat-file commit "$1") || return 1
+    headers="${headers%%$'\n\n'*}"
+    case "$headers" in
+      gpgsig*|*$'\n'gpgsig*) return 0 ;;
+    esac
+    return 1
+  }
 
-# Check each commit in the range
-for commit in $commit_range; do
-  if ! is_commit_signed "$commit"; then
-    echo "Error: Commit $commit is not signed."
-    exit 1
+  describe_status() {
+    case "$1" in
+      N)
+        if has_signature_header "$2"; then
+          echo 'signature cannot be checked, set gpg.ssh.allowedSignersFile for SSH signatures'
+        else
+          echo 'not signed'
+        fi
+        ;;
+      B) echo 'bad signature' ;;
+      E) echo 'signature cannot be checked' ;;
+      X) echo 'expired signature' ;;
+      Y) echo 'signed with an expired key' ;;
+      R) echo 'signed with a revoked key' ;;
+      *) echo "signature status $1" ;;
+    esac
+  }
+
+  # Read every ref before running git, so nothing below can consume stdin
+  PUSHED_REFS=$(cat)
+
+  CHECKED=' '
+  BAD_COMMITS=''
+  FAILED=0
+
+  while read -r LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
+    [ -n "${LOCAL_SHA:-}" ] || continue
+    is_zero_sha "$LOCAL_SHA" && continue
+
+    # A tag can point at a tree or a blob: no commit to check then
+    TIP=$(git rev-parse --verify --quiet "${LOCAL_SHA}^{commit}") || continue
+
+    if ! is_zero_sha "${REMOTE_SHA:-0}" && git cat-file -e "${REMOTE_SHA}^{commit}" 2>/dev/null; then
+      RANGE=("${REMOTE_SHA}..${TIP}")
+    else
+      # New ref, or a remote tip that is not in the local repository (force push
+      # without a fetch): check what no remote-tracking branch contains yet
+      RANGE=("$TIP" --not --remotes)
+    fi
+
+    if ! COMMITS=$(git --no-pager log --no-show-signature --format='%H %G? %s' "${RANGE[@]}"); then
+      echo "signed-commit: cannot list the commits pushed to ${REMOTE_REF:-$LOCAL_REF}." >&2
+      FAILED=1
+      continue
+    fi
+
+    while read -r SHA SIG_STATUS SUBJECT; do
+      [ -n "$SHA" ] || continue
+      case "$CHECKED" in
+        *" $SHA "*) continue ;;
+      esac
+      CHECKED="${CHECKED}${SHA} "
+      case "$SIG_STATUS" in
+        G|U) ;;
+        *)
+          BAD_COMMITS="${BAD_COMMITS}  ${SHA:0:12} ($(describe_status "$SIG_STATUS" "$SHA")) ${SUBJECT}"$'\n'
+          FAILED=1
+          ;;
+      esac
+    done <<< "$COMMITS"
+  done <<< "$PUSHED_REFS"
+
+  if [ -n "$BAD_COMMITS" ]; then
+    {
+      echo "signed-commit: these commits are not properly signed:"
+      printf '%s' "$BAD_COMMITS"
+      echo "Sign them again (for example: git rebase --exec 'git commit --amend --no-edit -S' <base>) and push again."
+    } >&2
   fi
-done
-
-echo "All commits are signed."
-exit 0
+  exit "$FAILED"
+) || exit $?
