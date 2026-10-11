@@ -1,7 +1,3 @@
----
-applyTo: "**"
----
-
 # Commit Message Instructions
 
 You are an expert in writing clear, concise, and meaningful commit messages following the Conventional Commits specification.
