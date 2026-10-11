@@ -300,7 +300,7 @@ A dispatch only publishes when started from `main` or from a release tag (`<name
 
 ### PR build checks
 
-`ci.yml` verifies buildability before anything merges, not just commit message format. On every non-draft PR it diffs changed files against `ci/matrix.json`'s `build.context` fields and builds (AMD64 only, no attestation) just the images actually touched, tagged `<image>:pr-<number>` and pushed to ghcr.io — a PR touching only docs or a single Dockerfile builds nothing or exactly that one image. `docker/templates/**` changes get a local `docker build` for both the `dev` and `prod` stages instead (no push — templates were never published by this pipeline, they're copy-paste starting points). PR-tagged images are deleted from ghcr.io once the PR closes (merged or not), via the shared `clean-cache.yml` workflow.
+`ci.yml` verifies buildability before anything merges, not just commit message format. On every non-draft PR it diffs changed files against `ci/matrix.json`'s `build.context` fields and builds (AMD64 only, no attestation) just the images actually touched, tagged `<image>:pr-<number>` and pushed to ghcr.io — a PR touching only docs or a single Dockerfile builds nothing or exactly that one image. An image's own smoke test (`ci/tests/<name>.sh`) counts as part of it, and a change to what every image shares — `ci/tests/lib*.sh` or `ci/matrix.json` — builds and tests all of them. `docker/templates/**` changes get a local `docker build` for both the `dev` and `prod` stages instead (no push — templates were never published by this pipeline, they're copy-paste starting points). PR-tagged images are deleted from ghcr.io once the PR closes (merged or not), via the shared `clean-cache.yml` workflow.
 
 ### GitHub API rate limit during builds
 

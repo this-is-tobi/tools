@@ -56,10 +56,19 @@ jobs:
         echo "Changed files:"
         echo "$CHANGED"
 
+        # An image is affected by its own build context and its own smoke test
+        # (ci/tests/<name>.sh), and every image is affected by what they all
+        # share: the test libraries (ci/tests/lib*.sh) and the matrix itself.
+        # Otherwise a change to a test or to a build entry is merged without the
+        # image it describes ever being built or tested against it.
         IMAGES=$(jq -c '[.[] | select(.deprecated != true)]' ci/matrix.json | \
           jq -c --arg files "$CHANGED" '
             ($files | split("\n")) as $changed
-            | [.[] | select(.build.context as $ctx | $changed | any(startswith(($ctx | ltrimstr("./")) + "/")))]
+            | ($changed | any(. == "ci/matrix.json" or test("^ci/tests/lib[^/]*\\.sh$"))) as $shared
+            | [.[]
+              | ((.build.context | ltrimstr("./")) + "/") as $ctx
+              | ("ci/tests/" + .name + ".sh") as $test
+              | select($shared or ($changed | any(startswith($ctx) or . == $test)))]
           ')
         echo "Affected images: $IMAGES"
         echo "IMAGES=$IMAGES" >> "$GITHUB_OUTPUT"
