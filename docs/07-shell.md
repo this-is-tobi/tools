@@ -27,7 +27,7 @@ chmod +x script.sh
 | ----------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | [backup-kube-mariadb.sh](../shell/backup-kube-mariadb.sh)         | *backup / restore mariadb database from / to a kubernetes pod.*                 |
 | [backup-kube-pg.sh](../shell/backup-kube-pg.sh)                   | *backup / restore postgres database from / to a kubernetes pod.*                |
-| [backup-kube-qdrant.sh](../shell/backup-kube-qdrant.sh)           | *backup / restore qdrant raft cluster from / to a kubernetes pod.*              |
+| [backup-kube-qdrant.sh](../shell/backup-kube-qdrant.sh)           | *backup / restore qdrant collection snapshots from / to a kubernetes pod.*      |
 | [backup-kube-vault.sh](../shell/backup-kube-vault.sh)             | *backup / restore vault raft cluster from / to a kubernetes pod.*               |
 | [clone-subdir.sh](../shell/clone-subdir.sh)                       | *clone a subdirectory from a git repository.*                                   |
 | [compose-to-matrix.sh](../shell/compose-to-matrix.sh)             | *parse docker-compose file to create github matrix.*                            |
@@ -68,42 +68,81 @@ chmod +x script.sh
 
 ### Backup Operations
 
+The backup scripts never put a password or token on a command line (where `ps` and the Kubernetes API audit log would show it): it reaches the pod on stdin, or the local client through its usual environment variable. Pass it through that variable rather than the `-p` / `-a` flag, which stays visible in the local process list. The `*_forward` modes forward a random free local port, so a database running on your machine is never touched, and every failure (dump, copy, port forward) makes the script exit non-zero instead of reporting success.
+
+| Script                   | Secret variable  | Flag |
+| ------------------------ | ---------------- | ---- |
+| `backup-kube-pg.sh`      | `PGPASSWORD`     | `-p` |
+| `backup-kube-mariadb.sh` | `MYSQL_PWD`      | `-p` |
+| `backup-kube-vault.sh`   | `VAULT_TOKEN`    | `-p` |
+| `backup-kube-qdrant.sh`  | `QDRANT_API_KEY` | `-a` |
+
 **PostgreSQL:**
 ```sh
-./backup-kube-pg.sh backup -n namespace -p pod-name -d database -o backup.sql
-./backup-kube-pg.sh restore -n namespace -p pod-name -d database -i backup.sql
+read -rs PGPASSWORD && export PGPASSWORD   # prompts without echo, stays out of the shell history
+./backup-kube-pg.sh -m dump -n my-namespace -t my-postgres-pod -d mydatabase -u myuser -o ./backups
+./backup-kube-pg.sh -m restore_forward -n my-namespace -t svc/my-postgres -d mydatabase -u myuser -f ./backups/20240101T1200-mydatabase.dump -z
+```
+
+**MariaDB:**
+```sh
+read -rs MYSQL_PWD && export MYSQL_PWD
+./backup-kube-mariadb.sh -m dump_forward -n my-namespace -t my-mariadb-pod -d mydatabase -o ./backups
 ```
 
 **Vault:**
 ```sh
-./backup-kube-vault.sh backup -n vault -p vault-0
-./backup-kube-vault.sh restore -n vault -p vault-0 -i vault-backup.snap
+read -rs VAULT_TOKEN && export VAULT_TOKEN
+./backup-kube-vault.sh -m dump -n vault -t vault-0 -o ./backups
+./backup-kube-vault.sh -m restore_forward -n vault -t vault-0 -f ./backups/20240101T1200-vault.snap
+```
+
+**Qdrant** (snapshots go through the HTTP API over a port forward, the former `dump` / `restore` modes are gone):
+```sh
+read -rs QDRANT_API_KEY && export QDRANT_API_KEY
+./backup-kube-qdrant.sh -m dump_forward -n my-namespace -t qdrant-0 -o ./backups
+./backup-kube-qdrant.sh -m restore_forward -n my-namespace -t qdrant-0 -f ./backups/20240101T1200-qdrant
 ```
 
 ### Monitoring
 
 ```sh
-# PostgreSQL cluster report
-./monitor-kube-cnpg.sh -n database-namespace -o report.md
+# PostgreSQL (CloudNativePG) cluster report
+./monitor-kube-cnpg.sh -n database-namespace -c my-cluster
 
 # Vault health check
-./monitor-kube-vault.sh -n vault
+./monitor-kube-vault.sh -n vault -v vault
 
 # Redis cluster status
-./monitor-kube-redis.sh -n redis-namespace
+./monitor-kube-redis.sh -n redis-namespace -r my-redis
+
+# Qdrant cluster status
+./monitor-kube-qdrant.sh -n qdrant-namespace -q my-qdrant
 ```
 
 ### Resource Management
 
 ```sh
-# Export Kubernetes resources
-./export-kube-resources.sh -n my-namespace -o ./exported
+# Export Kubernetes resources (files are created readable by you only: they can hold secrets)
+./export-kube-resources.sh -k all -n my-namespace -o ./exported
 
 # Export ArgoCD applications
-./export-argocd-resources.sh -n argocd -o ./argocd-backup
+./export-argocd-resources.sh -k all -n argocd -o ./argocd-backup
 
-# Generate service account token
-./kube-generate-token.sh -n default -s my-service-account --kubeconfig
+# Generate a service account token (24h by default, read-only role without access to secrets)
+./kube-generate-token.sh -n default -s my-service-account
+
+# Write a kubeconfig file (mode 600); add -S to also grant read access to secrets
+./kube-generate-token.sh -n default -s my-service-account -d 8h -f kubeconfig -o ~/.kube/config.d/my-service-account
+```
+
+`kube-generate-token.sh` prints only the token or kubeconfig on stdout, progress goes to stderr.
+
+### Helm Chart Scaffolding
+
+```sh
+# Generate a chart with a base service and two more; pin the template with HELM_CHARTS_REF=<branch|tag|sha>
+./helm-template.sh -c my-chart -s api -a worker -a client -o ./my-chart
 ```
 
 ### GitHub Container Registry
