@@ -9,7 +9,7 @@ Local GitHub Actions testing wrapper for running workflows on your machine.
 ### Prerequisites
 
 - **Docker** or **Podman**
-- **act** CLI - Install: `curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash`
+- **act** CLI - Install: `brew install act` or see [nektos/act](https://github.com/nektos/act). When it is missing, `run-ci-locally.sh` offers to install a pinned release after checking it against the release checksums.
 - **Git** repository with GitHub Actions workflows
 
 ### Overview
@@ -33,11 +33,14 @@ A custom act-runner image is available at [`docker/utils/act-runner`](https://gi
 ### Setup
 
 ```sh
-# Copy act directory to your project
+# Copy act directory to your project (creates ./act)
 curl -fsSL https://raw.githubusercontent.com/this-is-tobi/tools/main/shell/clone-subdir.sh | bash -s -- \
-  -u "https://github.com/this-is-tobi/tools" -b "main" -s "act" -o "./act" -d
+  -u "https://github.com/this-is-tobi/tools" -b "main" -s "act" -o "."
 
 cd act
+
+# Registry credentials (only needed with -r): env/.env is git-ignored
+cp env/.env-example env/.env
 ```
 
 ### Usage
@@ -52,7 +55,7 @@ cd act
 # Use specific event template
 ./scripts/run-ci-locally.sh -e ./events/pr_base_main.json
 
-# Start with local registry (port 5555)
+# Start with local registry (127.0.0.1:5555, stopped when the run ends)
 ./scripts/run-ci-locally.sh -r
 
 # Review artifacts
@@ -73,6 +76,8 @@ Available event templates in `events/`:
 FROM ubuntu:24.04
 RUN apt-get update && apt-get install -y python3 nodejs
 ```
+
+**Local registry** (`env/.env`, copied from `env/.env-example`): `REGISTRY_USERNAME` and `REGISTRY_SECRET` have no default and the registry refuses to start without them. They can also come from the environment. The registry is published on `127.0.0.1` only, and the credentials reach `htpasswd` through stdin and `act` by variable name, so they never show in the process list. Generated files (`env/.env`, `registry/auth`, `registry/certs`, `registry/data`, `artifacts`) are git-ignored by `act/.gitignore`.
 
 **Secrets** (`.secrets` file):
 ```sh
@@ -126,7 +131,7 @@ Local Kubernetes development environment using Kubernetes in Docker.
 ### Prerequisites
 
 - **Docker** or **Podman**
-- **kind** - Install: `brew install kind` or see [kind.sigs.k8s.io](https://kind.sigs.k8s.io/docs/user/quick-start/#installation)
+- **kind** - Install: `brew install kind` or see [kind.sigs.k8s.io](https://kind.sigs.k8s.io/docs/user/quick-start/#installation). When it is missing, `run.sh` offers to install a pinned release after checking its sha256.
 - **kubectl** - Install: `brew install kubectl` or see [kubernetes.io](https://kubernetes.io/docs/tasks/tools/)
 - **helm** (optional) - Install: `brew install helm`
 
@@ -135,7 +140,7 @@ Local Kubernetes development environment using Kubernetes in Docker.
 Run a local Kubernetes cluster for development and testing. The wrapper provides:
 - Simplified cluster management
 - Docker Compose integration for multi-image builds
-- Pre-configured ingress controller (Traefik or Nginx)
+- Pre-configured ingress controller (Traefik by default, or the retired ingress-nginx pinned to its last release)
 - Volume mounting for live development
 - Port forwarding to host machine
 
@@ -144,9 +149,9 @@ The cluster uses `extraMounts` to bind the host working directory to `/app` insi
 ### Setup
 
 ```sh
-# Copy kind directory to your project
+# Copy kind directory to your project (creates ./kind)
 curl -fsSL https://raw.githubusercontent.com/this-is-tobi/tools/main/shell/clone-subdir.sh | bash -s -- \
-  -u "https://github.com/this-is-tobi/tools" -b "main" -s "kind" -o "./kind" -d
+  -u "https://github.com/this-is-tobi/tools" -b "main" -s "kind" -o "."
 
 cd kind
 ```
@@ -163,6 +168,12 @@ Configure `docker-compose.yml` with your application services.
 ./run.sh -c create    # Create cluster
 ./run.sh -c build     # Build and load images
 ./run.sh -c delete    # Cleanup cluster
+
+# Use the retired ingress-nginx instead of Traefik
+./run.sh -c create -i nginx
+
+# Map local domains to 127.0.0.1 in /etc/hosts (sudo, missing names only)
+./run.sh -c dev -d 'api.domain.local,doc.domain.local'
 
 # View help
 ./run.sh -h
@@ -182,9 +193,10 @@ apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
   - role: control-plane
     extraPortMappings:
-      - containerPort: 80
+      # The ingress controller service listens on these node ports
+      - containerPort: 30080
         hostPort: 80
-      - containerPort: 443
+      - containerPort: 30443
         hostPort: 443
   - role: worker
 ```
@@ -200,7 +212,7 @@ services:
     image: myapp/frontend:local
 ```
 
-**Ingress controller**: Edit `run.sh` to switch between Traefik and Nginx.
+**Ingress controller**: `-i traefik` (default) or `-i nginx`. The [ingress-nginx project was retired in March 2026](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) and gets no more releases or security fixes: `run.sh` pins it to its last release (`controller-v1.15.1`) for existing setups and prints a warning. Both controllers are exposed on node ports 30080/30443, mapped to the host ports 80/443.
 
 ### Troubleshooting
 
@@ -229,7 +241,7 @@ docker exec -it kind-control-plane crictl images
 **Cannot access ingress:**
 ```sh
 # Check ingress controller status
-kubectl get pods -n ingress-nginx  # or -n traefik
+kubectl get pods -n ingress-traefik  # or -n ingress-nginx
 kubectl get ingress
 
 # Test from within cluster
