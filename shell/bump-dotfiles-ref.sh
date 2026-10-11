@@ -56,9 +56,12 @@ while getopts hb:nr:u: flag; do
       TARGET_REF="${OPTARG}";;
     u)
       REPO_URL="${OPTARG}";;
-    h | *)
+    h)
       print_help
       exit 0;;
+    *)
+      print_help >&2
+      exit 1;;
   esac
 done
 

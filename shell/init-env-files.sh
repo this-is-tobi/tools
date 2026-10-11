@@ -4,13 +4,7 @@ set -euo pipefail
 
 # Colors
 COLOR_OFF='\033[0m'
-COLOR_BLUE='\033[0;34m'
 COLOR_RED='\033[0;31m'
-COLOR_GREEN='\033[0;32m'
-COLOR_YELLOW='\033[0;33m'
-
-# Defaults
-PROJECT_DIR="$(git rev-parse --show-toplevel)"
 
 # Script helper
 TEXT_HELPER="
@@ -29,13 +23,20 @@ print_help() {
 while getopts h flag
 do
   case "${flag}" in
-    h | *)
+    h)
       print_help
       exit 0;;
+    *)
+      print_help >&2
+      exit 1;;
   esac
 done
 
-find ${PROJECT_DIR:-.} -type f -name ".env*-example" -or -name "*-example.yaml" | while read f; do
+# Defaults
+# The repository root, or the current directory outside of a git repository
+PROJECT_DIR="$(git rev-parse --show-toplevel 2> /dev/null || pwd)"
+
+find "$PROJECT_DIR" -type f \( -name ".env*-example" -o -name "*-example.yaml" \) | while IFS= read -r f; do
   if [ ! -f "${f/-example/}" ]; then
     printf "\n${COLOR_RED}Copy${COLOR_OFF}: '$f'"
     printf "\n${COLOR_RED}  to${COLOR_OFF}: '${f/-example/}'\n"
@@ -45,7 +46,7 @@ find ${PROJECT_DIR:-.} -type f -name ".env*-example" -or -name "*-example.yaml" 
   fi
 done
 
-find ${PROJECT_DIR:-.} -type f -name ".env*.example" -or -name "*.example.yaml" | while read f; do
+find "$PROJECT_DIR" -type f \( -name ".env*.example" -o -name "*.example.yaml" \) | while IFS= read -r f; do
   if [ ! -f "${f/.example/}" ]; then
     printf "\n${COLOR_RED}Copy${COLOR_OFF}: '$f'"
     printf "\n${COLOR_RED}  to${COLOR_OFF}: '${f/.example/}'\n"

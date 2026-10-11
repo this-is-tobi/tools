@@ -4,10 +4,7 @@ set -euo pipefail
 
 # Colors
 COLOR_OFF='\033[0m'
-COLOR_BLUE='\033[0;34m'
 COLOR_RED='\033[0;31m'
-COLOR_GREEN='\033[0;32m'
-COLOR_YELLOW='\033[0;33m'
 
 # Defaults
 INPUT=""
@@ -15,6 +12,8 @@ OUTPUT=""
 REPO=""
 RUN_ID=""
 ARTIFACT_DOWNLOAD_URL=""
+SCAN_IMAGES=false
+SCAN_CONFIG=false
 
 # Script helper
 TEXT_HELPER="
@@ -59,9 +58,12 @@ while getopts hi:o:p:r: flag; do
       REPO="${OPTARG}";;
     r)
       RUN_ID="${OPTARG}";;
-    h | *)
+    h)
       print_help
       exit 0;;
+    *)
+      print_help >&2
+      exit 1;;
   esac
 done
 
@@ -77,9 +79,9 @@ Settings:
 
 # Options validation
 if [ -z "$INPUT" ] || [ -z "$OUTPUT" ] || [ -z "$REPO" ] || [ -z "$RUN_ID" ]; then
-  echo "Argument(s) missing, you should set all paramters."
-  print_help
-  exit 0
+  echo "Argument(s) missing, you should set all parameters." >&2
+  print_help >&2
+  exit 1
 fi
 
 # Init
@@ -244,9 +246,8 @@ $SCAN_SUMMARY"
   SCAN_CONFIG=true
 fi
 
-if [ "$SCAN_DEPENDENCIES" = true ] || [ "$SCAN_CONFIG" = true ] || [ "$SCAN_IMAGES" = true ]; then
+if [ "$SCAN_CONFIG" = true ] || [ "$SCAN_IMAGES" = true ]; then
   printf "\n${COLOR_RED}[trivy report].${COLOR_OFF} Add artifacts download url to the vulnerability report body\n"
-  i=$(($i + 1))
 
   VULNERABILITY_REPORT_BODY=$(cat <<EOF
 $VULNERABILITY_REPORT_BODY
