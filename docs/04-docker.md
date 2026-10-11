@@ -200,7 +200,8 @@ What it still covers that a digest bump does not:
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
 | `curl`, `backup`                           | only the window between upstream rebuilds of the Alpine base, where the apk repositories are already ahead of it |
 | `debug`, `dev`, `dev-lite`                 | the mise tools and bat-extras installed at `@latest` by the dotfiles setup scripts                               |
-| `act-runner`, `gh-runner`, `gh-runner-gpu` | the docker.com and nvidia apt repositories, ~30 mise tools at `@latest`, and `uv pip install ansible`            |
+| `act-runner`, `gh-runner`                  | the docker.com apt repository and ansible's dependencies (the mise toolchain and ansible itself are pinned)      |
+| `gh-runner-gpu`                            | the NVIDIA apt repository; everything else comes from the pinned `gh-runner` digest                              |
 
 **Recency guard.** Renovate rebuilds an image within hours of its base moving, and because a changed `FROM` invalidates every layer, that rebuild already reinstalls everything else too. Refreshing an image that was just rebuilt only publishes a version whose contents are identical — which is what made the changelogs read as though the same change had landed twice. So the workflow reads each image's published `:latest` date from the GitHub Packages API and skips anything younger than `MAX_AGE_DAYS` (default 30). The lookup **fails open**: any result it cannot turn into a timestamp falls through to refreshing, since a redundant rebuild is cheap and an image silently skipped for months is not.
 
@@ -257,6 +258,61 @@ ARG PG_VERSION=18
 The comment is the whole configuration — adding a tracked pin to any active image needs nothing more than the `# renovate:` line above an `ARG <NAME>_VERSION=`, no change to `renovate.json`.
 
 `PG_VERSION` is the major that alpine's `postgresql<major>-client` package name is built from, tracked through the `postgres` image rather than the apk index. A major bump there depends on alpine having published the matching client package; the PR build and smoke test are what catch it if not.
+
+`act-runner` and `gh-runner` pin `ANSIBLE_VERSION` the same way (`datasource=pypi`). Only the top-level package is pinned: the venv still resolves ansible's own dependencies at build time.
+
+### Pinned runner toolchain (`mise.toml` + `mise.lock`)
+
+`act-runner` and `gh-runner` install their ~35 tools with [mise](https://mise.jdx.dev), and nothing about that install is resolved at build time:
+
+| file (in `docker/utils/<image>/`) | role                                                                                                                                       |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Dockerfile` `ARG MISE_IMAGE`     | the mise binary, copied from mise's own release image `ghcr.io/jdx/mise:<version>@sha256:...` (built from its signed release assets)      |
+| `mise.toml`                       | every tool at an exact version, copied to `~/.config/mise/config.toml`                                                                      |
+| `mise.lock`                       | per-platform (`linux-x64`, `linux-arm64`) download URL and checksum of every tool, copied to `~/.config/mise/mise.lock`                    |
+| `.mise/locks/`                    | the dependency graphs, with hashes, of the npm (`yarn`) and PyPI (`yamllint`) tools; `mise.lock` points at them by a path relative to itself |
+
+The build runs `mise install --locked`: every download comes from the URL in the lock and is checked against its checksum, and a lock that does not cover the config fails the build instead of quietly resolving something else. The build secret `github_token` is still mounted, since mise can still call the GitHub API (release attestation checks, for one).
+
+The mise binary comes from a digest-pinned image rather than `curl https://mise.run | sh`: the digest fixes the exact binary in this repository (an install script, or a checksum file fetched from the same release, can only prove the download was not corrupted), and Renovate's dockerfile manager bumps tag and digest together like any base image.
+
+`python` is in the toolchain because a locked PyPI install needs an interpreter mise manages, so `python`/`python3` on these runners resolve to mise's. It is held on the newest minor ansible-core supports, since the ansible venv uses it too. `yarn` is installed as `npm:@yarnpkg/cli-dist`: mise's default yarn backend is a plugin cloned from its default branch at install time, which nothing pins.
+
+**Bumping.** Renovate's `mise` manager reads `mise.toml` and updates `mise.lock` alongside it, provided it is allowed to run `mise lock` (`allowedUnsafeExecutions` on a self-hosted instance). If a bump arrives without a refreshed lock, the PR build fails at `mise install --locked`; refresh the lock and push it to the same branch. By hand:
+
+```sh
+cd docker/utils/gh-runner
+# edit the version in mise.toml, then:
+mise trust            # once, so mise reads this directory's config
+mise lock --platform linux-x64,linux-arm64
+```
+
+`mise lock` installs nothing: it reads the versions and fetches the URLs, checksums and dependency graphs from the backends. Locking `yamllint` needs `uv` 0.12.10 or newer and a Python 3.10+ on the machine running it.
+
+`act-runner/mise.toml` and `gh-runner/mise.toml` carry the same list (only their header comments differ), so bump both and copy the lock across:
+
+```sh
+cp docker/utils/gh-runner/mise.lock docker/utils/act-runner/mise.lock
+rm -rf docker/utils/act-runner/.mise && cp -R docker/utils/gh-runner/.mise docker/utils/act-runner/.mise
+```
+
+### gh-runner-gpu builds on gh-runner
+
+`gh-runner-gpu` is `gh-runner` plus the NVIDIA Container Toolkit, so its Dockerfile starts `FROM` the published `ghcr.io/this-is-tobi/tools/gh-runner:<version>@sha256:...` instead of repeating gh-runner's 120 lines, which drifted whenever one copy was edited without the other. The pin is an ordinary base image to Renovate: each gh-runner release turns into a `build(deps)` bump of `gh-runner-gpu`, which releases it.
+
+The trade-off is lag: a gh-runner change reaches gh-runner-gpu one release and one Renovate PR later, rather than in the same commit. Its own monthly refresh only re-runs the NVIDIA layer.
+
+### Dockerfile conventions
+
+- **Pinned frontend.** Every Dockerfile starts with `# syntax=docker/dockerfile:1@sha256:...`, so it parses the same on any builder (several rely on `RUN --mount` and `COPY --chmod`, and the bun template's symbolic `--chmod=a=rX` needs frontend 1.14+). Renovate's dockerfile manager tracks it.
+- **Downloads.** Every `curl` in a Dockerfile passes `-f`, so an HTTP error fails the build instead of being saved as the file. A downloaded binary is checked against a checksum (`vault` in `backup`, `mc` in the legacy images), and the docker.com and NVIDIA apt signing keys against their published fingerprints before apt trusts them.
+- **Lint.** [`.hadolint.yaml`](../.hadolint.yaml) holds the repository-wide [hadolint](https://github.com/hadolint/hadolint) decisions (trusted registries, unpinned apt/apk packages, `--no-install-recommends`); a decision about one instruction is an inline `# hadolint ignore=` with its reason, next to it. Run it from the repository root:
+
+  ```sh
+  hadolint --config .hadolint.yaml docker/utils/*/Dockerfile docker/templates/*/Dockerfile
+  ```
+
+  Only warnings and errors fail; the remaining `DL3066` infos (a non-numeric `USER`) are known.
 
 ### Versioning (release-please)
 
@@ -366,6 +422,8 @@ The tests are split in two deliberately, so that routine changes to a Dockerfile
 **Inventory — derived, never edited.** `probe_mise_shims` enumerates the mise shims directory *inside the image* and, for every binary found, resolves it through `mise which` and checks the dynamic loader can link it. Whatever a Dockerfile or the dotfiles scripts install today is what gets probed today. Adding a tool anywhere needs no edit here.
 
 The linkage check is the important half. It is what catches `node` exiting 127 on a missing `libatomic.so.1` — and it catches it for *every* binary at once, without executing any of them, so there are no per-tool version flags to guess at and nothing interactive to hang on. A static binary (most Go tools) makes `ldd` exit non-zero with "not a dynamic executable", which is correctly not treated as a failure.
+
+For the runner images, `probe_mise_config_installed` adds the other direction: every tool pinned in the image's global mise config must be installed, so a tool cannot drop out of `mise.toml`'s install without failing the test.
 
 **Contract — declared, and small.** Each `ci/tests/<image>.sh` lists only the tools the image exists to provide. These should fail loudly when removed, because dropping one is a breaking change for consumers and deserves a deliberate decision rather than silent absorption. Everything else is the probe's job — keep these lists short.
 
@@ -487,7 +545,7 @@ docker run -p 3000:3000 my-api:latest
 **Notes:**
 - Three stages: `dev` (hot reload via `bun --watch`), `build` (bundles and prunes to production-only dependencies), `prod` (minimal `distroless` runtime, no shell/package manager).
 - `dev` and `build` run as the image's built-in non-root `bun` user (uid/gid 1000), not root. With the bind-mount workflow above, if your host UID isn't 1000, either `chown` your project to `1000:1000` or add `--user "$(id -u):$(id -g)"` to the `docker run` so `bun` can write to it.
-- The prod image runs as a non-root user with group `0` (OpenShift restricted SCC compatible) and needs no writable volumes even under `readOnlyRootFilesystem: true`.
+- The prod image runs as non-root uid `1001`, but its code is root-owned and read-only (directories `555`, files `444`): the process cannot rewrite what it runs, and an arbitrary OpenShift uid (restricted SCC) can still read it. It needs no writable volumes even under `readOnlyRootFilesystem: true`; if your app writes files, give that path a volume of its own rather than making `/app` writable.
 - The `distroless` prod image has no shell or `wget`/`curl`, so there's no Docker `HEALTHCHECK`; wire an HTTP liveness/readiness probe (e.g. `/healthz`) at the orchestrator level instead.
 - `NODE_ENV` is set to `production` before the `build` stage runs, not just at runtime, since bundlers inline `process.env.NODE_ENV` at build time.
 
