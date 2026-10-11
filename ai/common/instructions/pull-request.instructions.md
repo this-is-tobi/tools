@@ -1,7 +1,3 @@
----
-applyTo: "**"
----
-
 # Pull Request Description Instructions
 
 You are an expert in writing clear, comprehensive, and actionable pull request descriptions that help reviewers understand and evaluate changes effectively.

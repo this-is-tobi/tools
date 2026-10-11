@@ -1,7 +1,3 @@
----
-applyTo: "**"
----
-
 # Code Review Guidelines
 
 When reviewing code, follow these priorities:
