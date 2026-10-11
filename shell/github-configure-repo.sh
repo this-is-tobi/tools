@@ -28,16 +28,18 @@ WEB_COMMIT_SIGNOFF_REQUIRED=true
 
 # Security features
 ENABLE_VULNERABILITY_ALERTS=true
-ENABLE_AUTOMATED_SECURITY_FIXES=true
+ENABLE_AUTOMATED_SECURITY_FIXES=false
 ENABLE_PRIVATE_VULNERABILITY_REPORTING=true
 ENABLE_SECRET_SCANNING=true
 ENABLE_SECRET_SCANNING_PUSH_PROTECTION=true
 
 # GitHub Actions
 ACTIONS_ENABLED=true
-ACTIONS_ALLOWED="selected"
+ACTIONS_ALLOWED="all"
+ACTIONS_SHA_PINNING_REQUIRED=true
 ACTIONS_GITHUB_OWNED=true
 ACTIONS_VERIFIED=false
+ACTIONS_PATTERNS=""
 WORKFLOW_DEFAULT_PERMISSION="read"
 WORKFLOW_CAN_APPROVE_PR=false
 
@@ -49,6 +51,10 @@ TEXT_HELPER="
 This script configures GitHub repository settings and security best practices using the REST API.
 It complements github-create-ruleset.sh (branch protection) and github-create-app.sh (app creation).
 
+Every setting is applied with an idempotent call, so the script can be run
+again at any time. A failed call does not stop the others: they are all
+reported at the end and the script exits non-zero.
+
 Configured settings:
   - Repository merge strategy and general settings
   - Vulnerability alerts and automated security fixes (Dependabot)
@@ -57,10 +63,15 @@ Configured settings:
   - GitHub Actions permissions and default workflow permissions
   - Immutable releases via tag rulesets
 
+Authentication:
+  The token is read from GH_TOKEN, then GITHUB_TOKEN, then 'gh auth token'.
+  It needs admin access to the repository. Passing it with -t still works, but
+  exposes it in the process list and the shell history.
+
 Available flags:
   -o    Owner (organization or user). [required]
   -r    Repository name. [required]
-  -t    GitHub Personal Access Token. [required]
+  -t    GitHub token (prefer GH_TOKEN / GITHUB_TOKEN).
 
   Repository settings:
   -D    Delete branch on merge.
@@ -87,7 +98,8 @@ Available flags:
   Security features:
   -v    Enable vulnerability alerts (Dependabot).
         Default: '$ENABLE_VULNERABILITY_ALERTS'.
-  -x    Enable automated security fixes (Dependabot auto-PRs).
+  -x    Enable automated security fixes (Dependabot pull requests).
+        Leave it off when Renovate already opens vulnerability fixes.
         Default: '$ENABLE_AUTOMATED_SECURITY_FIXES'.
   -V    Enable private vulnerability reporting.
         Default: '$ENABLE_PRIVATE_VULNERABILITY_REPORTING'.
@@ -99,10 +111,15 @@ Available flags:
   GitHub Actions:
   -a    Actions allowed: 'all', 'local_only', 'selected'.
         Default: '$ACTIONS_ALLOWED'.
+  -H    Require actions and reusable workflows to be pinned to a full-length commit SHA.
+        Default: '$ACTIONS_SHA_PINNING_REQUIRED'.
   -g    When actions_allowed=selected, allow GitHub-owned actions.
         Default: '$ACTIONS_GITHUB_OWNED'.
   -e    When actions_allowed=selected, allow verified creator actions.
         Default: '$ACTIONS_VERIFIED'.
+  -L    When actions_allowed=selected, comma-separated patterns of other allowed actions
+        and reusable workflows (e.g. 'docker/*,this-is-tobi/github-workflows/*').
+        Default: none.
   -W    Default workflow token permissions: 'read' or 'write'.
         Default: '$WORKFLOW_DEFAULT_PERMISSION'.
   -p    Allow workflows to approve pull requests.
@@ -120,7 +137,7 @@ Example:
   ./github-configure-repo.sh \\
     -o 'this-is-tobi' \\
     -r 'tools' \\
-    -t 'ghp_xxx'
+    -T '*'
 "
 
 # Functions
@@ -129,23 +146,40 @@ print_help() {
 }
 
 log_step() {
-  printf "\n${COLOR_BLUE}==> $1${COLOR_OFF}\n"
+  printf "\n${COLOR_BLUE}==> %s${COLOR_OFF}\n" "$1"
 }
 
 log_success() {
-  printf "${COLOR_GREEN}✔ $1${COLOR_OFF}\n"
+  printf "${COLOR_GREEN}✔ %s${COLOR_OFF}\n" "$1"
 }
 
 log_warn() {
-  printf "${COLOR_YELLOW}⚠ $1${COLOR_OFF}\n"
+  printf "${COLOR_YELLOW}⚠ %s${COLOR_OFF}\n" "$1" >&2
 }
 
 log_error() {
-  printf "${COLOR_RED}✖ $1${COLOR_OFF}\n"
+  printf "${COLOR_RED}✖ %s${COLOR_OFF}\n" "$1" >&2
 }
 
-# Perform a curl call and return the response body.
-# Exits with error if the HTTP status is >= 400.
+# A token given with -t is visible in the process list and the shell history:
+# the environment and the gh CLI keep it out of both.
+resolve_token() {
+  if [ -z "$TOKEN" ]; then
+    TOKEN="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+  fi
+  if [ -z "$TOKEN" ] && command -v gh > /dev/null 2>&1; then
+    TOKEN="$(gh auth token 2> /dev/null || true)"
+  fi
+}
+
+# Prints the Authorization header; curl reads it through a file descriptor so
+# the token never appears in its arguments.
+auth_header() {
+  printf 'Authorization: Bearer %s\n' "$TOKEN"
+}
+
+# Perform an API call and print the response body.
+# Fails (after printing the API message on stderr) unless the HTTP status is 2xx.
 github_api() {
   local method="$1"
   local url="$2"
@@ -156,36 +190,52 @@ github_api() {
   local http_status
 
   if [ -n "$data" ]; then
-    http_response=$(curl -s -w "\n%{http_code}" -X "$method" "$url" \
-      -H "Authorization: Bearer $TOKEN" \
+    http_response=$(printf '%s' "$data" | curl -sS -w "\n%{http_code}" -X "$method" "$url" \
+      -H @<(auth_header) \
       -H "Accept: application/vnd.github+json" \
       -H "X-GitHub-Api-Version: 2022-11-28" \
-      -d "$data")
+      -H "Content-Type: application/json" \
+      --data-binary @-) || { log_error "API call failed: $method $url"; return 1; }
   else
-    http_response=$(curl -s -w "\n%{http_code}" -X "$method" "$url" \
-      -H "Authorization: Bearer $TOKEN" \
+    http_response=$(curl -sS -w "\n%{http_code}" -X "$method" "$url" \
+      -H @<(auth_header) \
       -H "Accept: application/vnd.github+json" \
-      -H "X-GitHub-Api-Version: 2022-11-28")
+      -H "X-GitHub-Api-Version: 2022-11-28") || { log_error "API call failed: $method $url"; return 1; }
   fi
 
-  http_status=$(echo "$http_response" | tail -n1)
-  http_body=$(echo "$http_response" | sed '$d')
+  http_status=$(printf '%s\n' "$http_response" | tail -n1)
+  http_body=$(printf '%s\n' "$http_response" | sed '$d')
 
-  if [ "$http_status" -ge 400 ]; then
-    log_error "API call failed (HTTP $http_status): $method $url"
-    echo "$http_body" | jq -r '.message // .' 2>/dev/null || echo "$http_body"
-    return 1
+  case "$http_status" in
+    2??) ;;
+    *)
+      log_error "API call failed (HTTP $http_status): $method $url"
+      printf '%s\n' "$http_body" | jq -r '.message // .' >&2 2> /dev/null || printf '%s\n' "$http_body" >&2
+      return 1;;
+  esac
+
+  printf '%s\n' "$http_body"
+}
+
+# Runs one API call, prints the outcome and counts failures instead of stopping,
+# so every setting gets a chance to be applied.
+FAILURES=0
+apply() {
+  local message="$1"
+  shift
+  if github_api "$@" > /dev/null; then
+    log_success "$message"
+  else
+    FAILURES=$((FAILURES + 1))
   fi
-
-  echo "$http_body"
 }
 
 # Parse options
-while getopts "ho:r:t:D:S:M:R:A:U:w:j:I:G:v:x:V:s:P:a:g:e:W:p:i:T:" flag; do
+while getopts "ho:r:t:D:S:M:R:A:U:w:j:I:G:v:x:V:s:P:a:H:g:e:L:W:p:i:T:" flag; do
   case "${flag}" in
     o) OWNER=${OPTARG};;
     r) REPO=${OPTARG};;
-    t) TOKEN=${OPTARG};;
+    t) TOKEN=${OPTARG}; log_warn "Token passed with -t: it is visible in the process list and the shell history, prefer GH_TOKEN.";;
     D) DELETE_BRANCH_ON_MERGE=${OPTARG};;
     S) ALLOW_SQUASH_MERGE=${OPTARG};;
     M) ALLOW_MERGE_COMMIT=${OPTARG};;
@@ -202,13 +252,16 @@ while getopts "ho:r:t:D:S:M:R:A:U:w:j:I:G:v:x:V:s:P:a:g:e:W:p:i:T:" flag; do
     s) ENABLE_SECRET_SCANNING=${OPTARG};;
     P) ENABLE_SECRET_SCANNING_PUSH_PROTECTION=${OPTARG};;
     a) ACTIONS_ALLOWED=${OPTARG};;
+    H) ACTIONS_SHA_PINNING_REQUIRED=${OPTARG};;
     g) ACTIONS_GITHUB_OWNED=${OPTARG};;
     e) ACTIONS_VERIFIED=${OPTARG};;
+    L) ACTIONS_PATTERNS=${OPTARG};;
     W) WORKFLOW_DEFAULT_PERMISSION=${OPTARG};;
     p) WORKFLOW_CAN_APPROVE_PR=${OPTARG};;
     i) ENABLE_IMMUTABLE_RELEASES=${OPTARG};;
     T) IMMUTABLE_TAGS_PATTERN=${OPTARG};;
-    h | *) print_help; exit 0;;
+    h) print_help; exit 0;;
+    *) print_help >&2; exit 1;;
   esac
 done
 
@@ -238,8 +291,10 @@ Settings:
 
   GitHub Actions:
   > ACTIONS_ALLOWED: ${ACTIONS_ALLOWED}
+  > ACTIONS_SHA_PINNING_REQUIRED: ${ACTIONS_SHA_PINNING_REQUIRED}
   > ACTIONS_GITHUB_OWNED: ${ACTIONS_GITHUB_OWNED}
   > ACTIONS_VERIFIED: ${ACTIONS_VERIFIED}
+  > ACTIONS_PATTERNS: ${ACTIONS_PATTERNS:-none}
   > WORKFLOW_DEFAULT_PERMISSION: ${WORKFLOW_DEFAULT_PERMISSION}
   > WORKFLOW_CAN_APPROVE_PR: ${WORKFLOW_CAN_APPROVE_PR}
 
@@ -249,24 +304,37 @@ Settings:
 "
 
 # Options validation
+resolve_token
+
 if [ -z "$OWNER" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: owner (flag -o).\n"
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: owner (flag -o).\n" >&2
   exit 1
 elif [ -z "$REPO" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: repository (flag -r).\n"
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: repository (flag -r).\n" >&2
   exit 1
 elif [ -z "$TOKEN" ]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Argument missing: token (flag -t).\n"
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} No token found: set GH_TOKEN or GITHUB_TOKEN, log in with 'gh auth login', or use flag -t.\n" >&2
   exit 1
 fi
 
+for BOOLEAN_SETTING in DELETE_BRANCH_ON_MERGE ALLOW_SQUASH_MERGE ALLOW_MERGE_COMMIT ALLOW_REBASE_MERGE \
+  ALLOW_AUTO_MERGE ALLOW_UPDATE_BRANCH HAS_WIKI HAS_PROJECTS HAS_ISSUES WEB_COMMIT_SIGNOFF_REQUIRED \
+  ENABLE_VULNERABILITY_ALERTS ENABLE_AUTOMATED_SECURITY_FIXES ENABLE_PRIVATE_VULNERABILITY_REPORTING \
+  ENABLE_SECRET_SCANNING ENABLE_SECRET_SCANNING_PUSH_PROTECTION ACTIONS_SHA_PINNING_REQUIRED \
+  ACTIONS_GITHUB_OWNED ACTIONS_VERIFIED WORKFLOW_CAN_APPROVE_PR ENABLE_IMMUTABLE_RELEASES; do
+  if [ "${!BOOLEAN_SETTING}" != "true" ] && [ "${!BOOLEAN_SETTING}" != "false" ]; then
+    printf "\n${COLOR_RED}Error.${COLOR_OFF} Invalid value for %s: '%s' (expected 'true' or 'false').\n" "$BOOLEAN_SETTING" "${!BOOLEAN_SETTING}" >&2
+    exit 1
+  fi
+done
+
 if [[ "$ACTIONS_ALLOWED" != "all" && "$ACTIONS_ALLOWED" != "local_only" && "$ACTIONS_ALLOWED" != "selected" ]]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Invalid value for -a: must be 'all', 'local_only', or 'selected'.\n"
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Invalid value for -a: must be 'all', 'local_only', or 'selected'.\n" >&2
   exit 1
 fi
 
 if [[ "$WORKFLOW_DEFAULT_PERMISSION" != "read" && "$WORKFLOW_DEFAULT_PERMISSION" != "write" ]]; then
-  printf "\n${COLOR_RED}Error.${COLOR_OFF} Invalid value for -W: must be 'read' or 'write'.\n"
+  printf "\n${COLOR_RED}Error.${COLOR_OFF} Invalid value for -W: must be 'read' or 'write'.\n" >&2
   exit 1
 fi
 
@@ -276,10 +344,6 @@ BASE_URL="https://api.github.com/repos/$OWNER/$REPO"
 # 1. Repository general settings
 # ─────────────────────────────────────────────
 log_step "Configuring repository general settings..."
-
-# Build security_and_analysis block conditionally (only available for eligible repos)
-SECRET_SCANNING_STATUS=$([ "$ENABLE_SECRET_SCANNING" = "true" ] && echo "enabled" || echo "disabled")
-PUSH_PROTECTION_STATUS=$([ "$ENABLE_SECRET_SCANNING_PUSH_PROTECTION" = "true" ] && echo "enabled" || echo "disabled")
 
 REPO_PAYLOAD=$(jq -n \
   --argjson delete_branch "$DELETE_BRANCH_ON_MERGE" \
@@ -292,8 +356,6 @@ REPO_PAYLOAD=$(jq -n \
   --argjson projects "$HAS_PROJECTS" \
   --argjson issues "$HAS_ISSUES" \
   --argjson signoff "$WEB_COMMIT_SIGNOFF_REQUIRED" \
-  --arg ss_status "$SECRET_SCANNING_STATUS" \
-  --arg pp_status "$PUSH_PROTECTION_STATUS" \
   '{
     delete_branch_on_merge: $delete_branch,
     allow_squash_merge: $squash,
@@ -304,92 +366,99 @@ REPO_PAYLOAD=$(jq -n \
     has_wiki: $wiki,
     has_projects: $projects,
     has_issues: $issues,
-    web_commit_signoff_required: $signoff,
+    web_commit_signoff_required: $signoff
+  }')
+
+apply "Repository general settings applied." PATCH "$BASE_URL" "$REPO_PAYLOAD"
+
+# ─────────────────────────────────────────────
+# 2. Secret scanning
+# ─────────────────────────────────────────────
+# Sent apart from the general settings: on repositories where these features are
+# unavailable (private repositories without GitHub Advanced Security) the call
+# fails, and it must not take the general settings down with it.
+log_step "Configuring secret scanning..."
+
+SECRET_SCANNING_STATUS=$([ "$ENABLE_SECRET_SCANNING" = "true" ] && echo "enabled" || echo "disabled")
+PUSH_PROTECTION_STATUS=$([ "$ENABLE_SECRET_SCANNING_PUSH_PROTECTION" = "true" ] && echo "enabled" || echo "disabled")
+
+SECURITY_PAYLOAD=$(jq -n \
+  --arg ss_status "$SECRET_SCANNING_STATUS" \
+  --arg pp_status "$PUSH_PROTECTION_STATUS" \
+  '{
     security_and_analysis: {
       secret_scanning: {status: $ss_status},
       secret_scanning_push_protection: {status: $pp_status}
     }
   }')
 
-if github_api PATCH "$BASE_URL" "$REPO_PAYLOAD" > /dev/null; then
-  log_success "Repository general settings applied."
-else
-  log_warn "Repository settings partially applied (secret scanning may require GitHub Advanced Security)."
-fi
+apply "Secret scanning $SECRET_SCANNING_STATUS, push protection $PUSH_PROTECTION_STATUS." PATCH "$BASE_URL" "$SECURITY_PAYLOAD"
 
 # ─────────────────────────────────────────────
-# 2. Vulnerability alerts (Dependabot)
+# 3. Vulnerability alerts (Dependabot)
 # ─────────────────────────────────────────────
 log_step "Configuring vulnerability alerts..."
 
 if [ "$ENABLE_VULNERABILITY_ALERTS" = "true" ]; then
-  if github_api PUT "$BASE_URL/vulnerability-alerts" > /dev/null; then
-    log_success "Vulnerability alerts enabled."
-  fi
+  apply "Vulnerability alerts enabled." PUT "$BASE_URL/vulnerability-alerts"
 else
-  if github_api DELETE "$BASE_URL/vulnerability-alerts" > /dev/null; then
-    log_success "Vulnerability alerts disabled."
-  fi
+  apply "Vulnerability alerts disabled." DELETE "$BASE_URL/vulnerability-alerts"
 fi
 
 # ─────────────────────────────────────────────
-# 3. Automated security fixes (Dependabot PRs)
+# 4. Automated security fixes (Dependabot PRs)
 # ─────────────────────────────────────────────
 log_step "Configuring automated security fixes..."
 
 if [ "$ENABLE_AUTOMATED_SECURITY_FIXES" = "true" ]; then
-  if github_api PUT "$BASE_URL/automated-security-fixes" > /dev/null; then
-    log_success "Automated security fixes enabled."
-  fi
+  apply "Automated security fixes enabled." PUT "$BASE_URL/automated-security-fixes"
 else
-  if github_api DELETE "$BASE_URL/automated-security-fixes" > /dev/null; then
-    log_success "Automated security fixes disabled."
-  fi
+  apply "Automated security fixes disabled." DELETE "$BASE_URL/automated-security-fixes"
 fi
 
 # ─────────────────────────────────────────────
-# 4. Private vulnerability reporting
+# 5. Private vulnerability reporting
 # ─────────────────────────────────────────────
 log_step "Configuring private vulnerability reporting..."
 
 if [ "$ENABLE_PRIVATE_VULNERABILITY_REPORTING" = "true" ]; then
-  if github_api PUT "$BASE_URL/private-vulnerability-reporting" > /dev/null; then
-    log_success "Private vulnerability reporting enabled."
-  fi
+  apply "Private vulnerability reporting enabled." PUT "$BASE_URL/private-vulnerability-reporting"
 else
-  if github_api DELETE "$BASE_URL/private-vulnerability-reporting" > /dev/null; then
-    log_success "Private vulnerability reporting disabled."
-  fi
+  apply "Private vulnerability reporting disabled." DELETE "$BASE_URL/private-vulnerability-reporting"
 fi
 
 # ─────────────────────────────────────────────
-# 5. GitHub Actions permissions
+# 6. GitHub Actions permissions
 # ─────────────────────────────────────────────
 log_step "Configuring GitHub Actions permissions..."
 
 ACTIONS_PAYLOAD=$(jq -n \
   --argjson enabled "$ACTIONS_ENABLED" \
   --arg allowed "$ACTIONS_ALLOWED" \
-  '{enabled: $enabled, allowed_actions: $allowed}')
+  --argjson sha_pinning "$ACTIONS_SHA_PINNING_REQUIRED" \
+  '{enabled: $enabled, allowed_actions: $allowed, sha_pinning_required: $sha_pinning}')
 
-if github_api PUT "$BASE_URL/actions/permissions" "$ACTIONS_PAYLOAD" > /dev/null; then
-  log_success "Actions permissions set (allowed: $ACTIONS_ALLOWED)."
-fi
+apply "Actions permissions set (allowed: $ACTIONS_ALLOWED, sha_pinning_required: $ACTIONS_SHA_PINNING_REQUIRED)." \
+  PUT "$BASE_URL/actions/permissions" "$ACTIONS_PAYLOAD"
 
 # Configure selected actions allowlist when mode is 'selected'
 if [ "$ACTIONS_ALLOWED" = "selected" ]; then
   SELECTED_PAYLOAD=$(jq -n \
     --argjson github_owned "$ACTIONS_GITHUB_OWNED" \
     --argjson verified "$ACTIONS_VERIFIED" \
-    '{github_owned_allowed: $github_owned, verified_allowed: $verified, patterns_allowed: []}')
+    --arg patterns "$ACTIONS_PATTERNS" \
+    '{
+      github_owned_allowed: $github_owned,
+      verified_allowed: $verified,
+      patterns_allowed: ($patterns | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(. != "")))
+    }')
 
-  if github_api PUT "$BASE_URL/actions/permissions/selected-actions" "$SELECTED_PAYLOAD" > /dev/null; then
-    log_success "Selected actions configured (github_owned=$ACTIONS_GITHUB_OWNED, verified=$ACTIONS_VERIFIED)."
-  fi
+  apply "Selected actions configured (github_owned=$ACTIONS_GITHUB_OWNED, verified=$ACTIONS_VERIFIED, patterns=${ACTIONS_PATTERNS:-none})." \
+    PUT "$BASE_URL/actions/permissions/selected-actions" "$SELECTED_PAYLOAD"
 fi
 
 # ─────────────────────────────────────────────
-# 6. Default workflow permissions (GITHUB_TOKEN)
+# 7. Default workflow permissions (GITHUB_TOKEN)
 # ─────────────────────────────────────────────
 log_step "Configuring default workflow permissions..."
 
@@ -398,21 +467,16 @@ WORKFLOW_PAYLOAD=$(jq -n \
   --argjson can_approve "$WORKFLOW_CAN_APPROVE_PR" \
   '{default_workflow_permissions: $perm, can_approve_pull_request_reviews: $can_approve}')
 
-if github_api PUT "$BASE_URL/actions/permissions/workflow" "$WORKFLOW_PAYLOAD" > /dev/null; then
-  log_success "Default workflow permissions set (${WORKFLOW_DEFAULT_PERMISSION}, can_approve_pr=${WORKFLOW_CAN_APPROVE_PR})."
-fi
+apply "Default workflow permissions set (${WORKFLOW_DEFAULT_PERMISSION}, can_approve_pr=${WORKFLOW_CAN_APPROVE_PR})." \
+  PUT "$BASE_URL/actions/permissions/workflow" "$WORKFLOW_PAYLOAD"
 
 # ─────────────────────────────────────────────
-# 7. Immutable releases (tag ruleset)
+# 8. Immutable releases (tag ruleset)
 # ─────────────────────────────────────────────
 log_step "Configuring immutable releases..."
 
 if [ "$ENABLE_IMMUTABLE_RELEASES" = "true" ]; then
   TAG_INCLUDE_PATTERN="refs/tags/${IMMUTABLE_TAGS_PATTERN}"
-
-  # Check whether an immutable-releases ruleset already exists to avoid duplicates
-  EXISTING_RULESETS=$(github_api GET "$BASE_URL/rulesets" || echo "[]")
-  EXISTING_ID=$(echo "$EXISTING_RULESETS" | jq -r '.[] | select(.name == "Immutable releases") | .id' 2>/dev/null | head -n1)
 
   RULESET_PAYLOAD=$(jq -n \
     --arg pattern "$TAG_INCLUDE_PATTERN" \
@@ -433,16 +497,20 @@ if [ "$ENABLE_IMMUTABLE_RELEASES" = "true" ]; then
       ]
     }')
 
-  if [ -n "$EXISTING_ID" ]; then
-    if github_api PUT "$BASE_URL/rulesets/$EXISTING_ID" "$RULESET_PAYLOAD" > /dev/null; then
-      log_success "Immutable releases ruleset updated (id=$EXISTING_ID, pattern=$TAG_INCLUDE_PATTERN)."
+  # Update the ruleset in place when it already exists, so running the script twice
+  # never creates a duplicate. A failed lookup skips the step rather than guessing.
+  if EXISTING_RULESETS=$(github_api GET "$BASE_URL/rulesets?includes_parents=false&per_page=100"); then
+    EXISTING_ID=$(printf '%s\n' "$EXISTING_RULESETS" | jq -r '[.[] | select(.name == "Immutable releases" and .target == "tag")][0].id // empty')
+
+    if [ -n "$EXISTING_ID" ]; then
+      apply "Immutable releases ruleset updated (id=$EXISTING_ID, pattern=$TAG_INCLUDE_PATTERN)." \
+        PUT "$BASE_URL/rulesets/$EXISTING_ID" "$RULESET_PAYLOAD"
+    else
+      apply "Immutable releases ruleset created (pattern=$TAG_INCLUDE_PATTERN)." \
+        POST "$BASE_URL/rulesets" "$RULESET_PAYLOAD"
     fi
   else
-    RULESET_RESPONSE=$(github_api POST "$BASE_URL/rulesets" "$RULESET_PAYLOAD")
-    RULESET_ID=$(echo "$RULESET_RESPONSE" | jq -r '.id // empty')
-    if [ -n "$RULESET_ID" ]; then
-      log_success "Immutable releases ruleset created (id=$RULESET_ID, pattern=$TAG_INCLUDE_PATTERN)."
-    fi
+    FAILURES=$((FAILURES + 1))
   fi
 else
   log_warn "Immutable releases disabled — skipping tag ruleset."
@@ -451,4 +519,9 @@ fi
 # ─────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────
-printf "\n${COLOR_GREEN}Repository '$OWNER/$REPO' configured successfully.${COLOR_OFF}\n"
+if [ "$FAILURES" -gt 0 ]; then
+  printf "\n${COLOR_RED}Repository '%s/%s' configured with %s failed step(s), see the errors above.${COLOR_OFF}\n" "$OWNER" "$REPO" "$FAILURES" >&2
+  exit 1
+fi
+
+printf "\n${COLOR_GREEN}Repository '%s/%s' configured successfully.${COLOR_OFF}\n" "$OWNER" "$REPO"
