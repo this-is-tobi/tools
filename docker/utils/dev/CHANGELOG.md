@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.9](https://github.com/this-is-tobi/tools/compare/dev-v3.0.8...dev-v3.0.9) (2026-10-12)
+
+
+### Dependencies
+
+* **deps:** update dotfiles pin to bd01008 ([cb15cd6](https://github.com/this-is-tobi/tools/commit/cb15cd6598f7a337221eb06c57ccaffddd801ed5))
+
 ## [3.0.8](https://github.com/this-is-tobi/tools/compare/dev-v3.0.7...dev-v3.0.8) (2026-10-12)
 
 
