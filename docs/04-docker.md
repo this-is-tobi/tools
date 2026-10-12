@@ -20,9 +20,6 @@ This section provides a collection of pre-built Docker images and templates desi
 | `ghcr.io/this-is-tobi/tools/dev-lite:latest`      | Development container with common development tools (lite version, debian based)                                          | Active                | [Dockerfile](../docker/utils/dev-lite/Dockerfile)      | [Versions](https://github.com/this-is-tobi/tools/pkgs/container/tools%2Fdev-lite/versions)      |
 | `ghcr.io/this-is-tobi/tools/gh-runner:latest`     | Self-hosted GitHub Actions runner with common packages (ubuntu based)                                                     | Active                | [Dockerfile](../docker/utils/gh-runner/Dockerfile)     | [Versions](https://github.com/this-is-tobi/tools/pkgs/container/tools%2Fgh-runner/versions)     |
 | `ghcr.io/this-is-tobi/tools/gh-runner-gpu:latest` | Self-hosted GitHub Actions runner with GPU support (ubuntu based)                                                         | Active                | [Dockerfile](../docker/utils/gh-runner-gpu/Dockerfile) | [Versions](https://github.com/this-is-tobi/tools/pkgs/container/tools%2Fgh-runner-gpu/versions) |
-| `ghcr.io/this-is-tobi/tools/pg-backup:latest`     | PostgreSQL backup utility with S3 support (postgres based)                                                                | Deprecated *(Legacy)* | [Dockerfile](../docker/utils/pg-backup/Dockerfile)     | [Versions](https://github.com/this-is-tobi/tools/pkgs/container/tools%2Fpg-backup/versions)     |
-| `ghcr.io/this-is-tobi/tools/s3-backup:latest`     | S3 bucket sync and backup utility (debian based)                                                                          | Deprecated *(Legacy)* | [Dockerfile](../docker/utils/s3-backup/Dockerfile)     | [Versions](https://github.com/this-is-tobi/tools/pkgs/container/tools%2Fs3-backup/versions)     |
-| `ghcr.io/this-is-tobi/tools/vault-backup:latest`  | HashiCorp Vault backup utility with S3 support (vault based)                                                              | Deprecated *(Legacy)* | [Dockerfile](../docker/utils/vault-backup/Dockerfile)  | [Versions](https://github.com/this-is-tobi/tools/pkgs/container/tools%2Fvault-backup/versions)  |
 
 **Status Legend:**
 - **Active**: Currently maintained and recommended for use
@@ -147,7 +144,6 @@ docker run --rm \
 ```
 
 > [!NOTE]
-> Legacy backup images (`pg-backup`, `vault-backup`, `s3-backup`) are still available but consider migrating to the unified `backup` image.
 
 ## Building Images Locally
 
@@ -167,7 +163,7 @@ docker buildx build --platform linux/amd64,linux/arm64 \
 
 ## Release & Build Automation
 
-Active images (the `deprecated` images below use static, hand-maintained tags and are excluded from all of this) are versioned and rebuilt automatically. Nothing about publishing a new image version normally requires a manual step.
+Active images are versioned and rebuilt automatically. Nothing about publishing a new image version normally requires a manual step.
 
 **End-to-end flow:**
 
@@ -320,7 +316,7 @@ The trade-off is lag: a gh-runner change reaches gh-runner-gpu one release and o
 ### Dockerfile conventions
 
 - **Pinned frontend.** Every Dockerfile starts with `# syntax=docker/dockerfile:1@sha256:...`, so it parses the same on any builder (several rely on `RUN --mount` and `COPY --chmod`, and the bun template's symbolic `--chmod=a=rX` needs frontend 1.14+). Renovate's dockerfile manager tracks it.
-- **Downloads.** Every `curl` in a Dockerfile passes `-f`, so an HTTP error fails the build instead of being saved as the file. A downloaded binary is checked against a checksum (`vault` in `backup`, `mc` in the legacy images), and the docker.com and NVIDIA apt signing keys against their published fingerprints before apt trusts them.
+- **Downloads.** Every `curl` in a Dockerfile passes `-f`, so an HTTP error fails the build instead of being saved as the file. A downloaded binary is checked against a checksum (`vault` in `backup`), and the docker.com and NVIDIA apt signing keys against their published fingerprints before apt trusts them.
 - **Lint.** [`.hadolint.yaml`](../.hadolint.yaml) holds the repository-wide [hadolint](https://github.com/hadolint/hadolint) decisions (trusted registries, unpinned apt/apk packages, `--no-install-recommends`); a decision about one instruction is an inline `# hadolint ignore=` with its reason, next to it. Run it from the repository root:
 
   ```sh

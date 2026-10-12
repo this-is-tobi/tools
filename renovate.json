@@ -119,15 +119,6 @@
       "minimumReleaseAge": null
     },
     {
-      "description": "Deprecated legacy images are not released anymore, skip churn.",
-      "matchFileNames": [
-        "docker/utils/pg-backup/**",
-        "docker/utils/s3-backup/**",
-        "docker/utils/vault-backup/**"
-      ],
-      "enabled": false
-    },
-    {
       "description": "oc is pinned in the runner images' mise.toml through mise's conda mapping (openshift-cli), which Renovate's conda datasource cannot resolve: the lookup only fails and shows up as a warning on the Dependency Dashboard. openshift/oc tags only minor releases, so there is no other source for patch versions. It is bumped by hand together with `mise lock`.",
       "matchDatasources": ["conda"],
       "matchPackageNames": ["openshift-cli"],
