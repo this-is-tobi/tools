@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.0.8](https://github.com/this-is-tobi/tools/compare/dev-v3.0.7...dev-v3.0.8) (2026-10-12)
+
+
+### Dependencies
+
+* **deps:** update dotfiles pin to 9d52394 ([37c145b](https://github.com/this-is-tobi/tools/commit/37c145b6d0b3ba15708de512c0ea20f9b032a0a9))
+* **docker:** pin the Dockerfile frontend and lint every Dockerfile with hadolint ([8020bfd](https://github.com/this-is-tobi/tools/commit/8020bfdc6d86c2f1bf7a73907d03fb8e3ab6b044))
+
 ## [3.0.7](https://github.com/this-is-tobi/tools/compare/dev-v3.0.6...dev-v3.0.7) (2026-10-06)
 
 
