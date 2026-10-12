@@ -285,11 +285,13 @@ secrets:
 vulnerabilities:
 - id: CVE-2025-68121
   statement: >-
-    Go stdlib compiled into act, dive, gitleaks, helm-docs, mkcert, tldr and
-    the krew plugins cmctl, ktop and neat. The fix is in Go 1.24.13, 1.25.7 and
-    1.26, so each tool has to be released on one of them.
+    Go stdlib compiled into act, dive, gitleaks, helm-docs, mkcert, tldr, mc
+    and the krew plugins cmctl, ktop and neat. The fix is in Go 1.24.13, 1.25.7
+    and 1.26, so each tool has to be released on one of them. mc is archived
+    upstream (last release 2025-09), so none is coming for it.
   expired_at: 2027-01-12
   paths:
+  - "**/.local/share/mise/installs/mc/**"
   - "**/.local/share/mise/installs/act/**"
   - "**/.local/share/mise/installs/dive/**"
   - "**/.local/share/mise/installs/gitleaks/**"
@@ -319,11 +321,21 @@ vulnerabilities:
 
 - id: CVE-2026-33186
   statement: >-
-    google.golang.org/grpc in cmctl. Fixed in grpc 1.79.3, so it needs a cmctl
-    release built on that version.
+    google.golang.org/grpc in cmctl and mc. Fixed in grpc 1.79.3, so each needs
+    a release built on that version (none is coming for the archived mc).
   expired_at: 2027-01-12
   paths:
   - "**/.krew/store/cert-manager/**"
+  - "**/.local/share/mise/installs/mc/**"
+
+- id: CVE-2026-59873
+  statement: >-
+    node-tar 6.2.1, the copy bundled inside the npm that ships with Node.js
+    (fixed in tar 7.5.19). Only a Node.js release with an updated npm changes
+    it, and npm is not used to extract untrusted archives in these images.
+  expired_at: 2027-01-12
+  paths:
+  - "**/node_modules/npm/node_modules/tar/**"
 
 # tldr is installed as its 1.0.0-alpha release. Its findings are
 # listed together so removing the tool from dev removes them all.
