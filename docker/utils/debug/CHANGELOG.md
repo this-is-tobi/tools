@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.0.8](https://github.com/this-is-tobi/tools/compare/debug-v3.0.7...debug-v3.0.8) (2026-10-12)
+
+
+### Dependencies
+
+* **deps:** update dotfiles pin to 9d52394 ([37c145b](https://github.com/this-is-tobi/tools/commit/37c145b6d0b3ba15708de512c0ea20f9b032a0a9))
+* **deps:** update dotfiles pin to bd01008 ([cb15cd6](https://github.com/this-is-tobi/tools/commit/cb15cd6598f7a337221eb06c57ccaffddd801ed5))
+* **docker:** pin the Dockerfile frontend and lint every Dockerfile with hadolint ([8020bfd](https://github.com/this-is-tobi/tools/commit/8020bfdc6d86c2f1bf7a73907d03fb8e3ab6b044))
+
 ## [3.0.7](https://github.com/this-is-tobi/tools/compare/debug-v3.0.6...debug-v3.0.7) (2026-10-06)
 
 
