@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.5](https://github.com/this-is-tobi/tools/compare/gh-runner-v1.12.4...gh-runner-v1.12.5) (2026-10-12)
+
+
+### Bug Fixes
+
+* **docker:** pin mise and the runner toolchain, with checksums from a lockfile ([eddba20](https://github.com/this-is-tobi/tools/commit/eddba20e5234a5b70db73bf12b2a10c5e6c09d89))
+
 ## [1.12.4](https://github.com/this-is-tobi/tools/compare/gh-runner-v1.12.3...gh-runner-v1.12.4) (2026-10-06)
 
 
