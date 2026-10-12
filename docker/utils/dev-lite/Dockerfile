@@ -41,7 +41,7 @@ WORKDIR $HOME
 # image content depend on whatever dotfiles HEAD happens to be at build time,
 # so builds aren't reproducible and a bad dotfiles push reaches every image
 # built after it. Renovate bumps this through the customManager in renovate.json.
-ARG DOTFILES_REF=9d523948eb0849a29b936f7719f19fdee78027e9
+ARG DOTFILES_REF=bd01008e83a2cf01b5e005bff6bd8a7d4bc7f8a6
 # The token is mounted as a build secret rather than passed as a build arg, so it
 # never reaches an image layer or `docker history`. mise resolves `@latest` through
 # the GitHub API, and unauthenticated that is 60 requests/hour shared across every
