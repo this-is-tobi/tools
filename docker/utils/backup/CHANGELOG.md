@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.4.4](https://github.com/this-is-tobi/tools/compare/backup-v1.4.3...backup-v1.4.4) (2026-10-12)
+
+
+### Bug Fixes
+
+* **backup:** fail a Qdrant backup whose download fails, and send the API key as a header ([8727aea](https://github.com/this-is-tobi/tools/commit/8727aeaf88271c6272abc90ec9256e00f0ee4d5c))
+
+
+### Dependencies
+
+* **deps:** update dependency hashicorp/vault to v2.1.2 ([84ecfd3](https://github.com/this-is-tobi/tools/commit/84ecfd3b609496ebd14c9e310f4f7c68745455ba))
+* **docker:** pin the Dockerfile frontend and lint every Dockerfile with hadolint ([8020bfd](https://github.com/this-is-tobi/tools/commit/8020bfdc6d86c2f1bf7a73907d03fb8e3ab6b044))
+
 ## [1.4.3](https://github.com/this-is-tobi/tools/compare/backup-v1.4.2...backup-v1.4.3) (2026-09-19)
 
 
