@@ -239,7 +239,7 @@ jobs:
       #
       # `ignore-unfixed` filters less than it looks on these images: a Go stdlib
       # CVE counts as fixed once Go ships the fix, even inside a third-party
-      # prebuilt binary (krew plugins, helm-docs, mkcert, mc, kustomize) that
+      # prebuilt binary (krew plugins, helm-docs, mkcert, kustomize) that
       # only a new upstream release can change. Such a finding blocks until the
       # tool is updated or removed, or is accepted in .trivyignore.yaml with a
       # reason and a `paths` scope to that binary.
