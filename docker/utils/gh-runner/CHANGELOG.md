@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.6](https://github.com/this-is-tobi/tools/compare/gh-runner-v1.12.5...gh-runner-v1.12.6) (2026-10-12)
+
+
+### Bug Fixes
+
+* **docker:** drop the unmaintained mc from the runner images ([360888d](https://github.com/this-is-tobi/tools/commit/360888df5332e2d414fdc662c027343d04ec2913))
+
 ## [1.12.5](https://github.com/this-is-tobi/tools/compare/gh-runner-v1.12.4...gh-runner-v1.12.5) (2026-10-12)
 
 
