@@ -274,3 +274,83 @@ secrets:
     an image still fails the pull request.
   paths:
   - "**/ansible_collections/community/aws/plugins/modules/sts_session_token.py"
+
+# Go vulnerabilities inside prebuilt third-party binaries. The toolbox images
+# (debug, dev, dev-lite) ship these as released upstream, so only a new upstream
+# release can change what is compiled in: a Go stdlib CVE counts as fixed the
+# day Go ships the fix, which blocks the pull request scan although nothing in
+# this repository can act on it. Each entry is scoped to the binaries it was
+# seen in and expires, so the finding comes back for a decision instead of
+# staying accepted. HIGH and below are reported by scan-images.yml as before.
+vulnerabilities:
+- id: CVE-2025-68121
+  statement: >-
+    Go stdlib compiled into act, dive, gitleaks, helm-docs, mkcert, tldr and
+    the krew plugins cmctl, ktop and neat. The fix is in Go 1.24.13, 1.25.7 and
+    1.26, so each tool has to be released on one of them.
+  expired_at: 2027-01-12
+  paths:
+  - "**/.local/share/mise/installs/act/**"
+  - "**/.local/share/mise/installs/dive/**"
+  - "**/.local/share/mise/installs/gitleaks/**"
+  - "**/.local/share/mise/installs/helm-docs/**"
+  - "**/.local/share/mise/installs/mkcert/**"
+  - "**/.local/share/mise/installs/github-isacikgoz-tldr/**"
+  - "**/.krew/store/cert-manager/**"
+  - "**/.krew/store/ktop/**"
+  - "**/.krew/store/neat/**"
+
+- id: CVE-2024-24790
+  statement: >-
+    Go stdlib (net/netip) in helm-docs, mkcert and tldr.
+  expired_at: 2027-01-12
+  paths:
+  - "**/.local/share/mise/installs/helm-docs/**"
+  - "**/.local/share/mise/installs/mkcert/**"
+  - "**/.local/share/mise/installs/github-isacikgoz-tldr/**"
+
+- id: CVE-2024-41110
+  statement: >-
+    github.com/docker/docker in cmctl. The flaw is in the Docker daemon's
+    authorization plugins; cmctl uses the client library only.
+  expired_at: 2027-01-12
+  paths:
+  - "**/.krew/store/cert-manager/**"
+
+- id: CVE-2026-33186
+  statement: >-
+    google.golang.org/grpc in cmctl. Fixed in grpc 1.79.3, so it needs a cmctl
+    release built on that version.
+  expired_at: 2027-01-12
+  paths:
+  - "**/.krew/store/cert-manager/**"
+
+# tldr is installed as its 1.0.0-alpha release. Its findings are
+# listed together so removing the tool from dev removes them all.
+- id: CVE-2022-23806
+  statement: Go stdlib in the tldr alpha build.
+  expired_at: 2027-01-12
+  paths:
+  - "**/.local/share/mise/installs/github-isacikgoz-tldr/**"
+- id: CVE-2023-24538
+  statement: Go stdlib in the tldr alpha build and mkcert.
+  expired_at: 2027-01-12
+  paths:
+  - "**/.local/share/mise/installs/github-isacikgoz-tldr/**"
+  - "**/.local/share/mise/installs/mkcert/**"
+- id: CVE-2023-24540
+  statement: Go stdlib in the tldr alpha build and mkcert.
+  expired_at: 2027-01-12
+  paths:
+  - "**/.local/share/mise/installs/github-isacikgoz-tldr/**"
+  - "**/.local/share/mise/installs/mkcert/**"
+- id: CVE-2023-49569
+  statement: go-git in the tldr alpha build.
+  expired_at: 2027-01-12
+  paths:
+  - "**/.local/share/mise/installs/github-isacikgoz-tldr/**"
+- id: CVE-2025-21613
+  statement: go-git in the tldr alpha build.
+  expired_at: 2027-01-12
+  paths:
+  - "**/.local/share/mise/installs/github-isacikgoz-tldr/**"
