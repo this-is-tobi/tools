@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.10.5](https://github.com/this-is-tobi/tools/compare/gh-runner-gpu-v1.10.4...gh-runner-gpu-v1.10.5) (2026-10-12)
+
+
+### Bug Fixes
+
+* **docker:** build gh-runner-gpu on the published gh-runner image ([f283279](https://github.com/this-is-tobi/tools/commit/f283279627f5cbbb138ff9390fce4a10f56a4aa3))
+
+
+### Dependencies
+
+* **deps:** update ghcr.io/this-is-tobi/tools/gh-runner base image to v1.12.5 ([83f5ef7](https://github.com/this-is-tobi/tools/commit/83f5ef79051b2c0f6196a57dac37427e952b315a))
+
 ## [1.10.4](https://github.com/this-is-tobi/tools/compare/gh-runner-gpu-v1.10.3...gh-runner-gpu-v1.10.4) (2026-10-06)
 
 
