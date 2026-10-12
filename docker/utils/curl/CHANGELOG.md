@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.7](https://github.com/this-is-tobi/tools/compare/curl-v2.0.6...curl-v2.0.7) (2026-10-12)
+
+
+### Dependencies
+
+* **docker:** pin the Dockerfile frontend and lint every Dockerfile with hadolint ([8020bfd](https://github.com/this-is-tobi/tools/commit/8020bfdc6d86c2f1bf7a73907d03fb8e3ab6b044))
+
 ## [2.0.6](https://github.com/this-is-tobi/tools/compare/curl-v2.0.5...curl-v2.0.6) (2026-09-19)
 
 
