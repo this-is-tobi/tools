@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.10](https://github.com/this-is-tobi/tools/compare/act-runner-v2.1.9...act-runner-v2.1.10) (2026-10-12)
+
+
+### Bug Fixes
+
+* **docker:** drop the unmaintained mc from the runner images ([360888d](https://github.com/this-is-tobi/tools/commit/360888df5332e2d414fdc662c027343d04ec2913))
+* **docker:** pin mise and the runner toolchain, with checksums from a lockfile ([eddba20](https://github.com/this-is-tobi/tools/commit/eddba20e5234a5b70db73bf12b2a10c5e6c09d89))
+
 ## [2.1.9](https://github.com/this-is-tobi/tools/compare/act-runner-v2.1.8...act-runner-v2.1.9) (2026-10-04)
 
 
