@@ -305,23 +305,6 @@ url = "https://github.com/kyverno/kyverno/releases/download/v1.19.1/kyverno-cli_
 url_api = "https://api.github.com/repos/kyverno/kyverno/releases/assets/554402194"
 provenance = "cosign"
 
-[[tools.mc]]
-version = "RELEASE.2025-08-13T08-35-41Z"
-backend = "aqua:minio/mc"
-specifiers = ["RELEASE.2025-08-13T08-35-41Z"]
-
-[tools.mc."platforms.linux-arm64"]
-checksum = "sha256:14c8c9616cfce4636add161304353244e8de383b2e2752c0e9dad01d4c27c12c"
-url = "https://github.com/minio/mc/releases/download/RELEASE.2025-08-13T08-35-41Z/mc.linux-arm64.RELEASE.2025-08-13T08-35-41Z"
-url_api = "https://api.github.com/repos/minio/mc/releases/assets/401741340"
-provenance = "minisign"
-
-[tools.mc."platforms.linux-x64"]
-checksum = "sha256:01f866e9c5f9b87c2b09116fa5d7c06695b106242d829a8bb32990c00312e891"
-url = "https://github.com/minio/mc/releases/download/RELEASE.2025-08-13T08-35-41Z/mc.linux-amd64.RELEASE.2025-08-13T08-35-41Z"
-url_api = "https://api.github.com/repos/minio/mc/releases/assets/401741332"
-provenance = "minisign"
-
 [[tools.node]]
 version = "26.11.1"
 backend = "core:node"
