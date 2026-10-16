@@ -119,6 +119,11 @@
       "minimumReleaseAge": null
     },
     {
+      "description": "No cooldown for this owner's own reusable workflows: the pins carry a moving '# v0' comment, so the moment a release moves the v0 tag, zizmor's ref-version-mismatch audit fails every PR's lint until the digest bump lands - a cooldown would keep CI red for its whole length. A bad release is caught by pinning back to the previous digest.",
+      "matchDepNames": ["this-is-tobi/github-workflows"],
+      "minimumReleaseAge": null
+    },
+    {
       "description": "oc is pinned in the runner images' mise.toml through mise's conda mapping (openshift-cli), which Renovate's conda datasource cannot resolve: the lookup only fails and shows up as a warning on the Dependency Dashboard. openshift/oc tags only minor releases, so there is no other source for patch versions. It is bumped by hand together with `mise lock`.",
       "matchDatasources": ["conda"],
       "matchPackageNames": ["openshift-cli"],
