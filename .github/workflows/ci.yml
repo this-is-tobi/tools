@@ -59,7 +59,7 @@ jobs:
 
   lint-commits:
     if: ${{ !github.event.pull_request.draft }}
-    uses: this-is-tobi/github-workflows/.github/workflows/lint-commits.yml@80dd0214fc1657cfb8740fc93d89ce935ca27404 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/lint-commits.yml@3beae24b38f329c353407bba3f6728502a0ee715 # v0
     permissions:
       contents: read
       pull-requests: read
@@ -128,7 +128,7 @@ jobs:
     name: Build ${{ matrix.image.name }} (PR check)
     needs: resolve-affected
     if: ${{ needs.resolve-affected.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@80dd0214fc1657cfb8740fc93d89ce935ca27404 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@3beae24b38f329c353407bba3f6728502a0ee715 # v0
     permissions:
       packages: write
       contents: read
@@ -163,7 +163,7 @@ jobs:
     name: Build ${{ matrix.template.name }} (PR check)
     needs: resolve-affected
     if: ${{ needs.resolve-affected.outputs.templates != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@80dd0214fc1657cfb8740fc93d89ce935ca27404 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@3beae24b38f329c353407bba3f6728502a0ee715 # v0
     permissions:
       contents: read
       packages: write
@@ -194,7 +194,7 @@ jobs:
     - resolve-affected
     - build-images
     if: ${{ needs.resolve-affected.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/test-docker.yml@80dd0214fc1657cfb8740fc93d89ce935ca27404 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/test-docker.yml@3beae24b38f329c353407bba3f6728502a0ee715 # v0
     permissions:
       contents: read
       packages: read
@@ -218,7 +218,7 @@ jobs:
     - resolve-affected
     - build-images
     if: ${{ needs.resolve-affected.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@80dd0214fc1657cfb8740fc93d89ce935ca27404 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@3beae24b38f329c353407bba3f6728502a0ee715 # v0
     permissions:
       contents: read
       packages: read
@@ -255,7 +255,7 @@ jobs:
   scan-config:
     name: Scan Dockerfiles (PR check)
     if: ${{ !github.event.pull_request.draft }}
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@80dd0214fc1657cfb8740fc93d89ce935ca27404 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@3beae24b38f329c353407bba3f6728502a0ee715 # v0
     permissions:
       contents: read
       security-events: write
@@ -277,7 +277,7 @@ jobs:
   scan-secrets:
     name: Scan for leaked secrets (PR check)
     if: ${{ !github.event.pull_request.draft }}
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-gitleaks.yml@80dd0214fc1657cfb8740fc93d89ce935ca27404 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-gitleaks.yml@3beae24b38f329c353407bba3f6728502a0ee715 # v0
     permissions:
       contents: read
       security-events: write
