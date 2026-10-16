@@ -111,6 +111,11 @@
       "prBodyNotes": ["This tool is locked by a dependency graph under `.mise/locks/`, which Renovate does not regenerate. Run `mise lock --platform linux-x64,linux-arm64` in each changed `docker/utils/<image>/` directory and push `mise.lock` and `.mise/locks/` to this branch (see docs/04-docker.md)."]
     },
     {
+      "description": "Python stays on 3.14 for now: ansible-core, which ansible-lint pulls in, crashes on import under 3.15 (it calls dataclasses._is_type, removed there) and its latest release only declares support up to 3.14. The runner images are what CI jobs run on, so moving their python would break every job installing ansible-core. Patch releases of 3.14 still flow. Remove this rule once ansible-core lists 3.15.",
+      "matchDepNames": ["python"],
+      "allowedVersions": "<3.15"
+    },
+    {
       "description": "Every image cloning dotfiles moves together in a single PR - the pin exists to make builds reproducible, not to let images drift apart from one another. 'build' so each affected image still gets its patch release. Run shell/bump-dotfiles-ref.sh to do the same bump by hand. No cooldown: it is this owner's own repository, and git-refs has no release timestamp, so the cooldown would hold it forever.",
       "matchDepNames": ["this-is-tobi/dotfiles"],
       "groupName": "dotfiles pin",
