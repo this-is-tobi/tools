@@ -38,28 +38,26 @@ jobs:
         persist-credentials: false
 
     # Schema, expression and context checks, plus shellcheck over every `run:`
-    # block (the image ships shellcheck). Both linters run from their release
-    # images pinned by digest - a tag can be repointed, a digest cannot.
+    # block (the image ships shellcheck). Runs from its release image pinned by
+    # digest - a tag can be repointed, a digest cannot.
     - name: Run actionlint
       uses: docker://rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
       with:
         args: -color
 
-    # Security audit: template injection, persisted credentials, excessive
-    # permissions, unpinned references, dangerous triggers. The read-only job
-    # token turns on the online audits too (known-vulnerable actions, impostor
-    # commits, refs that disagree with their version comment). Accepted
-    # findings live in .github/zizmor.yml.
-    - name: Run zizmor
-      uses: docker://ghcr.io/zizmorcore/zizmor:1.30.1@sha256:a2eb396d886c053073405c7a980f2139ba2248ec172243cfa3841e57196e8101
-      env:
-        GH_TOKEN: ${{ github.token }}
-      with:
-        args: --format=github .
+  # Security audit: template injection, persisted credentials, excessive
+  # permissions, unpinned references, dangerous triggers. The read-only job
+  # token turns on the online audits too (known-vulnerable actions, impostor
+  # commits, refs that disagree with their version comment). Accepted findings
+  # live in .github/zizmor.yml. Runs on drafts too, like the lint job above.
+  scan-zizmor:
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-zizmor.yml@bedb8a8ec98b388c53b3982083c19c6b9a4bf583 # v0
+    permissions:
+      contents: read
 
   lint-commits:
     if: ${{ !github.event.pull_request.draft }}
-    uses: this-is-tobi/github-workflows/.github/workflows/lint-commits.yml@3beae24b38f329c353407bba3f6728502a0ee715 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/lint-commits.yml@bedb8a8ec98b388c53b3982083c19c6b9a4bf583 # v0
     permissions:
       contents: read
       pull-requests: read
@@ -128,7 +126,7 @@ jobs:
     name: Build ${{ matrix.image.name }} (PR check)
     needs: resolve-affected
     if: ${{ needs.resolve-affected.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@3beae24b38f329c353407bba3f6728502a0ee715 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@bedb8a8ec98b388c53b3982083c19c6b9a4bf583 # v0
     permissions:
       packages: write
       contents: read
@@ -163,7 +161,7 @@ jobs:
     name: Build ${{ matrix.template.name }} (PR check)
     needs: resolve-affected
     if: ${{ needs.resolve-affected.outputs.templates != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@3beae24b38f329c353407bba3f6728502a0ee715 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@bedb8a8ec98b388c53b3982083c19c6b9a4bf583 # v0
     permissions:
       contents: read
       packages: write
@@ -194,7 +192,7 @@ jobs:
     - resolve-affected
     - build-images
     if: ${{ needs.resolve-affected.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/test-docker.yml@3beae24b38f329c353407bba3f6728502a0ee715 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/test-docker.yml@bedb8a8ec98b388c53b3982083c19c6b9a4bf583 # v0
     permissions:
       contents: read
       packages: read
@@ -218,7 +216,7 @@ jobs:
     - resolve-affected
     - build-images
     if: ${{ needs.resolve-affected.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@3beae24b38f329c353407bba3f6728502a0ee715 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@bedb8a8ec98b388c53b3982083c19c6b9a4bf583 # v0
     permissions:
       contents: read
       packages: read
@@ -255,7 +253,7 @@ jobs:
   scan-config:
     name: Scan Dockerfiles (PR check)
     if: ${{ !github.event.pull_request.draft }}
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@3beae24b38f329c353407bba3f6728502a0ee715 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@bedb8a8ec98b388c53b3982083c19c6b9a4bf583 # v0
     permissions:
       contents: read
       security-events: write
@@ -277,7 +275,7 @@ jobs:
   scan-secrets:
     name: Scan for leaked secrets (PR check)
     if: ${{ !github.event.pull_request.draft }}
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-gitleaks.yml@3beae24b38f329c353407bba3f6728502a0ee715 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-gitleaks.yml@bedb8a8ec98b388c53b3982083c19c6b9a4bf583 # v0
     permissions:
       contents: read
       security-events: write
@@ -306,6 +304,7 @@ jobs:
     if: ${{ always() }}
     needs:
     - lint
+    - scan-zizmor
     - lint-commits
     - resolve-affected
     - build-images
@@ -334,7 +333,7 @@ jobs:
         # image and template jobs are skipped when the pull request touches
         # none, which is the one legitimate skip.
         FAILED=$(jq -r '
-          ["lint", "lint-commits", "resolve-affected", "scan-config", "scan-secrets"] as $always
+          ["lint", "scan-zizmor", "lint-commits", "resolve-affected", "scan-config", "scan-secrets"] as $always
           | to_entries[]
           | select(.value.result != "success" and (.value.result != "skipped" or (.key | IN($always[]))))
           | "\(.key): \(.value.result)"

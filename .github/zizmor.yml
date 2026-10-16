@@ -1,13 +1,13 @@
 ---
 
-# zizmor configuration, read by ci.yml's `Lint workflows` job. Every entry says
-# why the finding is not fixed instead; delete it once the reason stops being
-# true.
+# zizmor configuration, read by the `scan-zizmor` job of ci.yml. Every entry
+# says why the finding is not fixed instead; delete it once the reason stops
+# being true.
 
 rules:
   # Asks for GitHub's `uses: $/...` self-repository syntax (July 2026) instead of
   # `uses: ./...` for the local build-and-attest-image.yml. actionlint 1.7.12,
-  # pinned in the same job, predates that syntax and rejects it as a malformed
+  # pinned in ci.yml's `Lint` job, predates that syntax and rejects it as a malformed
   # reusable workflow call, so adopting it would trade this finding for a red
   # lint. Switch once the pinned actionlint accepts `$/`.
   self-repository:
