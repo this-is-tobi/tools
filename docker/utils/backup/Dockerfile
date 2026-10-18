@@ -20,7 +20,7 @@ ARG USER_GID=${USER_UID}
 # dockerfile manager only reads FROM lines, so without these comments both pins
 # would sit here untouched forever.
 # renovate: datasource=github-releases depName=hashicorp/vault extractVersion=^v(?<version>.+)$
-ARG VAULT_VERSION=2.1.2
+ARG VAULT_VERSION=2.2.0
 # postgresql<major>-client is what alpine names the package, so the major is
 # tracked through the postgres image rather than the apk index.
 # renovate: datasource=docker depName=postgres versioning=docker
