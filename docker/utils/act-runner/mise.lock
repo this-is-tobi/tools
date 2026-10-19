@@ -35,20 +35,44 @@ url = "https://github.com/helm/chart-testing/releases/download/v3.15.0/chart-tes
 url_api = "https://api.github.com/repos/helm/chart-testing/releases/assets/614959662"
 
 [[tools."aqua:kubescape/kubescape"]]
-version = "4.0.15"
+version = "4.0.16"
 backend = "aqua:kubescape/kubescape"
-specifiers = ["4.0.15"]
+specifiers = ["4.0.16"]
 
 [tools."aqua:kubescape/kubescape"."platforms.linux-arm64"]
-checksum = "sha256:416326e66c5d6cd5a542fceb912072e7c5dc2bb313d6c35d5dd13ff8fc26d31d"
-url = "https://github.com/kubescape/kubescape/releases/download/v4.0.15/kubescape_4.0.15_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/kubescape/kubescape/releases/assets/597429770"
+checksum = "sha256:8d8d2cf6757eb81680e0e65b9134d92f463979b6b606e6ff1bd4bedccaae043d"
+url = "https://github.com/kubescape/kubescape/releases/download/v4.0.16/kubescape_4.0.16_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/kubescape/kubescape/releases/assets/640394590"
+provenance = "github-attestations"
+
+[tools."aqua:kubescape/kubescape"."platforms.linux-arm64-musl"]
+checksum = "sha256:8d8d2cf6757eb81680e0e65b9134d92f463979b6b606e6ff1bd4bedccaae043d"
+url = "https://github.com/kubescape/kubescape/releases/download/v4.0.16/kubescape_4.0.16_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/kubescape/kubescape/releases/assets/640394590"
 provenance = "github-attestations"
 
 [tools."aqua:kubescape/kubescape"."platforms.linux-x64"]
-checksum = "sha256:6c9fd51bcdcd1093d19383ef20e1c58c2bf83c9026073f8dcc786680ed2a0093"
-url = "https://github.com/kubescape/kubescape/releases/download/v4.0.15/kubescape_4.0.15_linux_amd64.tar.gz"
-url_api = "https://api.github.com/repos/kubescape/kubescape/releases/assets/597429760"
+checksum = "sha256:71ed716b13487a6fa57500af6b191ee7fd51eb0b31809ea5994a696b1f36f874"
+url = "https://github.com/kubescape/kubescape/releases/download/v4.0.16/kubescape_4.0.16_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/kubescape/kubescape/releases/assets/640394575"
+provenance = "github-attestations"
+
+[tools."aqua:kubescape/kubescape"."platforms.linux-x64-baseline"]
+checksum = "sha256:71ed716b13487a6fa57500af6b191ee7fd51eb0b31809ea5994a696b1f36f874"
+url = "https://github.com/kubescape/kubescape/releases/download/v4.0.16/kubescape_4.0.16_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/kubescape/kubescape/releases/assets/640394575"
+provenance = "github-attestations"
+
+[tools."aqua:kubescape/kubescape"."platforms.linux-x64-musl"]
+checksum = "sha256:71ed716b13487a6fa57500af6b191ee7fd51eb0b31809ea5994a696b1f36f874"
+url = "https://github.com/kubescape/kubescape/releases/download/v4.0.16/kubescape_4.0.16_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/kubescape/kubescape/releases/assets/640394575"
+provenance = "github-attestations"
+
+[tools."aqua:kubescape/kubescape"."platforms.linux-x64-musl-baseline"]
+checksum = "sha256:71ed716b13487a6fa57500af6b191ee7fd51eb0b31809ea5994a696b1f36f874"
+url = "https://github.com/kubescape/kubescape/releases/download/v4.0.16/kubescape_4.0.16_linux_amd64.tar.gz"
+url_api = "https://api.github.com/repos/kubescape/kubescape/releases/assets/640394575"
 provenance = "github-attestations"
 
 [[tools."aqua:scaleway/scaleway-cli"]]
@@ -82,19 +106,39 @@ url = "https://github.com/argoproj/argo-workflows/releases/download/v4.1.5/argo-
 url_api = "https://api.github.com/repos/argoproj/argo-workflows/releases/assets/625312714"
 
 [[tools.argocd]]
-version = "3.5.4"
+version = "3.5.5"
 backend = "aqua:argoproj/argo-cd"
-specifiers = ["3.5.4"]
+specifiers = ["3.5.5"]
 
 [tools.argocd."platforms.linux-arm64"]
-checksum = "sha256:fe7c737ac912e281fa13dc27b2be6695634b9fe483d52846f3e7e65067b11c12"
-url = "https://github.com/argoproj/argo-cd/releases/download/v3.5.4/argocd-linux-arm64"
-url_api = "https://api.github.com/repos/argoproj/argo-cd/releases/assets/616636677"
+checksum = "sha256:13f423b9014e212a3e0052b7826e1d6b95ee5ac156f2436fc856f2eb8c827537"
+url = "https://github.com/argoproj/argo-cd/releases/download/v3.5.5/argocd-linux-arm64"
+url_api = "https://api.github.com/repos/argoproj/argo-cd/releases/assets/633520284"
+
+[tools.argocd."platforms.linux-arm64-musl"]
+checksum = "sha256:13f423b9014e212a3e0052b7826e1d6b95ee5ac156f2436fc856f2eb8c827537"
+url = "https://github.com/argoproj/argo-cd/releases/download/v3.5.5/argocd-linux-arm64"
+url_api = "https://api.github.com/repos/argoproj/argo-cd/releases/assets/633520284"
 
 [tools.argocd."platforms.linux-x64"]
-checksum = "sha256:9cd8cb9f8f785357af441a9544cc1c63a2b8d9bad45ebe88503ab8e315c64ae3"
-url = "https://github.com/argoproj/argo-cd/releases/download/v3.5.4/argocd-linux-amd64"
-url_api = "https://api.github.com/repos/argoproj/argo-cd/releases/assets/616636682"
+checksum = "sha256:c3ddfa606fc3e89ab14f55bda6600b207c355b028f8eaabe69b817a4c4621aba"
+url = "https://github.com/argoproj/argo-cd/releases/download/v3.5.5/argocd-linux-amd64"
+url_api = "https://api.github.com/repos/argoproj/argo-cd/releases/assets/633519800"
+
+[tools.argocd."platforms.linux-x64-baseline"]
+checksum = "sha256:c3ddfa606fc3e89ab14f55bda6600b207c355b028f8eaabe69b817a4c4621aba"
+url = "https://github.com/argoproj/argo-cd/releases/download/v3.5.5/argocd-linux-amd64"
+url_api = "https://api.github.com/repos/argoproj/argo-cd/releases/assets/633519800"
+
+[tools.argocd."platforms.linux-x64-musl"]
+checksum = "sha256:c3ddfa606fc3e89ab14f55bda6600b207c355b028f8eaabe69b817a4c4621aba"
+url = "https://github.com/argoproj/argo-cd/releases/download/v3.5.5/argocd-linux-amd64"
+url_api = "https://api.github.com/repos/argoproj/argo-cd/releases/assets/633519800"
+
+[tools.argocd."platforms.linux-x64-musl-baseline"]
+checksum = "sha256:c3ddfa606fc3e89ab14f55bda6600b207c355b028f8eaabe69b817a4c4621aba"
+url = "https://github.com/argoproj/argo-cd/releases/download/v3.5.5/argocd-linux-amd64"
+url_api = "https://api.github.com/repos/argoproj/argo-cd/releases/assets/633519800"
 
 [[tools.bun]]
 version = "1.4.3"
@@ -188,17 +232,33 @@ checksum = "sha256:ecbadb99091a3f46e31f5f934b068b1864eafa7995211b39eaddf76996045
 url = "https://dl.google.com/go/go1.27.2.linux-amd64.tar.gz"
 
 [[tools.helm]]
-version = "4.3.0"
+version = "4.3.1"
 backend = "aqua:helm/helm"
-specifiers = ["4.3.0"]
+specifiers = ["4.3.1"]
 
 [tools.helm."platforms.linux-arm64"]
-checksum = "sha256:31c5794dd55c66a51e6b7d2e2ac7a114ae8b1de41ff1d9ba51748ac973b06a08"
-url = "https://get.helm.sh/helm-v4.3.0-linux-arm64.tar.gz"
+checksum = "sha256:8cf8f66ecbc252ac8f7f06cca68aba88508ddfde3a6a34feb1678ad1694b4f88"
+url = "https://get.helm.sh/helm-v4.3.1-linux-arm64.tar.gz"
+
+[tools.helm."platforms.linux-arm64-musl"]
+checksum = "sha256:8cf8f66ecbc252ac8f7f06cca68aba88508ddfde3a6a34feb1678ad1694b4f88"
+url = "https://get.helm.sh/helm-v4.3.1-linux-arm64.tar.gz"
 
 [tools.helm."platforms.linux-x64"]
-checksum = "sha256:86584a54def73570558f66f5111cc53dfed56689637ae32c1201205d494f54fb"
-url = "https://get.helm.sh/helm-v4.3.0-linux-amd64.tar.gz"
+checksum = "sha256:0403a88ae20913d11b10a2467b50087721fea7581736da6b9d3992f5357fe54b"
+url = "https://get.helm.sh/helm-v4.3.1-linux-amd64.tar.gz"
+
+[tools.helm."platforms.linux-x64-baseline"]
+checksum = "sha256:0403a88ae20913d11b10a2467b50087721fea7581736da6b9d3992f5357fe54b"
+url = "https://get.helm.sh/helm-v4.3.1-linux-amd64.tar.gz"
+
+[tools.helm."platforms.linux-x64-musl"]
+checksum = "sha256:0403a88ae20913d11b10a2467b50087721fea7581736da6b9d3992f5357fe54b"
+url = "https://get.helm.sh/helm-v4.3.1-linux-amd64.tar.gz"
+
+[tools.helm."platforms.linux-x64-musl-baseline"]
+checksum = "sha256:0403a88ae20913d11b10a2467b50087721fea7581736da6b9d3992f5357fe54b"
+url = "https://get.helm.sh/helm-v4.3.1-linux-amd64.tar.gz"
 
 [[tools.helm-docs]]
 version = "1.14.2"
@@ -306,17 +366,33 @@ url_api = "https://api.github.com/repos/kyverno/kyverno/releases/assets/55440219
 provenance = "cosign"
 
 [[tools.node]]
-version = "26.11.1"
+version = "26.12.0"
 backend = "core:node"
-specifiers = ["26.11.1"]
+specifiers = ["26.12.0"]
 
 [tools.node."platforms.linux-arm64"]
-checksum = "sha256:170454fb022f5e9b5f6cc76c25fa32ef5100895be44eb04e92f9780591491bbf"
-url = "https://nodejs.org/dist/v26.11.1/node-v26.11.1-linux-arm64.tar.gz"
+checksum = "sha256:ec53c915c3fdd8786c5685abd25ae3fe9fba0692307f9811d7caaadea1bcaf03"
+url = "https://nodejs.org/dist/v26.12.0/node-v26.12.0-linux-arm64.tar.gz"
+
+[tools.node."platforms.linux-arm64-musl"]
+checksum = "sha256:2e70b6d5adbae94546c4d7e01de7b64c50bf8d3dbfaad2bb0774942e9da902b8"
+url = "https://unofficial-builds.nodejs.org/download/release/v26.12.0/node-v26.12.0-linux-arm64-musl.tar.gz"
 
 [tools.node."platforms.linux-x64"]
-checksum = "sha256:15fc043a51a5783f2f4b634561091658f5a7f0e3db03f997dca3a8033a33e45b"
-url = "https://nodejs.org/dist/v26.11.1/node-v26.11.1-linux-x64.tar.gz"
+checksum = "sha256:d9f88af72ad34f7ddf8e67289829f1698f54b6254f7d4f54b7453117ff1a3d2c"
+url = "https://nodejs.org/dist/v26.12.0/node-v26.12.0-linux-x64.tar.gz"
+
+[tools.node."platforms.linux-x64-baseline"]
+checksum = "sha256:d9f88af72ad34f7ddf8e67289829f1698f54b6254f7d4f54b7453117ff1a3d2c"
+url = "https://nodejs.org/dist/v26.12.0/node-v26.12.0-linux-x64.tar.gz"
+
+[tools.node."platforms.linux-x64-musl"]
+checksum = "sha256:48ba1cdf21e684f13f38b6295f43bfea951f1ffd008b4cf93361c966b33f6938"
+url = "https://unofficial-builds.nodejs.org/download/release/v26.12.0/node-v26.12.0-linux-x64-musl.tar.gz"
+
+[tools.node."platforms.linux-x64-musl-baseline"]
+checksum = "sha256:48ba1cdf21e684f13f38b6295f43bfea951f1ffd008b4cf93361c966b33f6938"
+url = "https://unofficial-builds.nodejs.org/download/release/v26.12.0/node-v26.12.0-linux-x64-musl.tar.gz"
 
 [[tools."npm:@yarnpkg/cli-dist"]]
 version = "4.18.1"
@@ -338,20 +414,44 @@ checksum = "sha256:07751676809553e012448cdb3a755ffa7b11d7e25b8a6cc60a5a62a9f4b18
 url = "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.22.18/openshift-client-linux.tar.gz"
 
 [[tools.pnpm]]
-version = "12.11.2"
+version = "12.14.0"
 backend = "aqua:pnpm/pnpm"
-specifiers = ["12.11.2"]
+specifiers = ["12.14.0"]
 
 [tools.pnpm."platforms.linux-arm64"]
-checksum = "sha256:ad444fa06d7ff344d74ba1e4933f2ed71cc6357cc2d33707a5c60958b7d83085"
-url = "https://github.com/pnpm/pnpm/releases/download/v12.11.2/pnpm-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/625613171"
+checksum = "sha256:cfc780b9e690549e6633e1045fb1fb6ef84e390711e2099e6ccbae91c32456ea"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.14.0/pnpm-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/643957409"
+provenance = "github-attestations"
+
+[tools.pnpm."platforms.linux-arm64-musl"]
+checksum = "sha256:511a54809bdfd28270d30011d1697f582c8130d555b4fa0e2856b1a7534c98bf"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.14.0/pnpm-linux-arm64-musl.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/643957416"
 provenance = "github-attestations"
 
 [tools.pnpm."platforms.linux-x64"]
-checksum = "sha256:358f30541b42371360c0d48a8daddc0c0850a90c36fcbea598032a9850e2c9ab"
-url = "https://github.com/pnpm/pnpm/releases/download/v12.11.2/pnpm-linux-x64.tar.gz"
-url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/625613177"
+checksum = "sha256:3910c3852136bed5bc1511b9137a45fd4357ed6b3970d9d08893641e9005867e"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.14.0/pnpm-linux-x64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/643957410"
+provenance = "github-attestations"
+
+[tools.pnpm."platforms.linux-x64-baseline"]
+checksum = "sha256:3910c3852136bed5bc1511b9137a45fd4357ed6b3970d9d08893641e9005867e"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.14.0/pnpm-linux-x64.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/643957410"
+provenance = "github-attestations"
+
+[tools.pnpm."platforms.linux-x64-musl"]
+checksum = "sha256:d7115e2f2791d79bf9e7e448609537595bb7787de1ef5292ce91ff3d1be2629e"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.14.0/pnpm-linux-x64-musl.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/643957412"
+provenance = "github-attestations"
+
+[tools.pnpm."platforms.linux-x64-musl-baseline"]
+checksum = "sha256:d7115e2f2791d79bf9e7e448609537595bb7787de1ef5292ce91ff3d1be2629e"
+url = "https://github.com/pnpm/pnpm/releases/download/v12.14.0/pnpm-linux-x64-musl.tar.gz"
+url_api = "https://api.github.com/repos/pnpm/pnpm/releases/assets/643957412"
 provenance = "github-attestations"
 
 [[tools.python]]
@@ -385,9 +485,9 @@ url = "https://github.com/rclone/rclone/releases/download/v1.75.2/rclone-v1.75.2
 url_api = "https://api.github.com/repos/rclone/rclone/releases/assets/624695998"
 
 [[tools.rust]]
-version = "1.99.0"
+version = "1.99.1"
 backend = "core:rust"
-specifiers = ["1.99.0"]
+specifiers = ["1.99.1"]
 
 [[tools.sops]]
 version = "3.13.3"
@@ -407,64 +507,144 @@ url_api = "https://api.github.com/repos/getsops/sops/releases/assets/486808201"
 provenance = "cosign"
 
 [[tools.terraform]]
-version = "1.16.5"
+version = "1.16.6"
 backend = "aqua:hashicorp/terraform"
-specifiers = ["1.16.5"]
+specifiers = ["1.16.6"]
 
 [tools.terraform."platforms.linux-arm64"]
-checksum = "sha256:61a50b00485ee4810cf20581ef080fc54d34d666e175c58d9a10501c65c1ccde"
-url = "https://releases.hashicorp.com/terraform/1.16.5/terraform_1.16.5_linux_arm64.zip"
+checksum = "sha256:a750b5a11038f165846b2658c40c88cd7070aa67a61bab431a14ba27928ea9ea"
+url = "https://releases.hashicorp.com/terraform/1.16.6/terraform_1.16.6_linux_arm64.zip"
+
+[tools.terraform."platforms.linux-arm64-musl"]
+checksum = "sha256:a750b5a11038f165846b2658c40c88cd7070aa67a61bab431a14ba27928ea9ea"
+url = "https://releases.hashicorp.com/terraform/1.16.6/terraform_1.16.6_linux_arm64.zip"
 
 [tools.terraform."platforms.linux-x64"]
-checksum = "sha256:2bc2fcfff033265c9e02ca0351f01794eb122f62a9b2a49a3294b9e49eaab5e4"
-url = "https://releases.hashicorp.com/terraform/1.16.5/terraform_1.16.5_linux_amd64.zip"
+checksum = "sha256:38034b38d03096399a7a1264a14561a8029b2b496fd1f169452656e53968f1b7"
+url = "https://releases.hashicorp.com/terraform/1.16.6/terraform_1.16.6_linux_amd64.zip"
+
+[tools.terraform."platforms.linux-x64-baseline"]
+checksum = "sha256:38034b38d03096399a7a1264a14561a8029b2b496fd1f169452656e53968f1b7"
+url = "https://releases.hashicorp.com/terraform/1.16.6/terraform_1.16.6_linux_amd64.zip"
+
+[tools.terraform."platforms.linux-x64-musl"]
+checksum = "sha256:38034b38d03096399a7a1264a14561a8029b2b496fd1f169452656e53968f1b7"
+url = "https://releases.hashicorp.com/terraform/1.16.6/terraform_1.16.6_linux_amd64.zip"
+
+[tools.terraform."platforms.linux-x64-musl-baseline"]
+checksum = "sha256:38034b38d03096399a7a1264a14561a8029b2b496fd1f169452656e53968f1b7"
+url = "https://releases.hashicorp.com/terraform/1.16.6/terraform_1.16.6_linux_amd64.zip"
 
 [[tools.trivy]]
-version = "0.75.0"
+version = "0.76.0"
 backend = "aqua:aquasecurity/trivy"
-specifiers = ["0.75.0"]
+specifiers = ["0.76.0"]
 
 [tools.trivy."platforms.linux-arm64"]
-checksum = "sha256:a1ee9f6ffb7d112b64ff726a2a0717c21175c1114361391f4a132956751a13b3"
-url = "https://github.com/aquasecurity/trivy/releases/download/v0.75.0/trivy_0.75.0_Linux-ARM64.tar.gz"
-url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/603335583"
+checksum = "sha256:aab21e677a7b7071fc79f1711480840754c18a1b9d9cefa7ccd06af63a0e8f4c"
+url = "https://github.com/aquasecurity/trivy/releases/download/v0.76.0/trivy_0.76.0_Linux-ARM64.tar.gz"
+url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/640213448"
+provenance = "cosign"
+
+[tools.trivy."platforms.linux-arm64-musl"]
+checksum = "sha256:aab21e677a7b7071fc79f1711480840754c18a1b9d9cefa7ccd06af63a0e8f4c"
+url = "https://github.com/aquasecurity/trivy/releases/download/v0.76.0/trivy_0.76.0_Linux-ARM64.tar.gz"
+url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/640213448"
 provenance = "cosign"
 
 [tools.trivy."platforms.linux-x64"]
-checksum = "sha256:c6e65abddb348e25f10549df887045629cf28cc72453cd1c63acb717316b3f3f"
-url = "https://github.com/aquasecurity/trivy/releases/download/v0.75.0/trivy_0.75.0_Linux-64bit.tar.gz"
-url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/603335432"
+checksum = "sha256:e24b1c51293c1b15e4ba8d45bbc7891ba053f90278ec2698f3562c993e145fe7"
+url = "https://github.com/aquasecurity/trivy/releases/download/v0.76.0/trivy_0.76.0_Linux-64bit.tar.gz"
+url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/640213415"
+provenance = "cosign"
+
+[tools.trivy."platforms.linux-x64-baseline"]
+checksum = "sha256:e24b1c51293c1b15e4ba8d45bbc7891ba053f90278ec2698f3562c993e145fe7"
+url = "https://github.com/aquasecurity/trivy/releases/download/v0.76.0/trivy_0.76.0_Linux-64bit.tar.gz"
+url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/640213415"
+provenance = "cosign"
+
+[tools.trivy."platforms.linux-x64-musl"]
+checksum = "sha256:e24b1c51293c1b15e4ba8d45bbc7891ba053f90278ec2698f3562c993e145fe7"
+url = "https://github.com/aquasecurity/trivy/releases/download/v0.76.0/trivy_0.76.0_Linux-64bit.tar.gz"
+url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/640213415"
+provenance = "cosign"
+
+[tools.trivy."platforms.linux-x64-musl-baseline"]
+checksum = "sha256:e24b1c51293c1b15e4ba8d45bbc7891ba053f90278ec2698f3562c993e145fe7"
+url = "https://github.com/aquasecurity/trivy/releases/download/v0.76.0/trivy_0.76.0_Linux-64bit.tar.gz"
+url_api = "https://api.github.com/repos/aquasecurity/trivy/releases/assets/640213415"
 provenance = "cosign"
 
 [[tools.uv]]
-version = "0.13.0"
+version = "0.13.1"
 backend = "aqua:astral-sh/uv"
-specifiers = ["0.13.0"]
+specifiers = ["0.13.1"]
 
 [tools.uv."platforms.linux-arm64"]
-checksum = "sha256:3ccfb6af6e242433eb552f7d9676abd5412c6595c497e990d9c8cb7b5bd4d2c3"
-url = "https://github.com/astral-sh/uv/releases/download/0.13.0/uv-aarch64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/626003012"
+checksum = "sha256:9041c73c99fdc5892cf128140beb354eca9231d502068cc36e6cb53a8e59ad14"
+url = "https://github.com/astral-sh/uv/releases/download/0.13.1/uv-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/639312990"
+provenance = "github-attestations"
+
+[tools.uv."platforms.linux-arm64-musl"]
+checksum = "sha256:345a8308e4d1835cdfaadf692836fd3137a6d45864773f05ad7bf59442b1ba16"
+url = "https://github.com/astral-sh/uv/releases/download/0.13.1/uv-aarch64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/639313013"
 provenance = "github-attestations"
 
 [tools.uv."platforms.linux-x64"]
-checksum = "sha256:1468ebd5a5541121837c5a2817b9972ba6090fa6caa3d142620850a47fb75154"
-url = "https://github.com/astral-sh/uv/releases/download/0.13.0/uv-x86_64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/626003332"
+checksum = "sha256:eadd9d27c134ab5ac1ffd4473b97a741407f3ea238288f03121fc4deddf90220"
+url = "https://github.com/astral-sh/uv/releases/download/0.13.1/uv-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/639313223"
+provenance = "github-attestations"
+
+[tools.uv."platforms.linux-x64-baseline"]
+checksum = "sha256:eadd9d27c134ab5ac1ffd4473b97a741407f3ea238288f03121fc4deddf90220"
+url = "https://github.com/astral-sh/uv/releases/download/0.13.1/uv-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/639313223"
+provenance = "github-attestations"
+
+[tools.uv."platforms.linux-x64-musl"]
+checksum = "sha256:6c86040a8f045ab9adc9e3ec4cdafa03fd00e9a988ed2bf28971c7fc2d0debd0"
+url = "https://github.com/astral-sh/uv/releases/download/0.13.1/uv-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/639313248"
+provenance = "github-attestations"
+
+[tools.uv."platforms.linux-x64-musl-baseline"]
+checksum = "sha256:6c86040a8f045ab9adc9e3ec4cdafa03fd00e9a988ed2bf28971c7fc2d0debd0"
+url = "https://github.com/astral-sh/uv/releases/download/0.13.1/uv-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/639313248"
 provenance = "github-attestations"
 
 [[tools.vault]]
-version = "2.1.2"
+version = "2.2.0"
 backend = "aqua:hashicorp/vault"
-specifiers = ["2.1.2"]
+specifiers = ["2.2.0"]
 
 [tools.vault."platforms.linux-arm64"]
-checksum = "sha256:57c0c4d2f8c1694b18f26f922eca40e472355934dca2f3bd63f415042d1898ed"
-url = "https://releases.hashicorp.com/vault/2.1.2/vault_2.1.2_linux_arm64.zip"
+checksum = "sha256:9d9ae0ce520744fb095bdf150a6924f5583528fd385a2e92782f7a6d00cad53c"
+url = "https://releases.hashicorp.com/vault/2.2.0/vault_2.2.0_linux_arm64.zip"
+
+[tools.vault."platforms.linux-arm64-musl"]
+checksum = "sha256:9d9ae0ce520744fb095bdf150a6924f5583528fd385a2e92782f7a6d00cad53c"
+url = "https://releases.hashicorp.com/vault/2.2.0/vault_2.2.0_linux_arm64.zip"
 
 [tools.vault."platforms.linux-x64"]
-checksum = "sha256:873bbdac35ca4b0c3e2886c41991ca1272fc452826208d5499f32d12cd2e76e1"
-url = "https://releases.hashicorp.com/vault/2.1.2/vault_2.1.2_linux_amd64.zip"
+checksum = "sha256:05d78b0ac842ca7c522fc297df91527cd43c15420c4c5c0a969d48a7b0ff7b6d"
+url = "https://releases.hashicorp.com/vault/2.2.0/vault_2.2.0_linux_amd64.zip"
+
+[tools.vault."platforms.linux-x64-baseline"]
+checksum = "sha256:05d78b0ac842ca7c522fc297df91527cd43c15420c4c5c0a969d48a7b0ff7b6d"
+url = "https://releases.hashicorp.com/vault/2.2.0/vault_2.2.0_linux_amd64.zip"
+
+[tools.vault."platforms.linux-x64-musl"]
+checksum = "sha256:05d78b0ac842ca7c522fc297df91527cd43c15420c4c5c0a969d48a7b0ff7b6d"
+url = "https://releases.hashicorp.com/vault/2.2.0/vault_2.2.0_linux_amd64.zip"
+
+[tools.vault."platforms.linux-x64-musl-baseline"]
+checksum = "sha256:05d78b0ac842ca7c522fc297df91527cd43c15420c4c5c0a969d48a7b0ff7b6d"
+url = "https://releases.hashicorp.com/vault/2.2.0/vault_2.2.0_linux_amd64.zip"
 
 [[tools.velero]]
 version = "1.18.4"

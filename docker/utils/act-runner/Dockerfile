@@ -5,7 +5,7 @@ ARG BASE_IMAGE=docker.io/ubuntu:26.04@sha256:f144425ff09be612d6d9ad965196e9cdc23
 # release assets, nothing else. Pinned by digest, so the binary is fixed by
 # this file rather than by whatever an install script serves at build time,
 # and Renovate moves tag and digest together like any other base image.
-ARG MISE_IMAGE=ghcr.io/jdx/mise:2026.10.8@sha256:b720f506c21a6bf5f733a3b1cd04361617ac461a597e44f513aa3976dcd71e57
+ARG MISE_IMAGE=ghcr.io/jdx/mise:2026.10.14@sha256:7cb6019fd7e60dfc3622b1d667d3e57628549fbc9e36b4a5768265388342f754
 
 FROM ${MISE_IMAGE} AS mise
 
