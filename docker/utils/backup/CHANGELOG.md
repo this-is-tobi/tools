@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.5](https://github.com/this-is-tobi/tools/compare/backup-v1.4.4...backup-v1.4.5) (2026-10-19)
+
+
+### Dependencies
+
+* **deps:** update dependency hashicorp/vault to v2.2.0 ([7dfba6d](https://github.com/this-is-tobi/tools/commit/7dfba6d29518892d9d891706ef843a0e4c42da6a))
+
 ## [1.4.4](https://github.com/this-is-tobi/tools/compare/backup-v1.4.3...backup-v1.4.4) (2026-10-12)
 
 
