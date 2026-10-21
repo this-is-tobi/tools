@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.10](https://github.com/this-is-tobi/tools/compare/dev-v3.0.9...dev-v3.0.10) (2026-10-21)
+
+
+### Dependencies
+
+* **deps:** update dotfiles pin to 5a9d672 ([fb86c1e](https://github.com/this-is-tobi/tools/commit/fb86c1e4cdb749ff18a769ff8b3ae18e70bac8c4))
+
 ## [3.0.9](https://github.com/this-is-tobi/tools/compare/dev-v3.0.8...dev-v3.0.9) (2026-10-12)
 
 
