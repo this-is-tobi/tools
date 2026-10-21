@@ -196,6 +196,21 @@ vulnerabilities:
   paths:
   - "**/node_modules/npm/node_modules/tar/**"
 
+- id: GHSA-6q48-6c7w-9gw2
+  statement: >-
+    certifi 2026.6.17, the copy vendored inside the pip that ships with the
+    uv-managed CPython. The bundle trusts an emSign root with compromised
+    intermediate keys, so exploiting it takes an on-path attacker holding one
+    of those keys, against pip's own HTTPS traffic inside a toolbox container.
+    Fixed in pip 26.2.2 (certifi 2026.10.19); only a CPython build that bundles
+    it changes the image. Trivy reads this copy from pip's bundled SBOM, so the
+    package carries no file path and `paths` can only name the scan result,
+    "Python". Deliberately short-lived, unlike the entries above: delete it as
+    soon as the images ship pip 26.2.2.
+  expired_at: 2026-11-18
+  paths:
+  - "Python"
+
 # tldr is installed as its 1.0.0-alpha release. Its findings are
 # listed together so removing the tool from dev removes them all.
 - id: CVE-2022-23806
