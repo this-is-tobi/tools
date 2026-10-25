@@ -39,14 +39,14 @@
   ],
   "packageRules": [
     {
-      "description": "Supply-chain cooldown: a release is only proposed once it has been public for 3 days, which is usually long enough for a compromised or broken release of an action, a build-arg pin or a mise tool to be caught and pulled upstream before it reaches CI or an image. Security fixes bypass it. Updates whose datasource gives no release timestamp are held (listed under Pending Status Checks on the Dependency Dashboard, where they can be approved) unless a rule below exempts them.",
+      "description": "Supply-chain cooldown: a release is only proposed once it has been public for a day, which is usually long enough for a compromised or broken release of an action, a build-arg pin or a mise tool to be caught and pulled upstream before it reaches CI or an image. Security fixes bypass it. Updates whose datasource gives no release timestamp are held (listed under Pending Status Checks on the Dependency Dashboard, where they can be approved) unless a rule below exempts them.",
       "matchManagers": ["github-actions", "custom.regex", "mise"],
-      "minimumReleaseAge": "3 days"
+      "minimumReleaseAge": "1 day"
     },
     {
       "description": "The same cooldown for every container image: base images, docker:// actions and the image-backed build-arg pins.",
       "matchDatasources": ["docker"],
-      "minimumReleaseAge": "3 days"
+      "minimumReleaseAge": "1 day"
     },
     {
       "description": "Registries other than Docker Hub return no release timestamp, so the cooldown above would hold their updates forever - ghcr.io/actions/actions-runner, the base of the runner images, among them. They are raised without the age check instead.",
