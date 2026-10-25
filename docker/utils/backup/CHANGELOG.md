@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.6](https://github.com/this-is-tobi/tools/compare/backup-v1.4.5...backup-v1.4.6) (2026-10-25)
+
+
+### Dependencies
+
+* **deps:** update dependency hashicorp/vault to v2.2.1 ([dd35d42](https://github.com/this-is-tobi/tools/commit/dd35d428d52f4c357f8ee137738aae584b847450))
+* **deps:** update docker.io/alpine base image to v3.24.3 ([4aaa463](https://github.com/this-is-tobi/tools/commit/4aaa463d22f2ac62b9bbfba83d930d4da244aad8))
+
 ## [1.4.5](https://github.com/this-is-tobi/tools/compare/backup-v1.4.4...backup-v1.4.5) (2026-10-19)
 
 
