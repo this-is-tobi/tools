@@ -32,6 +32,14 @@ on:
         description: Target stage to build in the Dockerfile (optional, builds the last stage if not set)
         required: false
         type: string
+      IMAGE_LABELS:
+        description: Newline-separated list of extra image labels (e.g. 'my.label=value'), applied after the standard org.opencontainers.image.* set
+        required: false
+        type: string
+      IMAGE_ANNOTATIONS:
+        description: Newline-separated list of extra manifest-list annotations, applied after the standard set. Labels given above do not reach the annotations, so a value meant for both goes in both
+        required: false
+        type: string
       LATEST_TAG:
         description: Whether to tag the image with 'latest'
         required: false
@@ -115,6 +123,8 @@ jobs:
       IMAGE_CONTEXT: ${{ inputs.IMAGE_CONTEXT }}
       IMAGE_DOCKERFILE: ${{ inputs.IMAGE_DOCKERFILE }}
       IMAGE_TARGET: ${{ inputs.IMAGE_TARGET }}
+      IMAGE_LABELS: ${{ inputs.IMAGE_LABELS }}
+      IMAGE_ANNOTATIONS: ${{ inputs.IMAGE_ANNOTATIONS }}
       LATEST_TAG: ${{ inputs.LATEST_TAG }}
       TAG_MAJOR_AND_MINOR: ${{ inputs.TAG_MAJOR_AND_MINOR }}
       BUILD_AMD64: ${{ inputs.BUILD_AMD64 }}

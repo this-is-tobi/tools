@@ -510,6 +510,12 @@ An SBOM for an image this size runs past the 16 MiB ceiling `actions/attest` imp
 
 PR check builds are not signed or attested — only release builds are.
 
+Each image also carries the standard `org.opencontainers.image.*` labels, repeated as annotations on the manifest list: `title` and `description` are the image's own (from [`ci/matrix.json`](../ci/matrix.json)), `version` is the release tag, and `revision` is the commit it was built from, the same one the provenance records. Read them with:
+
+```sh
+docker buildx imagetools inspect ghcr.io/this-is-tobi/tools/<image>:<tag> --raw | jq .annotations
+```
+
 ## Template Images
 
 Pre-configured Docker image templates that can be customized for specific use cases.

@@ -11,7 +11,7 @@
   },
   {
     "name": "backup",
-    "description": "Unified backup utility for PostgreSQL, Vault, Qdrant and S3 using rclone streaming",
+    "description": "Unified backup utility for MariaDB, MongoDB, PostgreSQL, etcd, Vault, Qdrant and S3 using rclone streaming",
     "build": {
       "context": "./docker/utils/backup",
       "dockerfile": "./docker/utils/backup/Dockerfile",
