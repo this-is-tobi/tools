@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.9](https://github.com/this-is-tobi/tools/compare/gh-runner-v1.12.8...gh-runner-v1.12.9) (2026-10-26)
+
+
+### Dependencies
+
+* **deps:** update mise toolchain ([192298f](https://github.com/this-is-tobi/tools/commit/192298ff5277ef07163f68166afa3e1874250fa5))
+
 ## [1.12.8](https://github.com/this-is-tobi/tools/compare/gh-runner-v1.12.7...gh-runner-v1.12.8) (2026-10-22)
 
 
