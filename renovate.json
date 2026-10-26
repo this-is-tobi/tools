@@ -55,6 +55,11 @@
       "minimumReleaseAgeBehaviour": "timestamp-optional"
     },
     {
+      "description": "A digest bump (same tag, new digest) is aged at lookup against the tag's last push, which is what decides whether the PR is raised at all. The branch-level renovate/stability-days status then reads a release timestamp that digest updates never carry, so under the default timestamp-required it stays pending forever and the PR can never be merged (renovatebot/renovate#45236). Treating the missing timestamp as optional there leaves the lookup-stage age check untouched.",
+      "matchUpdateTypes": ["digest", "pinDigest"],
+      "minimumReleaseAgeBehaviour": "timestamp-optional"
+    },
+    {
       "description": "GitHub-hosted runner labels (runs-on) carry no release timestamp, and there is no third-party release to wait out.",
       "matchDatasources": ["github-runners"],
       "minimumReleaseAge": null
