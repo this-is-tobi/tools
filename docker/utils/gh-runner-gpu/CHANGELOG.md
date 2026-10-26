@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.9](https://github.com/this-is-tobi/tools/compare/gh-runner-gpu-v1.10.8...gh-runner-gpu-v1.10.9) (2026-10-26)
+
+
+### Dependencies
+
+* **deps:** update ghcr.io/this-is-tobi/tools/gh-runner base image to v1.12.9 ([82415b3](https://github.com/this-is-tobi/tools/commit/82415b3ded85d7ad3234b138177366770302ff1d))
+
 ## [1.10.8](https://github.com/this-is-tobi/tools/compare/gh-runner-gpu-v1.10.7...gh-runner-gpu-v1.10.8) (2026-10-23)
 
 
