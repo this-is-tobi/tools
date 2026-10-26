@@ -167,6 +167,16 @@ jobs:
       IMAGE_CONTEXT: ${{ matrix.image.build.context }}
       IMAGE_DOCKERFILE: ${{ matrix.image.build.dockerfile }}
       IMAGE_TARGET: ${{ matrix.image.build.target }}
+      # The standard labels take the title and description from the repository,
+      # so every image would read "tools" - name each one after itself instead.
+      # Labels and annotations are separate inputs and the annotations on the
+      # manifest list are not derived from IMAGE_LABELS, so both get the pair.
+      IMAGE_LABELS: |
+        org.opencontainers.image.title=${{ matrix.image.name }}
+        org.opencontainers.image.description=${{ matrix.image.description }}
+      IMAGE_ANNOTATIONS: |
+        org.opencontainers.image.title=${{ matrix.image.name }}
+        org.opencontainers.image.description=${{ matrix.image.description }}
       # mise resolves its tools through the GitHub API, which is 60
       # requests/hour when unauthenticated and shared across every runner on the
       # same egress IP - building the whole matrix at once exhausts it and the
