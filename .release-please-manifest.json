@@ -3,7 +3,7 @@
   "docker/utils/backup": "1.4.6",
   "docker/utils/curl": "2.0.8",
   "docker/utils/debug": "3.0.10",
-  "docker/utils/dev": "3.0.10",
+  "docker/utils/dev": "3.0.11",
   "docker/utils/dev-lite": "1.0.10",
   "docker/utils/gh-runner": "1.12.10",
   "docker/utils/gh-runner-gpu": "1.10.9"
