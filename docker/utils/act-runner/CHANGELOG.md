@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.13](https://github.com/this-is-tobi/tools/compare/act-runner-v2.1.12...act-runner-v2.1.13) (2026-10-26)
+
+
+### Dependencies
+
+* **deps:** update docker.io/ubuntu base image to c098726 ([60ab00b](https://github.com/this-is-tobi/tools/commit/60ab00bf721cf51803214ffccc9fa9406a6b75d1))
+
 ## [2.1.12](https://github.com/this-is-tobi/tools/compare/act-runner-v2.1.11...act-runner-v2.1.12) (2026-10-26)
 
 
