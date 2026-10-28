@@ -51,13 +51,13 @@ jobs:
   # commits, refs that disagree with their version comment). Accepted findings
   # live in .github/zizmor.yml. Runs on drafts too, like the lint job above.
   scan-zizmor:
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-zizmor.yml@f31ceb2eed4d5aac8cdad1c976987a81b2548372 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-zizmor.yml@dd476ed281cc56736361c21b078f882f8b3cd3b6 # v0
     permissions:
       contents: read
 
   lint-commits:
     if: ${{ !github.event.pull_request.draft }}
-    uses: this-is-tobi/github-workflows/.github/workflows/lint-commits.yml@f31ceb2eed4d5aac8cdad1c976987a81b2548372 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/lint-commits.yml@dd476ed281cc56736361c21b078f882f8b3cd3b6 # v0
     permissions:
       contents: read
       pull-requests: read
@@ -126,7 +126,7 @@ jobs:
     name: Build ${{ matrix.image.name }} (PR check)
     needs: resolve-affected
     if: ${{ needs.resolve-affected.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@f31ceb2eed4d5aac8cdad1c976987a81b2548372 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@dd476ed281cc56736361c21b078f882f8b3cd3b6 # v0
     permissions:
       packages: write
       contents: read
@@ -161,7 +161,7 @@ jobs:
     name: Build ${{ matrix.template.name }} (PR check)
     needs: resolve-affected
     if: ${{ needs.resolve-affected.outputs.templates != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@f31ceb2eed4d5aac8cdad1c976987a81b2548372 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/build-docker.yml@dd476ed281cc56736361c21b078f882f8b3cd3b6 # v0
     permissions:
       contents: read
       packages: write
@@ -192,7 +192,7 @@ jobs:
     - resolve-affected
     - build-images
     if: ${{ needs.resolve-affected.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/test-docker.yml@f31ceb2eed4d5aac8cdad1c976987a81b2548372 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/test-docker.yml@dd476ed281cc56736361c21b078f882f8b3cd3b6 # v0
     permissions:
       contents: read
       packages: read
@@ -216,7 +216,7 @@ jobs:
     - resolve-affected
     - build-images
     if: ${{ needs.resolve-affected.outputs.images != '[]' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@f31ceb2eed4d5aac8cdad1c976987a81b2548372 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@dd476ed281cc56736361c21b078f882f8b3cd3b6 # v0
     permissions:
       contents: read
       packages: read
@@ -253,7 +253,7 @@ jobs:
   scan-config:
     name: Scan Dockerfiles (PR check)
     if: ${{ !github.event.pull_request.draft }}
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@f31ceb2eed4d5aac8cdad1c976987a81b2548372 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-trivy.yml@dd476ed281cc56736361c21b078f882f8b3cd3b6 # v0
     permissions:
       contents: read
       security-events: write
@@ -275,7 +275,7 @@ jobs:
   scan-secrets:
     name: Scan for leaked secrets (PR check)
     if: ${{ !github.event.pull_request.draft }}
-    uses: this-is-tobi/github-workflows/.github/workflows/scan-gitleaks.yml@f31ceb2eed4d5aac8cdad1c976987a81b2548372 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/scan-gitleaks.yml@dd476ed281cc56736361c21b078f882f8b3cd3b6 # v0
     permissions:
       contents: read
       security-events: write
