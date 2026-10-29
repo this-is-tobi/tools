@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.12](https://github.com/this-is-tobi/tools/compare/dev-v3.0.11...dev-v3.0.12) (2026-10-29)
+
+
+### Dependencies
+
+* **deps:** update docker.io/debian base image to 2dc419c ([c834f6e](https://github.com/this-is-tobi/tools/commit/c834f6e7b373c39020efbeced1990e9f490ebe2b))
+
 ## [3.0.11](https://github.com/this-is-tobi/tools/compare/dev-v3.0.10...dev-v3.0.11) (2026-10-26)
 
 
