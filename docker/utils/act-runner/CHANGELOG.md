@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.15](https://github.com/this-is-tobi/tools/compare/act-runner-v2.1.14...act-runner-v2.1.15) (2026-11-02)
+
+
+### Dependencies
+
+* **deps:** update mise toolchain ([8246680](https://github.com/this-is-tobi/tools/commit/8246680e54d04d49cab70954b5b713b9e3d2dc5c))
+
 ## [2.1.14](https://github.com/this-is-tobi/tools/compare/act-runner-v2.1.13...act-runner-v2.1.14) (2026-10-30)
 
 
