@@ -20,15 +20,11 @@ This section provides a collection of pre-built Docker images and templates desi
 | `ghcr.io/this-is-tobi/tools/dev-lite:latest`      | Development container with common development tools (lite version, debian based)                                          | Active                    | [Dockerfile](../docker/utils/dev-lite/Dockerfile)      | [Versions](https://github.com/this-is-tobi/tools/pkgs/container/tools%2Fdev-lite/versions)      |
 | `ghcr.io/this-is-tobi/tools/gh-runner:latest`     | Self-hosted GitHub Actions runner with common packages (ubuntu based)                                                     | Active                    | [Dockerfile](../docker/utils/gh-runner/Dockerfile)     | [Versions](https://github.com/this-is-tobi/tools/pkgs/container/tools%2Fgh-runner/versions)     |
 | `ghcr.io/this-is-tobi/tools/gh-runner-gpu:latest` | Self-hosted GitHub Actions runner with GPU support (ubuntu based)                                                         | Active                    | [Dockerfile](../docker/utils/gh-runner-gpu/Dockerfile) | [Versions](https://github.com/this-is-tobi/tools/pkgs/container/tools%2Fgh-runner-gpu/versions) |
-| `ghcr.io/this-is-tobi/tools/pg-backup:latest`     | PostgreSQL backup utility with S3 support (postgres based)                                                                | Source removed *(Legacy)* | -                                                      | [Versions](https://github.com/this-is-tobi/tools/pkgs/container/tools%2Fpg-backup/versions) |
-| `ghcr.io/this-is-tobi/tools/s3-backup:latest`     | S3 bucket sync and backup utility (debian based)                                                                          | Source removed *(Legacy)* | -                                                      | [Versions](https://github.com/this-is-tobi/tools/pkgs/container/tools%2Fs3-backup/versions) |
-| `ghcr.io/this-is-tobi/tools/vault-backup:latest`  | HashiCorp Vault backup utility with S3 support (vault based)                                                              | Source removed *(Legacy)* | -                                                      | [Versions](https://github.com/this-is-tobi/tools/pkgs/container/tools%2Fvault-backup/versions) |
 
 **Status Legend:**
 - **Active**: Currently maintained and recommended for use
 - **Legacy**: Still functional but superseded by newer images (consider migrating to `backup` image)
 - **Deprecated**: Not recommended for new deployments, will be removed in future versions
-- **Source removed**: Image still available in registry but source code removed from repository
 
 > [!TIP]
 > This table intentionally never lists a specific version number - every image reference uses `:latest`, and the **Versions** column links straight to each image's live tag list on ghcr.io instead. A hardcoded version column would drift the moment any image released again; this doesn't.
