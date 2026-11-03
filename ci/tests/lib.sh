@@ -20,12 +20,15 @@
 
 set -uo pipefail
 
-# mise exposes its tools through shims. The runner images export that directory
-# via ENV, but the dotfiles-based images (debug, dev, dev-lite) rely on shell
-# init, which a non-interactive test shell never reads - so it is spelled out
-# here rather than assumed.
+# mise exposes its tools through shims. The runner images export those
+# directories via ENV, but the dotfiles-based images (debug, dev, dev-lite) rely
+# on shell init, which a non-interactive test shell never reads - so they are
+# spelled out here rather than assumed. There are two layers: the user's, and the
+# system one that gh-runner installs its toolchain into; an image only has the
+# layers it uses.
 export MISE_SHIMS="${MISE_DATA_DIR:-${HOME}/.local/share/mise}/shims"
-export PATH="${MISE_SHIMS}:${HOME}/.local/bin:${PATH}"
+export MISE_SYSTEM_SHIMS="${MISE_SYSTEM_DATA_DIR:-/usr/local/share/mise}/shims"
+export PATH="${MISE_SHIMS}:${MISE_SYSTEM_SHIMS}:${HOME}/.local/bin:${PATH}"
 
 FAILURES=0
 
@@ -96,21 +99,26 @@ linkage_ok() {
 # Pass "optional" for images that legitimately have no mise (curl, backup).
 probe_mise_shims() {
   local expect="${1:-required}"
-  local count=0 broken=0 name target shim
+  local count=0 broken=0 name target dir
+  local dirs=()
 
-  if [ ! -d "$MISE_SHIMS" ]; then
+  for dir in "$MISE_SHIMS" "$MISE_SYSTEM_SHIMS"; do
+    [ -d "$dir" ] && dirs+=("$dir")
+  done
+
+  if [ "${#dirs[@]}" -eq 0 ]; then
     if [ "$expect" = "optional" ]; then
       printf '  skip     no mise in this image\n'
       return 0
     fi
-    printf '  FAILED   no mise shims directory at %s\n' "$MISE_SHIMS"
+    printf '  FAILED   no mise shims directory at %s or %s\n' "$MISE_SHIMS" "$MISE_SYSTEM_SHIMS"
     FAILURES=$((FAILURES + 1))
     return 1
   fi
 
-  for shim in "$MISE_SHIMS"/*; do
-    [ -e "$shim" ] || continue
-    name=$(basename "$shim")
+  # A tool can have a shim in both layers; it is one binary to probe.
+  while read -r name; do
+    [ -n "$name" ] || continue
     count=$((count + 1))
 
     target=$(mise which "$name" 2>/dev/null)
@@ -125,7 +133,7 @@ probe_mise_shims() {
       ldd "$target" 2>&1 | grep -E "not found|Error loading" | head -3 | sed 's/^/           /'
       broken=$((broken + 1))
     fi
-  done
+  done < <(for dir in "${dirs[@]}"; do ls -1A "$dir"; done | sort -u)
 
   if [ "$count" -eq 0 ]; then
     if [ "$expect" = "optional" ]; then
@@ -174,12 +182,13 @@ probe_mise_consistency() {
     "$total" "$missing"
 }
 
-# Every tool the image's global mise config pins must be installed. The runner
-# images install that config with `mise install --locked`, so this is the
-# check that a pinned tool cannot quietly drop out of the image: the shims
-# probe only sees what did install, and the declared contract only names a few.
-# Scoped to the global config so a mise.toml in the working directory cannot
-# add or hide anything.
+# Every tool the image's mise config pins must be installed. The runner images
+# install that config with `mise install --locked`, so this is the check that a
+# pinned tool cannot quietly drop out of the image: the shims probe only sees
+# what did install, and the declared contract only names a few.
+# Read from / so a mise.toml in the working directory cannot add or hide
+# anything; what is left is the system and global config, which is where an
+# image keeps its pins (gh-runner in /etc/mise, act-runner in ~/.config/mise).
 probe_mise_config_installed() {
   command -v mise > /dev/null 2>&1 || {
     printf '  FAILED   mise not installed\n'
@@ -188,10 +197,10 @@ probe_mise_config_installed() {
   }
 
   local missing total
-  total=$(mise ls --global 2>/dev/null | awk 'NF' | wc -l | tr -d ' ')
-  missing=$(mise ls --global --missing 2>/dev/null | awk 'NF {print $1 "@" $2}')
+  total=$(cd / && mise ls --current 2>/dev/null | awk 'NF' | wc -l | tr -d ' ')
+  missing=$(cd / && mise ls --current --missing 2>/dev/null | awk 'NF {print $1 "@" $2}')
   if [ "$total" -eq 0 ]; then
-    printf '  FAILED   the global mise config pins no tools\n'
+    printf '  FAILED   the mise config pins no tools\n'
     FAILURES=$((FAILURES + 1))
     return 1
   fi

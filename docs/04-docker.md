@@ -144,6 +144,58 @@ docker run --rm \
 
 > [!NOTE]
 
+### Runner Images
+
+`gh-runner` runs as the `runner` user (uid 1001) with the upstream runner in `/home/runner`. It behaves the same under Docker-in-Docker and in a hardened pod (non-root, `allowPrivilegeEscalation: false`, every capability dropped, `readOnlyRootFilesystem: true`); the second asks a few things of the pod spec.
+
+**What differs in a hardened pod**
+
+- **No root, so no `sudo`.** The kernel refuses privilege escalation; `sudo` says so and exits 1. What jobs usually `apt-get install` is already in the image (a C/C++ toolchain and headers, `zstd`, `xz`, `bzip2`, `git-lfs`); anything else installs into the home directory (`mise`, `uv tool install`, `npm`, `cargo` or `go install`) or runs in a `container:` image that has it.
+- **No Docker daemon.** The `docker` CLI and the buildx plugin are in the image; build against a remote BuildKit with `docker buildx create --driver remote tcp://<host>:<port>`.
+- **The toolchain is read-only.** It lives in mise's system layer (`/etc/mise`, `/usr/local/share/mise`), so global installs into it (`npm install -g`, `rustup toolchain install`) fail; install under the home directory instead. What a job installs with `mise` goes to the user layer (`~/.local/share/mise`), which adds to the image's tools. Installing a tool also tries to update the lock shipped in the read-only image and reports an error doing so; run that one command as `MISE_LOCKFILE=false mise install <tool>`. Do not set it for the whole pod: with the lockfile off, `yarn` and `yamllint` stop running on a read-only root.
+
+**What the pod provides.** Mount an `emptyDir` (or any writable volume) at each of these:
+
+| path under `/home/runner`           | what writes there                                                              |
+| ----------------------------------- | ------------------------------------------------------------------------------ |
+| `_work`, `_diag`                    | job workspaces and the runner's logs (the runner exits at start without `_diag`) |
+| `.cache`                            | Go, uv, helm, trivy and mise caches                                            |
+| `.config`                           | per-tool configuration (`gh`, `helm`, ...), mise's user config, git's global config |
+| `.local`                            | mise's user installs and state, `uv tool` installs                             |
+| `.cargo/registry`, `.cargo/git`     | cargo downloads (not `.cargo` itself: its `bin` holds the Rust proxies)        |
+| `.npm`, `.yarn`, `.bun`, `go`       | package caches                                                                 |
+| `.docker`, `.kube`, `.sigstore`, `.terraform.d`, `.ansible`, `.krew` | client configuration of docker, kubectl, cosign, terraform, ansible and krew |
+
+plus `/tmp`, all allowing execution (an `emptyDir` does; docker's `--tmpfs` does not unless given `exec`), and one environment variable, `GIT_CONFIG_GLOBAL=/home/runner/.config/gitconfig`: `~/.gitconfig` is a single file, which a volume cannot replace.
+
+```yaml
+containers:
+- name: runner
+  image: ghcr.io/this-is-tobi/tools/gh-runner:<version>
+  command: [/home/runner/run.sh]
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1001
+    runAsGroup: 1001
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: [ALL]
+  env:
+  - {name: GIT_CONFIG_GLOBAL, value: /home/runner/.config/gitconfig}
+  volumeMounts:           # one entry per path in the table above
+  - {name: state, mountPath: /tmp, subPath: tmp}
+  - {name: state, mountPath: /home/runner/_work, subPath: work}
+  - {name: state, mountPath: /home/runner/_diag, subPath: diag}
+  - {name: state, mountPath: /home/runner/.cache, subPath: cache}
+  # ...
+volumes:
+- name: state
+  emptyDir: {}
+```
+
+[`ci/tests/gh-runner-hardened.sh`](../ci/tests/gh-runner-hardened.sh) runs the image with exactly these volumes and flags on every PR, so the table cannot drift from what works.
+
 ## Building Images Locally
 
 ```sh
@@ -278,9 +330,11 @@ The comment is the whole configuration — adding a tracked pin to any Dockerfil
 | file (in `docker/utils/<image>/`) | role                                                                                                                                       |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `Dockerfile` `ARG MISE_IMAGE`     | the mise binary, copied from mise's own release image `ghcr.io/jdx/mise:<version>@sha256:...` (built from its signed release assets)      |
-| `mise.toml`                       | every tool at an exact version, copied to `~/.config/mise/config.toml`                                                                      |
-| `mise.lock`                       | per-platform (`linux-x64`, `linux-arm64`) download URL and checksum of every tool, copied to `~/.config/mise/mise.lock`                    |
+| `mise.toml`                       | every tool at an exact version, copied to mise's config directory (see below)                                                               |
+| `mise.lock`                       | per-platform (`linux-x64`, `linux-arm64`) download URL and checksum of every tool, copied next to `mise.toml`                               |
 | `.mise/locks/`                    | the dependency graphs, with hashes, of the npm (`yarn`) and PyPI (`yamllint`) tools; `mise.lock` points at them by a path relative to itself |
+
+`gh-runner` installs into mise's **system layer**: the three files above go to `/etc/mise` and the tools to `/usr/local/share/mise`, leaving `~/.config/mise` and `~/.local/share/mise` to whoever runs the job. Anything mounted or installed there adds to the image's toolchain instead of replacing it, and a volume mounted over `~/.config` or `~/.local` (a read-only root filesystem needs both writable) hides nothing the image depends on. `act-runner` still keeps everything in the user layer (`~/.config/mise`, `~/.local/share/mise`). The lock and `.mise/locks/` stay in the image on purpose: without the second, `yamllint` stops running, and without the first mise reports `yarn` and `yamllint` as not installed.
 
 The build runs `mise install --locked`: every download comes from the URL in the lock and is checked against its checksum, and a lock that does not cover the config fails the build instead of quietly resolving something else. The build secret `github_token` is still mounted, since mise can still call the GitHub API (release attestation checks, for one).
 
@@ -443,13 +497,15 @@ The tests are split in two deliberately, so that routine changes to a Dockerfile
 
 The linkage check is the important half. It is what catches `node` exiting 127 on a missing `libatomic.so.1` — and it catches it for *every* binary at once, without executing any of them, so there are no per-tool version flags to guess at and nothing interactive to hang on. A static binary (most Go tools) makes `ldd` exit non-zero with "not a dynamic executable", which is correctly not treated as a failure.
 
-For the runner images, `probe_mise_config_installed` adds the other direction: every tool pinned in the image's global mise config must be installed, so a tool cannot drop out of `mise.toml`'s install without failing the test.
+For the runner images, `probe_mise_config_installed` adds the other direction: every tool pinned in the image's mise config (system or global, read from `/` so a `mise.toml` in the working directory changes nothing) must be installed, so a tool cannot drop out of `mise.toml`'s install without failing the test.
 
 **Contract — declared, and small.** Each `ci/tests/<image>.sh` lists only the tools the image exists to provide. These should fail loudly when removed, because dropping one is a breaking change for consumers and deserves a deliberate decision rather than silent absorption. Everything else is the probe's job — keep these lists short.
 
 The three CI runner images share their contract through [`ci/tests/lib-runner.sh`](../ci/tests/lib-runner.sh), so it is stated once rather than three times. `backup` delegates entirely to the healthcheck script it already ships, so the healthcheck and the test cannot disagree. `curl` and `backup` have no mise at all and pass `optional` to the probe.
 
-`lib.sh` puts the mise shims directory on `PATH` explicitly. The runner images export it via `ENV`, but the dotfiles-based images (`debug`, `dev`, `dev-lite`) rely on shell init, which a non-interactive test shell never reads.
+`lib.sh` puts the mise shims directories (user and system layer) on `PATH` explicitly. The runner images export them via `ENV`, but the dotfiles-based images (`debug`, `dev`, `dev-lite`) rely on shell init, which a non-interactive test shell never reads.
+
+`gh-runner` has a second test, [`gh-runner-hardened.sh`](../ci/tests/gh-runner-hardened.sh), run by its own CI job with the flags and volumes of a hardened pod (see *Runner Images* above). It checks the security context took effect, that the runner starts, that every documented volume is writable, and that what a job writes first (git config, a Go or Rust build, `npm`, `uv`, `helm`, `kubectl`, `docker buildx`, `ansible`) succeeds. `gh-runner-gpu` joins once its pinned `gh-runner` carries this layout.
 
 A missing `ci/tests/<name>.sh` fails the job rather than skipping it, so a new image cannot be published with no verification at all.
 
