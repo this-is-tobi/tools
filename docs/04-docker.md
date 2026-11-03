@@ -273,7 +273,7 @@ The comment is the whole configuration — adding a tracked pin to any Dockerfil
 
 ### Pinned runner toolchain (`mise.toml` + `mise.lock`)
 
-`act-runner` and `gh-runner` install their ~35 tools with [mise](https://mise.jdx.dev), and nothing about that install is resolved at build time:
+`act-runner` and `gh-runner` install their ~40 tools with [mise](https://mise.jdx.dev), and nothing about that install is resolved at build time:
 
 | file (in `docker/utils/<image>/`) | role                                                                                                                                       |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |

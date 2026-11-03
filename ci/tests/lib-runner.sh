@@ -10,6 +10,34 @@
 # tool pinned in the image's mise.toml, and probe_mise_shims every binary those
 # tools expose - adding a tool to mise.toml needs no edit here.
 
+# A compiler on PATH is not a working toolchain: building and running a trivial
+# program also needs the C library headers and the linker.
+compiles_c() {
+  local dir ok=1
+  dir=$(mktemp -d) || return 1
+  printf 'int main(void){return 0;}' > "${dir}/t.c"
+  if gcc "${dir}/t.c" -o "${dir}/t" && "${dir}/t"; then
+    ok=0
+  fi
+  rm -rf "$dir"
+  return "$ok"
+}
+
+# What the apt layer of act-runner and gh-runner adds for jobs that cannot
+# install packages themselves (no sudo where the pod forbids privilege
+# escalation). Kept apart from check_runner_common because gh-runner-gpu is
+# built on the *published* gh-runner: it only has these once the gh-runner pin in
+# its Dockerfile does, so its test calls this after that bump.
+check_runner_build_tools() {
+  local image="$1"
+
+  echo "${image}: build and archive tools (apt)"
+  for bin in bzip2 g++ gcc git-lfs pkg-config xz zstd; do
+    require_cmd "$bin"
+  done
+  require_run gcc-compile compiles_c
+}
+
 check_runner_common() {
   local image="$1"
 

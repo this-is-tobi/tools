@@ -45,15 +45,32 @@ USER root
 # System utilities only; portable release binaries come from mise below.
 # libatomic1 is a runtime dependency of the prebuilt node binary mise
 # installs; without it node exits 127 on a missing libatomic.so.1.
+# A C/C++ toolchain, the headers most native builds link against and the archive
+# tools that tar and actions/cache rely on. The runner account cannot sudo when
+# the pod forbids privilege escalation, so a workflow step cannot apt-get
+# install them itself: cargo, cgo, node-gyp and Python sdists need a compiler,
+# actions/cache falls back to gzip without zstd, and tar cannot unpack .xz or
+# .bz2 archives without xz-utils and bzip2.
 RUN apt-get update -y && apt-get install -y \
+  bzip2 \
+  g++ \
+  gcc \
+  git-lfs \
   jq \
   libatomic1 \
+  libc6-dev \
+  libffi-dev \
+  libssl-dev \
   make \
   pandoc \
+  pkg-config \
   rsync \
   sed \
   tar \
   unzip \
+  xz-utils \
+  zlib1g-dev \
+  zstd \
   && rm -rf /var/lib/apt/lists/*
 
 # Install docker

@@ -5,6 +5,7 @@
 . "$(dirname "$0")/lib-runner.sh"
 
 check_runner_common act-runner
+check_runner_build_tools act-runner
 
 echo "act-runner: additional system tools (apt)"
 for bin in curl gpg sudo; do
