@@ -44,18 +44,35 @@ ENV PATH="$MISE_DATA_DIR/shims:$HOME/.local/bin:$PATH:$HOME/.cargo/bin"
 # workflows that call sudo at runtime; they share this layer with the rest so
 # the package indices are downloaded once rather than fetched, deleted and
 # fetched again.
+# A C/C++ toolchain, the headers most native builds link against and the archive
+# tools that tar and actions/cache rely on. Workflows that run where the runner
+# account cannot sudo have no way to apt-get install them, so they are baked in:
+# cargo, cgo, node-gyp and Python sdists need a compiler, actions/cache falls
+# back to gzip without zstd, and tar cannot unpack .xz or .bz2 archives without
+# xz-utils and bzip2.
 RUN apt-get update -y && apt-get install -y \
+  bzip2 \
   curl \
+  g++ \
+  gcc \
+  git-lfs \
   gpg \
   jq \
   libatomic1 \
+  libc6-dev \
+  libffi-dev \
+  libssl-dev \
   make \
   pandoc \
+  pkg-config \
   rsync \
   sed \
   sudo \
   tar \
   unzip \
+  xz-utils \
+  zlib1g-dev \
+  zstd \
   && rm -rf /var/lib/apt/lists/*
 
 # Install docker
