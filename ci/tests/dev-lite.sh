@@ -35,4 +35,6 @@ require_run helm helm version
 echo "dev-lite: user"
 require_non_root
 
+check_welcome_message dev-lite
+
 report

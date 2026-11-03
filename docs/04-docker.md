@@ -44,6 +44,20 @@ docker run -it ghcr.io/this-is-tobi/tools/debug:latest
 docker run -it -v $(pwd):/workspace -w /workspace ghcr.io/this-is-tobi/tools/dev:latest
 ```
 
+**Welcome message.** `dev`, `dev-lite` and `debug` print a few lines when an interactive shell starts (`docker run -it`, `docker exec -it`, `kubectl exec -it pod -- zsh` or `bash`): the pod or container name and IP, the namespace when a service account is mounted, the user and what the security context forbids (so a failing `sudo` or a read-only write is explained), the CPU and memory the container is limited to, the proxy settings (`HTTP_PROXY`, `HTTPS_PROXY`, `NO_PROXY`, with any login in the URL masked) and custom CA bundle variables when the environment sets them, and, for `debug`, the DNS configuration. A line only appears when it has something to say, so a container without limits or proxy shows neither. It reads local state only, never calls the API server, and prints nothing for a non-interactive shell or when stdout is not a terminal, so `kubectl cp` and `kubectl exec pod -- cmd | tool` are unaffected. It shows once per session: nested shells and tmux panes stay quiet.
+
+To switch it off, either:
+
+```sh
+# for one container (docker run -e, or `env:` in a pod spec for every session)
+docker run -it -e NO_MOTD=1 ghcr.io/this-is-tobi/tools/debug:latest
+
+# or for a home directory that persists
+touch ~/.hushlogin
+```
+
+The message ends with that same hint, so it is always on screen when someone wants it gone. `kubectl exec` cannot pass environment variables, so for a pod the setting belongs in its spec.
+
 ### Backup Images
 
 The new unified backup image supports MariaDB, MongoDB, PostgreSQL, etcd, Vault, Qdrant, and S3-to-S3 backups with streaming:
