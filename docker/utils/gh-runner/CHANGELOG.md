@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.0](https://github.com/this-is-tobi/tools/compare/gh-runner-v1.12.11...gh-runner-v1.13.0) (2026-11-03)
+
+
+### Features
+
+* **docker:** add build tooling and CI linters to the runner images ([8c60679](https://github.com/this-is-tobi/tools/commit/8c60679388690c5896239a36d9d809a76f17bf3d))
+
 ## [1.12.11](https://github.com/this-is-tobi/tools/compare/gh-runner-v1.12.10...gh-runner-v1.12.11) (2026-11-02)
 
 
