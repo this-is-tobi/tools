@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/this-is-tobi/tools/compare/act-runner-v2.1.15...act-runner-v2.2.0) (2026-11-03)
+
+
+### Features
+
+* **docker:** add build tooling and CI linters to the runner images ([8c60679](https://github.com/this-is-tobi/tools/commit/8c60679388690c5896239a36d9d809a76f17bf3d))
+
 ## [2.1.15](https://github.com/this-is-tobi/tools/compare/act-runner-v2.1.14...act-runner-v2.1.15) (2026-11-02)
 
 
