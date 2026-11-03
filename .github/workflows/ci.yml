@@ -88,8 +88,9 @@ jobs:
         echo "Changed files:"
         echo "$CHANGED"
 
-        # An image is affected by its own build context and its own smoke test
-        # (ci/tests/<name>.sh), and every image is affected by what they all
+        # An image is affected by its own build context and its own smoke tests
+        # (ci/tests/<name>.sh, and ci/tests/<name>-hardened.sh where it has
+        # one), and every image is affected by what they all
         # share: the test libraries (ci/tests/lib*.sh) and the matrix itself.
         # Otherwise a change to a test or to a build entry is merged without the
         # image it describes ever being built or tested against it.
@@ -100,7 +101,8 @@ jobs:
             | [.[]
               | ((.build.context | ltrimstr("./")) + "/") as $ctx
               | ("ci/tests/" + .name + ".sh") as $test
-              | select($shared or ($changed | any(startswith($ctx) or . == $test)))]
+              | ("ci/tests/" + .name + "-hardened.sh") as $hardened
+              | select($shared or ($changed | any(startswith($ctx) or . == $test or . == $hardened)))]
           ')
         echo "Affected images: $IMAGES"
         echo "IMAGES=$IMAGES" >> "$GITHUB_OUTPUT"
@@ -210,6 +212,57 @@ jobs:
       WORKSPACE_MOUNT: /tests
       COMMAND: /tests/${{ matrix.image.name }}.sh
 
+  # gh-runner also runs in pods with a read-only root filesystem, no privilege
+  # escalation and every capability dropped. The same image is tested the way
+  # such a pod starts it: the volumes below are the ones docs/04-docker.md tells
+  # a pod to provide, and the test fails if they are not enough. Only gh-runner
+  # for now: gh-runner-gpu is built on the published gh-runner and joins once its
+  # pin carries this layout.
+  test-gh-runner-hardened:
+    name: Test gh-runner hardened (PR check)
+    needs:
+    - resolve-affected
+    - build-images
+    if: ${{ contains(fromJSON(needs.resolve-affected.outputs.images).*.name, 'gh-runner') }}
+    uses: this-is-tobi/github-workflows/.github/workflows/test-docker.yml@2204ef5b41c4a86152f81d6ed0ebbdd00562ac49 # v0
+    permissions:
+      contents: read
+      packages: read
+    with:
+      IMAGE: ghcr.io/this-is-tobi/tools/gh-runner:pr-${{ github.event.pull_request.number }}
+      ENTRYPOINT: bash
+      WORKSPACE_PATH: ci/tests
+      WORKSPACE_MOUNT: /tests
+      # GIT_CONFIG_GLOBAL puts git's global config inside a mounted directory (a
+      # single file under the home directory cannot be a volume). The volumes
+      # carry `exec` because docker mounts a tmpfs noexec by default and a
+      # Kubernetes emptyDir is not: a compiled test binary has to run from /tmp.
+      RUN_ARGS: >-
+        --user 1001:1001
+        --security-opt no-new-privileges
+        --cap-drop ALL
+        --read-only
+        -e GIT_CONFIG_GLOBAL=/home/runner/.config/gitconfig
+        --tmpfs /tmp:mode=1777,exec
+        --tmpfs /home/runner/_work:uid=1001,gid=1001,exec
+        --tmpfs /home/runner/_diag:uid=1001,gid=1001,exec
+        --tmpfs /home/runner/.cache:uid=1001,gid=1001,exec
+        --tmpfs /home/runner/.config:uid=1001,gid=1001,exec
+        --tmpfs /home/runner/.local:uid=1001,gid=1001,exec
+        --tmpfs /home/runner/.cargo/registry:uid=1001,gid=1001,exec
+        --tmpfs /home/runner/.cargo/git:uid=1001,gid=1001,exec
+        --tmpfs /home/runner/.npm:uid=1001,gid=1001,exec
+        --tmpfs /home/runner/.yarn:uid=1001,gid=1001,exec
+        --tmpfs /home/runner/.bun:uid=1001,gid=1001,exec
+        --tmpfs /home/runner/go:uid=1001,gid=1001,exec
+        --tmpfs /home/runner/.docker:uid=1001,gid=1001,exec
+        --tmpfs /home/runner/.kube:uid=1001,gid=1001,exec
+        --tmpfs /home/runner/.sigstore:uid=1001,gid=1001,exec
+        --tmpfs /home/runner/.terraform.d:uid=1001,gid=1001,exec
+        --tmpfs /home/runner/.ansible:uid=1001,gid=1001,exec
+        --tmpfs /home/runner/.krew:uid=1001,gid=1001,exec
+      COMMAND: /tests/gh-runner-hardened.sh
+
   scan-images:
     name: Scan ${{ matrix.image.name }} (PR check)
     needs:
@@ -310,6 +363,7 @@ jobs:
     - build-images
     - build-templates
     - test-images
+    - test-gh-runner-hardened
     - scan-images
     - scan-config
     - scan-secrets

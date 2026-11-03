@@ -13,7 +13,9 @@
 #   request on a CRITICAL finding, and scan-images.yml's weekly scan of the
 #   published images (the `secrets` and `vulnerabilities` sections). Paths are
 #   file paths inside the image; start them with `**/` so they match however
-#   Trivy roots them.
+#   Trivy roots them. mise installs sit under `~/.local/share/mise` in the
+#   dotfiles images and under `/usr/local/share/mise` in gh-runner, so the
+#   globs for them start at `share/mise`.
 #
 # Two rules for editing this file. Every entry states why, in terms of this
 # repository rather than in the abstract, and is scoped with `paths` to where
@@ -150,13 +152,13 @@ vulnerabilities:
     upstream (last release 2025-09), so none is coming for it.
   expired_at: 2027-01-12
   paths:
-  - "**/.local/share/mise/installs/mc/**"
-  - "**/.local/share/mise/installs/act/**"
-  - "**/.local/share/mise/installs/dive/**"
-  - "**/.local/share/mise/installs/gitleaks/**"
-  - "**/.local/share/mise/installs/helm-docs/**"
-  - "**/.local/share/mise/installs/mkcert/**"
-  - "**/.local/share/mise/installs/github-isacikgoz-tldr/**"
+  - "**/share/mise/installs/mc/**"
+  - "**/share/mise/installs/act/**"
+  - "**/share/mise/installs/dive/**"
+  - "**/share/mise/installs/gitleaks/**"
+  - "**/share/mise/installs/helm-docs/**"
+  - "**/share/mise/installs/mkcert/**"
+  - "**/share/mise/installs/github-isacikgoz-tldr/**"
   - "**/.krew/store/cert-manager/**"
   - "**/.krew/store/ktop/**"
   - "**/.krew/store/neat/**"
@@ -166,9 +168,9 @@ vulnerabilities:
     Go stdlib (net/netip) in helm-docs, mkcert and tldr.
   expired_at: 2027-01-12
   paths:
-  - "**/.local/share/mise/installs/helm-docs/**"
-  - "**/.local/share/mise/installs/mkcert/**"
-  - "**/.local/share/mise/installs/github-isacikgoz-tldr/**"
+  - "**/share/mise/installs/helm-docs/**"
+  - "**/share/mise/installs/mkcert/**"
+  - "**/share/mise/installs/github-isacikgoz-tldr/**"
 
 - id: CVE-2024-41110
   statement: >-
@@ -185,7 +187,7 @@ vulnerabilities:
   expired_at: 2027-01-12
   paths:
   - "**/.krew/store/cert-manager/**"
-  - "**/.local/share/mise/installs/mc/**"
+  - "**/share/mise/installs/mc/**"
 
 - id: CVE-2026-59873
   statement: >-
@@ -217,26 +219,26 @@ vulnerabilities:
   statement: Go stdlib in the tldr alpha build.
   expired_at: 2027-01-12
   paths:
-  - "**/.local/share/mise/installs/github-isacikgoz-tldr/**"
+  - "**/share/mise/installs/github-isacikgoz-tldr/**"
 - id: CVE-2023-24538
   statement: Go stdlib in the tldr alpha build and mkcert.
   expired_at: 2027-01-12
   paths:
-  - "**/.local/share/mise/installs/github-isacikgoz-tldr/**"
-  - "**/.local/share/mise/installs/mkcert/**"
+  - "**/share/mise/installs/github-isacikgoz-tldr/**"
+  - "**/share/mise/installs/mkcert/**"
 - id: CVE-2023-24540
   statement: Go stdlib in the tldr alpha build and mkcert.
   expired_at: 2027-01-12
   paths:
-  - "**/.local/share/mise/installs/github-isacikgoz-tldr/**"
-  - "**/.local/share/mise/installs/mkcert/**"
+  - "**/share/mise/installs/github-isacikgoz-tldr/**"
+  - "**/share/mise/installs/mkcert/**"
 - id: CVE-2023-49569
   statement: go-git in the tldr alpha build.
   expired_at: 2027-01-12
   paths:
-  - "**/.local/share/mise/installs/github-isacikgoz-tldr/**"
+  - "**/share/mise/installs/github-isacikgoz-tldr/**"
 - id: CVE-2025-21613
   statement: go-git in the tldr alpha build.
   expired_at: 2027-01-12
   paths:
-  - "**/.local/share/mise/installs/github-isacikgoz-tldr/**"
+  - "**/share/mise/installs/github-isacikgoz-tldr/**"
