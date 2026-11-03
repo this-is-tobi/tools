@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.0](https://github.com/this-is-tobi/tools/compare/debug-v3.0.11...debug-v3.1.0) (2026-11-03)
+
+
+### Features
+
+* **docker:** print a welcome message in interactive dev, dev-lite and debug shells ([7463ab0](https://github.com/this-is-tobi/tools/commit/7463ab046653aeaf883163b94dd68f7715d0d99f))
+
 ## [3.0.11](https://github.com/this-is-tobi/tools/compare/debug-v3.0.10...debug-v3.0.11) (2026-10-30)
 
 
