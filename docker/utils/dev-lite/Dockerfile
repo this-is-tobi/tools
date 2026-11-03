@@ -32,6 +32,15 @@ RUN apt-get update && apt-get install -y \
   && echo "$USER_NAME ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/$USER_NAME" \
   && chmod 440 "/etc/sudoers.d/$USER_NAME"
 
+# Welcome message for interactive shells; motd.sh says what it prints and how to
+# switch it off. Hooked in system-wide rather than through ~/.zshrc, which the
+# dotfiles own, and for bash as well as zsh: `kubectl exec -it pod -- bash`
+# never starts zsh.
+COPY --chmod=0644 motd.sh /usr/local/share/container-motd.sh
+RUN printf '%s\n' '[ -r /usr/local/share/container-motd.sh ] && . /usr/local/share/container-motd.sh' >> /etc/zsh/zshrc \
+  && printf '%s\n' '[ -r /usr/local/share/container-motd.sh ] && . /usr/local/share/container-motd.sh' >> /etc/bash.bashrc
+ENV IMAGE_NAME=dev-lite
+
 ENV USER=$USER_NAME
 ENV HOME=$USER_HOME
 USER $USER_NAME

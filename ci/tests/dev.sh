@@ -35,4 +35,6 @@ require_run helm helm version
 echo "dev: user"
 require_non_root
 
+check_welcome_message dev
+
 report

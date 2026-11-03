@@ -71,6 +71,105 @@ require_non_root() {
   fi
 }
 
+# The welcome message of the dev, dev-lite and debug images (docker/utils/*/motd.sh).
+# The silent cases matter as much as the printed one: a banner on a
+# non-interactive shell would corrupt `kubectl cp` (tar over exec) and every
+# `kubectl exec ... | tool` pipeline. The marker is the line that tells a user how
+# to switch the message off, so it is in the output exactly when the message is.
+MOTD_MARKER='NO_MOTD=1'
+
+# What a command writes on a pseudo-terminal, the way `docker exec -it` and
+# `kubectl exec -it` start it. `script` takes the command as one string. The
+# timeout is for a shell that stops to ask something (zsh does, in a home with
+# no .zshrc): a hung check would otherwise hold the job until the runner gives up.
+motd_on_tty() {
+  timeout 60 script -qec "$1" /dev/null 2>&1 || true
+}
+
+motd_shown_by() {
+  case "$(motd_on_tty "$1")" in
+    *"$MOTD_MARKER"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+motd_hidden_by() {
+  ! motd_shown_by "$1"
+}
+
+# Output of shells that are not on a terminal: here stdout is captured, so even
+# an interactive shell has to stay silent.
+motd_silent_without_tty() {
+  local out
+  out=$({ zsh -c true; bash -c true; zsh -i -c true < /dev/null; bash -i -c true < /dev/null; } 2>&1 || true)
+  case "$out" in
+    *"$MOTD_MARKER"*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
+# A nested shell inherits the guard, so one session prints the message once.
+motd_printed_once() {
+  local count
+  count=$(motd_on_tty "zsh -i -c 'zsh -i -c true'" | grep -c "$MOTD_MARKER" || true)
+  [ "$count" = 1 ]
+}
+
+motd_names_image() {
+  case "$(motd_on_tty 'zsh -i -c true')" in
+    *"$1"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Proxy settings show up, and a login in the URL does not.
+motd_shows_proxy_without_login() {
+  local out
+  out=$(motd_on_tty 'HTTPS_PROXY=http://alice:s3cret@proxy.example:3128 NO_PROXY=a,b,c,d,e zsh -i -c true')
+  case "$out" in
+    *s3cret* | *alice*) return 1 ;;
+  esac
+  case "$out" in
+    *'proxy.example:3128'*'(+2 more)'*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# No proxy in the environment, no proxy line: the message lists what is set.
+motd_omits_proxy_when_unset() {
+  case "$(motd_on_tty 'env -u HTTP_PROXY -u http_proxy -u HTTPS_PROXY -u https_proxy -u NO_PROXY -u no_proxy zsh -i -c true')" in
+    *'  proxy '* | *'  no_proxy '*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
+motd_hidden_by_hushlogin() {
+  local home
+  home=$(mktemp -d) || return 1
+  # An empty .zshrc keeps zsh from starting its new-user setup wizard.
+  : > "${home}/.hushlogin"
+  : > "${home}/.zshrc"
+  motd_hidden_by "HOME=${home} zsh -i -c true"
+  local rc=$?
+  rm -rf "$home"
+  return "$rc"
+}
+
+check_welcome_message() {
+  local image="$1"
+  echo "${image}: welcome message"
+  require_cmd script
+  require_run shown-by-zsh motd_shown_by 'zsh -i -c true'
+  require_run shown-by-bash motd_shown_by 'bash -i -c true'
+  require_run names-the-image motd_names_image "$image"
+  require_run silent-without-a-terminal motd_silent_without_tty
+  require_run printed-once-per-session motd_printed_once
+  require_run proxy-shown-without-login motd_shows_proxy_without_login
+  require_run no-proxy-line-when-unset motd_omits_proxy_when_unset
+  require_run hidden-by-NO_MOTD motd_hidden_by 'NO_MOTD=1 zsh -i -c true'
+  require_run hidden-by-hushlogin motd_hidden_by_hushlogin
+}
+
 # True when the dynamic loader can resolve every shared library a binary needs.
 #
 # This is what would have caught node exiting 127 on a missing libatomic.so.1,
