@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.2](https://github.com/this-is-tobi/tools/compare/debug-v3.1.1...debug-v3.1.2) (2026-11-06)
+
+
+### Dependencies
+
+* **deps:** update dotfiles pin to 16f594e ([c8f80bd](https://github.com/this-is-tobi/tools/commit/c8f80bdeaaf8957498b5000d48805f097e87c246))
+
 ## [3.1.1](https://github.com/this-is-tobi/tools/compare/debug-v3.1.0...debug-v3.1.1) (2026-11-06)
 
 
