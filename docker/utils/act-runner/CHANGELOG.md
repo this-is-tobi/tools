@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.1](https://github.com/this-is-tobi/tools/compare/act-runner-v2.2.0...act-runner-v2.2.1) (2026-11-06)
+
+
+### Dependencies
+
+* **deps:** update dependency ansible to v14.6.0 ([c85de8f](https://github.com/this-is-tobi/tools/commit/c85de8fdffa61900c037475f703b7e4cef107640))
+
 ## [2.2.0](https://github.com/this-is-tobi/tools/compare/act-runner-v2.1.15...act-runner-v2.2.0) (2026-11-03)
 
 
