@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.1](https://github.com/this-is-tobi/tools/compare/debug-v3.1.0...debug-v3.1.1) (2026-11-06)
+
+
+### Dependencies
+
+* **deps:** update docker.io/debian base image to 9c6e381 ([47fb5c4](https://github.com/this-is-tobi/tools/commit/47fb5c4819cc357fae13b61743c5864b9729a95f))
+
 ## [3.1.0](https://github.com/this-is-tobi/tools/compare/debug-v3.0.11...debug-v3.1.0) (2026-11-03)
 
 
