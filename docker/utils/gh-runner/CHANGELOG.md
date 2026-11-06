@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.1](https://github.com/this-is-tobi/tools/compare/gh-runner-v1.13.0...gh-runner-v1.13.1) (2026-11-06)
+
+
+### Dependencies
+
+* **deps:** update dependency ansible to v14.6.0 ([c85de8f](https://github.com/this-is-tobi/tools/commit/c85de8fdffa61900c037475f703b7e4cef107640))
+
 ## [1.13.0](https://github.com/this-is-tobi/tools/compare/gh-runner-v1.12.11...gh-runner-v1.13.0) (2026-11-03)
 
 
