@@ -127,7 +127,7 @@ RUN --mount=type=secret,id=github_token,mode=0444 \
 # The venv picks up mise's python from PATH. Only ansible itself is pinned:
 # its dependencies still resolve at build time.
 # renovate: datasource=pypi depName=ansible
-ARG ANSIBLE_VERSION=14.5.0
+ARG ANSIBLE_VERSION=14.6.0
 RUN uv venv "${HOME}/.venv" \
   && . "${HOME}/.venv/bin/activate" \
   && uv pip install "ansible==${ANSIBLE_VERSION}" \
