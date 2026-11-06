@@ -211,6 +211,19 @@ vulnerabilities:
   paths:
   - "Python"
 
+- id: CVE-2026-105769
+  statement: >-
+    kaniko 1.25.16 in scw (scaleway-cli 2.65.2), which reaches it through
+    buildpacks/pack for `scw container`. The flaw is in the Azure ACR
+    credential helper that kaniko links into its executor and warmer; scw links
+    only kaniko's pkg/util/proc, so the vulnerable code is not in the binary.
+    Fixed in kaniko 1.25.20; it goes away once scaleway-cli releases on it. If
+    a newer scw links more of kaniko, this reason no longer holds: delete the
+    entry.
+  expired_at: 2027-01-12
+  paths:
+  - "**/.local/share/mise/installs/aqua-scaleway-scaleway-cli/**"
+
 # tldr is installed as its 1.0.0-alpha release. Its findings are
 # listed together so removing the tool from dev removes them all.
 - id: CVE-2022-23806
