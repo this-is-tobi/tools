@@ -18,17 +18,17 @@ This repository serves as a centralized toolkit for developers and DevOps engine
 
 ```
 tools/
-├── act/              # Local GitHub Actions testing
+├── ai/               # Instructions, skills, agents & plugins for AI coding agents
 ├── ci/               # CI/CD configurations
-├── claude/           # Claude Code agents
-├── copilot/          # GitHub Copilot instructions, skills & agents
 ├── devops/           # Kubernetes and ArgoCD templates
 ├── docker/           # Docker images and templates
 ├── docs/             # Documentation
 ├── git-hooks/        # Git hooks for quality checks
-├── kind/             # Local Kubernetes development
 ├── node/             # Node.js utilities
-└── shell/            # Automation scripts
+├── shell/            # Automation scripts
+└── wrapper/          # Local development wrappers
+    ├── act/          # Local GitHub Actions testing
+    └── kind/         # Local Kubernetes development
 ```
 
 ## Quick Examples
