@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.1.1](https://github.com/this-is-tobi/tools/compare/dev-v3.1.0...dev-v3.1.1) (2026-11-06)
+
+
+### Dependencies
+
+* **deps:** update docker.io/debian base image to 9c6e381 ([47fb5c4](https://github.com/this-is-tobi/tools/commit/47fb5c4819cc357fae13b61743c5864b9729a95f))
+* **deps:** update dotfiles pin to 16f594e ([c8f80bd](https://github.com/this-is-tobi/tools/commit/c8f80bdeaaf8957498b5000d48805f097e87c246))
+
 ## [3.1.0](https://github.com/this-is-tobi/tools/compare/dev-v3.0.12...dev-v3.1.0) (2026-11-06)
 
 
