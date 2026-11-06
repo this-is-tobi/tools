@@ -18,4 +18,5 @@ ports:
     nodePort: 30443
 
 service:
-  type: NodePort
+  spec:
+    type: NodePort
