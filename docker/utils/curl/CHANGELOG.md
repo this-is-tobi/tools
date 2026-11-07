@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.9](https://github.com/this-is-tobi/tools/compare/curl-v2.0.8...curl-v2.0.9) (2026-11-07)
+
+
+### Dependencies
+
+* **deps:** update docker.io/alpine base image to v3.24.4 ([dfa20b5](https://github.com/this-is-tobi/tools/commit/dfa20b5bb12ae85dfce2ff9fccd38db5ff235473))
+
 ## [2.0.8](https://github.com/this-is-tobi/tools/compare/curl-v2.0.7...curl-v2.0.8) (2026-10-25)
 
 
