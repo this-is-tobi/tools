@@ -15,14 +15,14 @@
 # Language runtimes. npm ships inside the node release.
 node = "26.13.0"
 bun = "1.4.4"
-pnpm = "12.16.1"
+pnpm = "12.18.0"
 # The registry's default yarn backend is a vfox plugin cloned from its default
 # branch at install time, which nothing pins; the npm package is versioned and
 # integrity-checked like any other npm dependency.
 "npm:@yarnpkg/cli-dist" = "4.18.1"
 go = "1.27.3"
 rust = "1.99.1"
-uv = "0.13.6"
+uv = "0.13.7"
 # A locked PyPI install (yamllint below) needs an interpreter mise manages
 # rather than one uv downloads on the fly. Held on the newest release
 # ansible-core supports, since the ansible venv uses it too.
@@ -32,7 +32,7 @@ python = "3.14.10"
 actionlint = "1.7.12"
 age = "1.3.2"
 argo = "4.1.6"
-argocd = "3.5.6"
+argocd = "3.6.1"
 cosign = "3.1.4"
 # crane copies, inspects and resolves digests of registry images without a
 # Docker daemon.
@@ -51,20 +51,20 @@ kubectl = "1.37.2"
 kustomize = "5.8.3"
 kyverno = "1.19.2"
 oc = "4.22.18"
-rclone = "1.75.2"
+rclone = "1.76.0"
 # actionlint runs shellcheck over every `run:` block when it finds it on PATH.
 shellcheck = "0.11.0"
 sops = "3.13.3"
-syft = "1.55.0"
+syft = "1.57.0"
 terraform = "1.17.1"
-trivy = "0.76.1"
+trivy = "0.76.2"
 vault = "2.2.1"
 velero = "1.18.4"
 yamllint = "1.38.0"
-yq = "4.54.1"
-zizmor = "1.31.1"
+yq = "4.54.2"
+zizmor = "1.32.0"
 # No short name in mise's registry, so addressed through their aqua packages.
 # chart-testing provides the `ct` binary.
 "aqua:helm/chart-testing" = "3.15.0"
-"aqua:kubescape/kubescape" = "4.0.17"
+"aqua:kubescape/kubescape" = "4.0.20"
 "aqua:scaleway/scaleway-cli" = "2.65.2"
