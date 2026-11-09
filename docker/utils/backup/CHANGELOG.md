@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.8](https://github.com/this-is-tobi/tools/compare/backup-v1.4.7...backup-v1.4.8) (2026-11-09)
+
+
+### Dependencies
+
+* **deps:** update docker.io/alpine base image to f59abe6 ([33fab59](https://github.com/this-is-tobi/tools/commit/33fab59ab044f0be96b5a7cc173c1a6875499153))
+
 ## [1.4.7](https://github.com/this-is-tobi/tools/compare/backup-v1.4.6...backup-v1.4.7) (2026-11-07)
 
 
