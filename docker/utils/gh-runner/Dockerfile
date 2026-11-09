@@ -5,7 +5,7 @@ ARG BASE_IMAGE=ghcr.io/actions/actions-runner:2.338.2@sha256:759a1d94a15b05941ab
 # release assets, nothing else. Pinned by digest, so the binary is fixed by
 # this file rather than by whatever an install script serves at build time,
 # and Renovate moves tag and digest together like any other base image.
-ARG MISE_IMAGE=ghcr.io/jdx/mise:2026.10.25@sha256:91417f41840316b7c5da6854bef393eccea4546ae70f8baf0803e0e94287b68d
+ARG MISE_IMAGE=ghcr.io/jdx/mise:2026.11.4@sha256:085be191bbe51dbe93894681b7f29f6c014ae267e7a365c0b8b6a2fdd882ac63
 
 FROM ${MISE_IMAGE} AS mise
 
