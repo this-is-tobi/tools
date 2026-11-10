@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.3](https://github.com/this-is-tobi/tools/compare/act-runner-v2.2.2...act-runner-v2.2.3) (2026-11-10)
+
+
+### Dependencies
+
+* **deps:** update ghcr.io/jdx/mise base image to v2026.11.5 ([1a3431a](https://github.com/this-is-tobi/tools/commit/1a3431a695e33a70ea6d4c6532adabd8b23a13f8))
+
 ## [2.2.2](https://github.com/this-is-tobi/tools/compare/act-runner-v2.2.1...act-runner-v2.2.2) (2026-11-09)
 
 
