@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.3](https://github.com/this-is-tobi/tools/compare/gh-runner-v1.13.2...gh-runner-v1.13.3) (2026-11-10)
+
+
+### Dependencies
+
+* **deps:** update ghcr.io/jdx/mise base image to v2026.11.5 ([1a3431a](https://github.com/this-is-tobi/tools/commit/1a3431a695e33a70ea6d4c6532adabd8b23a13f8))
+
 ## [1.13.2](https://github.com/this-is-tobi/tools/compare/gh-runner-v1.13.1...gh-runner-v1.13.2) (2026-11-09)
 
 
