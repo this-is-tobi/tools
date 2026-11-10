@@ -5,7 +5,7 @@
 # moment one copy was edited without the other. Pinned by digest like any other
 # base: Renovate opens the bump once a new gh-runner is released, and that bump
 # is what releases this image with it.
-ARG BASE_IMAGE=ghcr.io/this-is-tobi/tools/gh-runner:1.13.2@sha256:8ea801252c3392e68449a0f1ec19479eb03911633db2ab3f7c6746b1ef4d057f
+ARG BASE_IMAGE=ghcr.io/this-is-tobi/tools/gh-runner:1.13.3@sha256:5e06bde557cf623aff5153d28be59976059cb54331c0a2174a0538c6b1fc1187
 
 FROM ${BASE_IMAGE} AS build
 
