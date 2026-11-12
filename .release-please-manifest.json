@@ -6,5 +6,5 @@
   "docker/utils/dev": "3.1.3",
   "docker/utils/dev-lite": "1.1.4",
   "docker/utils/gh-runner": "1.13.4",
-  "docker/utils/gh-runner-gpu": "1.10.15"
+  "docker/utils/gh-runner-gpu": "1.10.16"
 }
