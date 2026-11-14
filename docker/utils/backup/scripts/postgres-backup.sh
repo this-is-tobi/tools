@@ -1,6 +1,8 @@
 #!/bin/bash
 
-set -e
+# pipefail: the dump is piped into rclone, and without it a failed dump would
+# still end in "Backup completed".
+set -eo pipefail
 
 # Source utility functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

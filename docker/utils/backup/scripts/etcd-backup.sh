@@ -54,12 +54,14 @@ log "Creating etcd snapshot and uploading to destination"
 SNAPSHOT_FILE="${DATE_TIME}-etcd.snapshot"
 BACKUP_PATH="${DEST_BASE}/${SNAPSHOT_FILE}"
 
+# Separate commands, not an && list: set -e ignores a failure anywhere in such
+# a list but its last command, so a failed upload would end in "completed".
 ETCDCTL_API=3 etcdctl snapshot save \
   --endpoints="${ETCD_ENDPOINTS}" \
   ${ETCD_TLS_ARGS} \
-  ./${SNAPSHOT_FILE} \
-  && rclone copyto --stats-one-line-date ${RCLONE_EXTRA_ARGS} ./${SNAPSHOT_FILE} "${BACKUP_PATH}" \
-  && rm ./${SNAPSHOT_FILE}
+  ./${SNAPSHOT_FILE}
+rclone copyto --stats-one-line-date ${RCLONE_EXTRA_ARGS} ./${SNAPSHOT_FILE} "${BACKUP_PATH}"
+rm ./${SNAPSHOT_FILE}
 
 log "Backup completed: ${BACKUP_PATH}"
 

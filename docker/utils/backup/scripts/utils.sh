@@ -81,8 +81,9 @@ configure_rclone_remote() {
     endpoint "$endpoint" \
     $([ "$path_style" = "true" ] && echo "force_path_style true") >/dev/null 2>&1
   
-  # Verify remote was created
-  if ! rclone listremotes | grep -q "${remote_name}:"; then
+  # Verify remote was created. Not a pipe into grep -q: under pipefail, grep
+  # leaving at the first match can fail the pipe with rclone's SIGPIPE.
+  if ! grep -q "${remote_name}:" <<<"$(rclone listremotes)"; then
     error "Failed to configure rclone remote: ${remote_name}"
     exit 1
   fi
