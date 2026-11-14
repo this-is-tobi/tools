@@ -27,14 +27,21 @@ ARG TARGETARCH
 ENV DEBIAN_FRONTEND=noninteractive
 ENV USER=runner
 ENV HOME=/home/$USER
-# Tools install under $MISE_DATA_DIR and are exposed through shims; `mise
-# activate` is for interactive shells, so the shims directory goes on PATH
+# The toolchain is mise's system layer: pinned in /etc/mise, installed under
+# $MISE_SYSTEM_DATA_DIR and exposed through shims. The user layer
+# ($MISE_DATA_DIR, ~/.config/mise) is left to whoever runs the job: what they
+# install or mount there adds to the image's tools instead of replacing them, and
+# a volume mounted over ~/.config or ~/.local (a pod with a read-only root
+# filesystem needs both writable) hides nothing the image depends on. `mise
+# activate` is for interactive shells, so both shims directories go on PATH
 # explicitly. MISE_YES keeps the build non-interactive, and disabling the asdf
 # backend keeps installs on backends that verify what they download.
+ENV MISE_SYSTEM_CONFIG_DIR=/etc/mise
+ENV MISE_SYSTEM_DATA_DIR=/usr/local/share/mise
 ENV MISE_DATA_DIR="$HOME/.local/share/mise"
 ENV MISE_YES=1
 ENV MISE_DISABLE_BACKENDS=asdf
-ENV PATH="$MISE_DATA_DIR/shims:$HOME/.local/bin:$PATH:$HOME/.cargo/bin"
+ENV PATH="$MISE_DATA_DIR/shims:$MISE_SYSTEM_DATA_DIR/shims:$HOME/.local/bin:$PATH:$HOME/.cargo/bin"
 
 # The system layers below are installed as root rather than through sudo: the
 # account exists to run workflows, and a build step gains nothing from going
@@ -89,16 +96,37 @@ RUN install -d -m 0755 /etc/apt/keyrings \
   && apt-get install -y containerd.io docker-buildx-plugin docker-ce docker-ce-cli docker-compose-plugin \
   && rm -rf /var/lib/apt/lists/*
 
+# The directories the toolchain is installed into, owned by the runner account
+# so the install below needs no privileges and a workflow that installs a tool
+# globally (npm -g, mise install) keeps working wherever the root filesystem is
+# writable.
+RUN install -d -o runner -g runner "${MISE_SYSTEM_DATA_DIR}" "${MISE_SYSTEM_CONFIG_DIR}"
+
+# Installed ahead of the real sudo on PATH: where the pod forbids privilege
+# escalation it explains that, instead of the stock message about container
+# configuration, and everywhere else it hands over to the real sudo.
+COPY --chmod=0755 sudo-wrapper.sh /usr/local/bin/sudo
+
 # Back to the account the actions-runner base ends on, which owns everything
 # installed from here and is the user the image runs as.
 USER runner
+
+# run.sh copies run-helper.sh.template over run-helper.sh every time it starts
+# the runner, and on a read-only root filesystem that copy fails and takes the
+# whole start with it. With the file already in place the failed copy is
+# harmless and the runner starts.
+RUN cp "${HOME}/run-helper.sh.template" "${HOME}/run-helper.sh"
 
 # Install mise and the toolchain
 # Every tool is pinned in mise.toml, and `--locked` makes the install take each
 # download URL and checksum from mise.lock (the npm/PyPI dependency graphs from
 # .mise/locks/) instead of resolving anything: a lock that does not cover the
 # config fails the build rather than silently resolving something else. The
-# lock records its sidecars relative to itself, hence .mise/ next to it.
+# lock records its sidecars relative to itself, hence .mise/ next to it. Both
+# stay in the image: the sidecars are what keeps the PyPI and npm tools
+# runnable, and the lock is what keeps them reported as installed.
+# MISE_DATA_DIR points at the system layer for this one step, so the tools land
+# where the image looks for them; at run time it is the user layer again.
 # GITHUB_TOKEN comes from a build secret, never a build arg, so it stays out of
 # the image layers and `docker history`. Downloads come from the URLs in the
 # lock, but mise can still call the GitHub API (release attestation checks, for
@@ -110,14 +138,15 @@ USER runner
 # content-addressable store alone runs to gigabytes, and shipping it inflates the
 # image, the SBOM (which has a 16 MiB attestation ceiling) and the Trivy scan.
 COPY --from=mise /usr/local/bin/mise /usr/local/bin/mise
-COPY --chown=runner:runner mise.toml ${HOME}/.config/mise/config.toml
-COPY --chown=runner:runner mise.lock ${HOME}/.config/mise/mise.lock
-COPY --chown=runner:runner .mise/ ${HOME}/.config/mise/.mise/
+COPY --chown=runner:runner mise.toml ${MISE_SYSTEM_CONFIG_DIR}/config.toml
+COPY --chown=runner:runner mise.lock ${MISE_SYSTEM_CONFIG_DIR}/mise.lock
+COPY --chown=runner:runner .mise/ ${MISE_SYSTEM_CONFIG_DIR}/.mise/
 # The token read keeps `|| true` on purpose (the secret is optional), so there
 # is no failure for a separate declaration to surface.
 # hadolint ignore=SC2155
 RUN --mount=type=secret,id=github_token,mode=0444 \
   export GITHUB_TOKEN="$(cat /run/secrets/github_token 2> /dev/null || true)" \
+  && export MISE_DATA_DIR="${MISE_SYSTEM_DATA_DIR}" \
   && mise install --locked \
   && mise reshim \
   && { chmod -R u+w "${HOME}/.cache" "${HOME}/.npm/_cacache" "${MISE_DATA_DIR}/downloads" 2> /dev/null || true; } \

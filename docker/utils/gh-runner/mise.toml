@@ -2,7 +2,8 @@
 #
 # Every version is exact so two builds of the same commit ship the same tools,
 # and Renovate's mise manager can bump them. The Dockerfile copies this file to
-# ~/.config/mise/config.toml and installs it with `mise install --locked`,
+# /etc/mise/config.toml (mise's system config, which a user's own
+# ~/.config/mise/config.toml adds to) and installs it with `mise install --locked`,
 # which takes each download URL and checksum from mise.lock (and the npm/PyPI
 # dependency graphs from .mise/locks/) instead of resolving anything at build
 # time. After editing a version by hand, refresh the lock from this directory:
