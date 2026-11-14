@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.10](https://github.com/this-is-tobi/tools/compare/backup-v1.4.9...backup-v1.4.10) (2026-11-14)
+
+
+### Bug Fixes
+
+* **backup:** fail the job when a dump or an upload fails ([18acb58](https://github.com/this-is-tobi/tools/commit/18acb5821909176698cf6e104f7d63abff7ebdf5))
+
 ## [1.4.9](https://github.com/this-is-tobi/tools/compare/backup-v1.4.8...backup-v1.4.9) (2026-11-13)
 
 
