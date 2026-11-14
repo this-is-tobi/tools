@@ -57,9 +57,11 @@ fi
 
 BACKUP_PATH="${DEST_BASE}/${DATE_TIME}-vault.snap"
 
-VAULT_TOKEN=${VAULT_TOKEN} vault operator raft snapshot save -address=${VAULT_TARGET_ADDR} ${VAULT_EXTRA_ARGS} ./${DATE_TIME}-vault.snap \
-  && rclone copyto --stats-one-line-date ${RCLONE_EXTRA_ARGS} ./${DATE_TIME}-vault.snap "${BACKUP_PATH}" \
-  && rm ./${DATE_TIME}-vault.snap
+# Separate commands, not an && list: set -e ignores a failure anywhere in such
+# a list but its last command, so a failed upload would end in "completed".
+VAULT_TOKEN=${VAULT_TOKEN} vault operator raft snapshot save -address=${VAULT_TARGET_ADDR} ${VAULT_EXTRA_ARGS} ./${DATE_TIME}-vault.snap
+rclone copyto --stats-one-line-date ${RCLONE_EXTRA_ARGS} ./${DATE_TIME}-vault.snap "${BACKUP_PATH}"
+rm ./${DATE_TIME}-vault.snap
 
 log "Backup completed: ${BACKUP_PATH}"
 
