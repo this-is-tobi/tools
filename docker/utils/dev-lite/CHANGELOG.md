@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.5](https://github.com/this-is-tobi/tools/compare/dev-lite-v1.1.4...dev-lite-v1.1.5) (2026-11-19)
+
+
+### Dependencies
+
+* **deps:** update dotfiles pin to d7aa83f ([41cf8d4](https://github.com/this-is-tobi/tools/commit/41cf8d4b16079526e645fa21a893298e753ecdbe))
+
 ## [1.1.4](https://github.com/this-is-tobi/tools/compare/dev-lite-v1.1.3...dev-lite-v1.1.4) (2026-11-10)
 
 
