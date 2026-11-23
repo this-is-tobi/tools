@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.13.6](https://github.com/this-is-tobi/tools/compare/gh-runner-v1.13.5...gh-runner-v1.13.6) (2026-11-23)
+
+
+### Dependencies
+
+* **deps:** update dependency npm:@yarnpkg/cli-dist to v4.19.0 ([9f01de4](https://github.com/this-is-tobi/tools/commit/9f01de419a0de4b40566a056167a7feedf2fad28))
+* **deps:** update mise toolchain ([0550503](https://github.com/this-is-tobi/tools/commit/0550503fc4996a3185f411b6af649f8d85be4217))
+
 ## [1.13.5](https://github.com/this-is-tobi/tools/compare/gh-runner-v1.13.4...gh-runner-v1.13.5) (2026-11-16)
 
 
