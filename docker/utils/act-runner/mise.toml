@@ -19,7 +19,7 @@ pnpm = "12.21.0"
 # The registry's default yarn backend is a vfox plugin cloned from its default
 # branch at install time, which nothing pins; the npm package is versioned and
 # integrity-checked like any other npm dependency.
-"npm:@yarnpkg/cli-dist" = "4.18.1"
+"npm:@yarnpkg/cli-dist" = "4.19.0"
 go = "1.27.4"
 rust = "1.100.0"
 uv = "0.13.8"

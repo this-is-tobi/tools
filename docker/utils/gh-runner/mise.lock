@@ -668,10 +668,10 @@ checksum = "sha256:04bf9ed3e32ea139c9af52f6dd06879ff6f8880555a0aa1183ef2d156c0e0
 url = "https://unofficial-builds.nodejs.org/download/release/v26.13.1/node-v26.13.1-linux-x64-musl.tar.gz"
 
 [[tools."npm:@yarnpkg/cli-dist"]]
-version = "4.18.1"
-aube = { path = ".mise/locks/npm-yarnpkg-cli-dist/4.18.1", digest = "sha256:5dd087387a3d871bb0ec31fb7eb7d3160af85935d9abd0481619571b8f759196" }
+version = "4.19.0"
+aube = { path = ".mise/locks/npm-yarnpkg-cli-dist/4.19.0", digest = "sha256:f269d43af12da6e052f828a3c5193c06934e42817e8c1f3c23cbcb81c364b774" }
 backend = "npm:@yarnpkg/cli-dist"
-specifiers = ["4.18.1"]
+specifiers = ["4.19.0"]
 
 [[tools.oc]]
 version = "4.22.18"

@@ -2,6 +2,6 @@
   "name": "mise-npm-install",
   "private": true,
   "dependencies": {
-    "@yarnpkg/cli-dist": "4.18.1"
+    "@yarnpkg/cli-dist": "4.19.0"
   }
 }
