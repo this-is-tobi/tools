@@ -1,0 +1,24 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@yarnpkg/cli-dist':
+        specifier: 4.19.0
+        version: 4.19.0
+
+packages:
+
+  '@yarnpkg/cli-dist@4.19.0':
+    resolution: {integrity: sha512-jjv4NIPlz974CUxGIdQDuK7mRb1f26BFIdkCkuFcM/64LT9tTRVj7/UqEv9bcB8DKFvtUw680CVo71bEBsHjuA==}
+    engines: {node: '>=18.12.0'}
+    hasBin: true
+
+snapshots:
+
+  '@yarnpkg/cli-dist@4.19.0': {}
