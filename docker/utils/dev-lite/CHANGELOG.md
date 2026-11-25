@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.6](https://github.com/this-is-tobi/tools/compare/dev-lite-v1.1.5...dev-lite-v1.1.6) (2026-11-25)
+
+
+### Dependencies
+
+* **deps:** update docker.io/debian base image to 3cda3ca ([d331ac6](https://github.com/this-is-tobi/tools/commit/d331ac6b068bcd917e0a8f4e4c73f51e9498a941))
+
 ## [1.1.5](https://github.com/this-is-tobi/tools/compare/dev-lite-v1.1.4...dev-lite-v1.1.5) (2026-11-19)
 
 
