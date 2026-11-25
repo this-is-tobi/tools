@@ -24,7 +24,7 @@ jobs:
     # token that can push. A dispatch from another branch would cut releases
     # from unreviewed history, so it only ever runs for main.
     if: ${{ github.ref == 'refs/heads/main' }}
-    uses: this-is-tobi/github-workflows/.github/workflows/release-app.yml@55d9e5bfded7ed785088ed5807dbbb46b7c1aa76 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/release-app.yml@4d73e676686b83489f09dcd2a555edc6d4f6c3b3 # v0
     permissions:
       contents: write
       issues: write

@@ -45,7 +45,7 @@ jobs:
 
   cleanup-cache:
     name: Delete PR build caches
-    uses: this-is-tobi/github-workflows/.github/workflows/clean-cache.yml@55d9e5bfded7ed785088ed5807dbbb46b7c1aa76 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/clean-cache.yml@4d73e676686b83489f09dcd2a555edc6d4f6c3b3 # v0
     permissions:
       actions: write
     with:
@@ -57,7 +57,7 @@ jobs:
   cleanup-images:
     name: Delete ${{ matrix.name }}:pr-${{ github.event.pull_request.number }}
     needs: resolve-active
-    uses: this-is-tobi/github-workflows/.github/workflows/clean-images.yml@55d9e5bfded7ed785088ed5807dbbb46b7c1aa76 # v0
+    uses: this-is-tobi/github-workflows/.github/workflows/clean-images.yml@4d73e676686b83489f09dcd2a555edc6d4f6c3b3 # v0
     permissions:
       packages: write
     strategy:
