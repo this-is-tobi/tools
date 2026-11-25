@@ -24,7 +24,7 @@ ARG VAULT_VERSION=2.2.2
 # postgresql<major>-client is what alpine names the package, so the major is
 # tracked through the postgres image rather than the apk index.
 # renovate: datasource=docker depName=postgres versioning=docker
-ARG PG_VERSION=18
+ARG PG_VERSION=19
 ARG HOME=/home/${USERNAME}
 ENV HOME=${HOME}
 
