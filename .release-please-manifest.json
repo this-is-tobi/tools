@@ -4,7 +4,7 @@
   "docker/utils/curl": "2.0.10",
   "docker/utils/debug": "3.1.6",
   "docker/utils/dev": "3.1.4",
-  "docker/utils/dev-lite": "1.1.5",
+  "docker/utils/dev-lite": "1.1.6",
   "docker/utils/gh-runner": "1.13.6",
   "docker/utils/gh-runner-gpu": "1.10.18"
 }
